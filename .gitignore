@@ -1,0 +1,10 @@
+# build
+cofidectl
+cofide.plan
+
+# don't ignore pkgs named the same as binary!
+!cofidectl/
+
+# ide workspaces
+.idea
+.vscode
