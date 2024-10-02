@@ -17,11 +17,11 @@ type TrustZonesGRPCClient struct {
 	client api.TrustZoneServiceClient
 }
 
-func (p *DataSourcePlugin) TrustZonesGRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	// TODO
+func (p *DataSourcePlugin) ConnectDataSourceGRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
 	return nil
 }
 
-func (p *DataSourcePlugin) TrustZonesGRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	return &TrustZonesGRPCClient{client: api.NewTrustZoneServiceClient(c)}, nil
+func (p *DataSourcePlugin) ConnectDataSourceGRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+	return nil, nil
+	// return &TrustZonesGRPCClient{client: api.NewTrustZoneServiceClient(c)}, nil
 }
