@@ -18,5 +18,4 @@ func (p *DataSourcePlugin) ConnectDataSourceGRPCServer(broker *plugin.GRPCBroker
 
 func (p *DataSourcePlugin) ConnectDataSourceGRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return nil, nil
-	// return &TrustZonesGRPCClient{client: api.NewTrustZoneServiceClient(c)}, nil
 }
