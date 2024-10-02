@@ -10,26 +10,26 @@ type DataSource interface {
 	GetTrustZones() ([]*api.TrustZone, error)
 }
 
-type FileDataSource struct {
+type LocalDataSource struct {
 	FilePath string
 }
 
-func NewFileDataSource(filePath string) (*FileDataSource, error) {
-	fds := &FileDataSource{
+func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
+	lds := &LocalDataSource{
 		FilePath: filePath,
 	}
-	if err := fds.loadState(); err != nil {
+	if err := lds.loadState(); err != nil {
 		return nil, err
 	}
-	return fds, nil
+	return lds, nil
 }
 
-func (f *FileDataSource) loadState() error {
+func (lds *LocalDataSource) loadState() error {
 	// load file from disk
 	return nil
 }
 
-func (f *FileDataSource) GetTrustZone(ctx context.Context) ([]*api.TrustZone, error) {
+func (lds *LocalDataSource) GetTrustZones(ctx context.Context) ([]*api.TrustZone, error) {
 	trustzones := make([]*api.TrustZone, 0)
 	return trustzones, nil
 }
