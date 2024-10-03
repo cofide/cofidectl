@@ -13,7 +13,6 @@ type ConnectDataSourceGRPCClient struct {
 }
 
 func (c *ConnectDataSourceGRPCClient) GetTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-
 	resp, err := c.client.GetTrustZones(context.Background(), &cofidectl_proto.GetTrustZonesRequest{})
 	if err != nil {
 		return nil, err
