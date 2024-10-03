@@ -4,7 +4,7 @@ import (
 	"context"
 
 	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1"
-	"github.com/hashicorp/go-plugin"
+	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 )
 
@@ -13,15 +13,15 @@ import (
 // proved the Impl field with a concrete implementation of the DataSource
 // interface.
 type DataSourcePlugin struct {
-	plugin.Plugin
+	go_plugin.Plugin
 	Impl DataSource
 }
 
-func (p *DataSourcePlugin) ConnectDataSourceGRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
+func (p *DataSourcePlugin) ConnectDataSourceGRPCServer(broker *go_plugin.GRPCBroker, s *grpc.Server) error {
 	cofidectl_proto.RegisterDataSourcePluginServiceServer(s, &DataSourcePluginServerGRPC{Impl: p.Impl})
 	return nil
 }
 
-func (p *DataSourcePlugin) ConnectDataSourceGRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *DataSourcePlugin) ConnectDataSourceGRPCClient(ctx context.Context, broker *go_plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &DataSourcePluginClientGRPC{client: cofidectl_proto.NewDataSourcePluginServiceClient(c)}, nil
 }
