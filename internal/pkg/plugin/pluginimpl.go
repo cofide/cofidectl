@@ -8,6 +8,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+// DataSourcePlugin implements the plugin.Plugin interface to provide the GRPC
+// server or client back to the plugin machinery. The server side should
+// proved the Impl field with a concrete implementation of the DataSource
+// interface.
 type DataSourcePlugin struct {
 	plugin.Plugin
 	Impl DataSource

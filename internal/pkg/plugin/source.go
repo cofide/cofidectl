@@ -4,13 +4,7 @@ import (
 	"context"
 
 	"github.com/cofide/cofide-connect/pkg/api"
-
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1"
 )
-
-type DataSource interface {
-	GetTrustZones() ([]*trust_zone_proto.TrustZone, error)
-}
 
 type LocalDataSource struct {
 	FilePath string
