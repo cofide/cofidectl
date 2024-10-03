@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1"
 	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1"
@@ -32,6 +33,15 @@ func (c *DataSourcePluginClientGRPC) CreateTrustZone() (*trust_zone_proto.TrustZ
 	return resp.TrustZone, nil
 }
 
+func (c *DataSourcePluginClientGRPC) CreateAttestationPolicy() (*attestation_policy_proto.AttestationPolicy, error) {
+	resp, err := c.client.CreateAttestationPolicy(context.Background(), &cofidectl_proto.CreateAttestationPolicyRequest{})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.AttestationPolicy, nil
+}
+
 // DataSourcePluginServerGRPC is used by plugins to map GRPC calls from the clients to
 // methods of the DataSource interface.
 type DataSourcePluginServerGRPC struct {
@@ -46,4 +56,9 @@ func (c *DataSourcePluginServerGRPC) GetTrustZones(context.Context, *cofidectl_p
 func (c *DataSourcePluginServerGRPC) CreateTrustZone(context.Context, *cofidectl_proto.CreateTrustZoneRequest) (*cofidectl_proto.CreateTrustZoneResponse, error) {
 	v, err := c.Impl.CreateTrustZone()
 	return &cofidectl_proto.CreateTrustZoneResponse{TrustZone: v}, err
+}
+
+func (c *DataSourcePluginServerGRPC) CreateAttestationPolicy(context.Context, *cofidectl_proto.CreateAttestationPolicyRequest) (*cofidectl_proto.CreateAttestationPolicyResponse, error) {
+	v, err := c.Impl.CreateAttestationPolicy()
+	return &cofidectl_proto.CreateAttestationPolicyResponse{AttestationPolicy: v}, err
 }
