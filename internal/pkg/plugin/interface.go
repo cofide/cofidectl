@@ -5,4 +5,5 @@ import trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zon
 // DataSource is the interface plugins have to implement.
 type DataSource interface {
 	GetTrustZones() ([]*trust_zone_proto.TrustZone, error)
+	CreateTrustZone() (*trust_zone_proto.TrustZone, error)
 }
