@@ -8,11 +8,13 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1"
 )
 
-type ConnectDataSourceGRPCClient struct {
+// DataSourcePluginClientGRPC is used by clients (main application) to translate the
+// DataSource interface of plugins to GRPC calls.
+type DataSourcePluginClientGRPC struct {
 	client cofidectl_proto.DataSourcePluginServiceClient
 }
 
-func (c *ConnectDataSourceGRPCClient) GetTrustZones() ([]*trust_zone_proto.TrustZone, error) {
+func (c *DataSourcePluginClientGRPC) GetTrustZones() ([]*trust_zone_proto.TrustZone, error) {
 	resp, err := c.client.GetTrustZones(context.Background(), &cofidectl_proto.GetTrustZonesRequest{})
 	if err != nil {
 		return nil, err
@@ -21,11 +23,13 @@ func (c *ConnectDataSourceGRPCClient) GetTrustZones() ([]*trust_zone_proto.Trust
 	return resp.TrustZones, nil
 }
 
-type ConnectDataSourceGRPCServer struct {
+// DataSourcePluginServerGRPC is used by plugins to map GRPC calls from the clients to
+// methods of the DataSource interface.
+type DataSourcePluginServerGRPC struct {
 	Impl DataSource
 }
 
-func (c *ConnectDataSourceGRPCServer) GetTrustZones(context.Context, *cofidectl_proto.GetTrustZonesRequest) (*cofidectl_proto.GetTrustZonesResponse, error) {
+func (c *DataSourcePluginServerGRPC) GetTrustZones(context.Context, *cofidectl_proto.GetTrustZonesRequest) (*cofidectl_proto.GetTrustZonesResponse, error) {
 	v, err := c.Impl.GetTrustZones()
 	return &cofidectl_proto.GetTrustZonesResponse{TrustZones: v}, err
 }

@@ -18,10 +18,10 @@ type DataSourcePlugin struct {
 }
 
 func (p *DataSourcePlugin) ConnectDataSourceGRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	cofidectl_proto.RegisterDataSourcePluginServiceServer(s, &ConnectDataSourceGRPCServer{Impl: p.Impl})
+	cofidectl_proto.RegisterDataSourcePluginServiceServer(s, &DataSourcePluginServerGRPC{Impl: p.Impl})
 	return nil
 }
 
 func (p *DataSourcePlugin) ConnectDataSourceGRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	return &ConnectDataSourceGRPCClient{client: cofidectl_proto.NewDataSourcePluginServiceClient(c)}, nil
+	return &DataSourcePluginClientGRPC{client: cofidectl_proto.NewDataSourcePluginServiceClient(c)}, nil
 }
