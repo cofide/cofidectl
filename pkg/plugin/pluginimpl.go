@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"log/slog"
 
 	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1"
 	go_plugin "github.com/hashicorp/go-plugin"
@@ -17,11 +18,12 @@ type DataSourcePlugin struct {
 	Impl DataSource
 }
 
-func (p *DataSourcePlugin) ConnectDataSourceGRPCServer(broker *go_plugin.GRPCBroker, s *grpc.Server) error {
-	cofidectl_proto.RegisterDataSourcePluginServiceServer(s, &DataSourcePluginServerGRPC{Impl: p.Impl})
+func (dsp *DataSourcePlugin) ConnectDataSourceGRPCServer(broker *go_plugin.GRPCBroker, s *grpc.Server) error {
+	cofidectl_proto.RegisterDataSourcePluginServiceServer(s, &DataSourcePluginServerGRPC{Impl: dsp.Impl})
 	return nil
 }
 
-func (p *DataSourcePlugin) ConnectDataSourceGRPCClient(ctx context.Context, broker *go_plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (dsp *DataSourcePlugin) ConnectDataSourceGRPCClient(ctx context.Context, broker *go_plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+	slog.Info("HEY")
 	return &DataSourcePluginClientGRPC{client: cofidectl_proto.NewDataSourcePluginServiceClient(c)}, nil
 }

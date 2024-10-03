@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +35,10 @@ func NewRootCmd(args []string) (*cobra.Command, error) {
 		Long:         longDesc,
 		SilenceUsage: true,
 	}
+
+	cmd.AddCommand(
+		trustzone.TrustZoneListCmd(),
+	)
 
 	return cmd, nil
 }
