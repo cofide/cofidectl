@@ -5,5 +5,5 @@ import (
 )
 
 var PluginMap = map[string]plugin.Plugin{
-	"data_source_plugin": &DataSourcePlugin{},
+	"data_source": &DataSourcePlugin{},
 }
