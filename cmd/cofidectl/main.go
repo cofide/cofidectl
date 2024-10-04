@@ -2,10 +2,8 @@ package main
 
 import (
 	"log"
-	"log/slog"
 	"os"
 	"os/exec"
-	"reflect"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
 
@@ -40,8 +38,6 @@ func main() {
 	}
 
 	plugin := raw.(cofidectl_plugin.DataSource)
-
-	slog.Info("getting here", "plugin", reflect.TypeOf(plugin))
 
 	rootCmd, err := cmd.NewRootCmd(os.Args[1:], plugin)
 	if err != nil {

@@ -27,7 +27,6 @@ func (c *TrustZoneCommand) GetCommand() *cobra.Command {
 			//potentially good place to init the grpc client (lazily)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			slog.Info("getting here - it shouldn't though!")
 			trustZones, err := c.source.GetTrustZones()
 			if err != nil {
 				return fmt.Errorf("failed to get trust zones")
