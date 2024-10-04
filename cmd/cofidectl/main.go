@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"os"
 	"os/exec"
+	"reflect"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
 
@@ -18,7 +20,7 @@ func main() {
 			"connect_data_source": &cofidectl_plugin.DataSourcePlugin{},
 		},
 		Cmd:              exec.Command("sh", "-c", "./cofidectl-connect-plugin"),
-		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolNetRPC, go_plugin.ProtocolGRPC},
+		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
 	})
 
 	defer client.Kill()
@@ -38,6 +40,8 @@ func main() {
 	}
 
 	plugin := raw.(cofidectl_plugin.DataSource)
+
+	slog.Info("getting here", "plugin", reflect.TypeOf(plugin))
 
 	rootCmd, err := cmd.NewRootCmd(os.Args[1:], plugin)
 	if err != nil {

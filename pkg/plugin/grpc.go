@@ -3,9 +3,9 @@ package plugin
 import (
 	"context"
 
-	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1"
+	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/cofidectl_plugin/v1"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/trust_zone/v1"
 )
 
 // DataSourcePluginClientGRPC is used by clients (main application) to translate the
