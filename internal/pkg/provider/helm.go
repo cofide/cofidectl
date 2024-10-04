@@ -6,11 +6,6 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 )
 
-// SPIREProvider is the interface to downstream SPIRE installation methodologies for the Cofide stack
-type SPIREProvider interface {
-	Execute() error
-}
-
 // HelmSPIREProvider implements a Helm-based installer for the Cofide stack
 type HelmSPIREProvider struct {
 	chart   string
