@@ -38,6 +38,7 @@ func (s *GRPCServer) GetTrustZones(ctx context.Context, req *cofidectl_proto.Get
 	return &cofidectl_proto.GetTrustZonesResponse{TrustZones: resp}, nil
 }
 
+/*
 func (s *GRPCServer) CreateTrustZone(ctx context.Context, req *cofidectl_proto.CreateTrustZoneRequest) (*cofidectl_proto.CreateTrustZoneResponse, error) {
 	// TODO
 	return &cofidectl_proto.CreateTrustZoneResponse{}, nil
@@ -48,3 +49,4 @@ func (s *GRPCServer) CreateAttestationPolicy(ctx context.Context, req *cofidectl
 	// TODO
 	return &cofidectl_proto.CreateAttestationPolicyResponse{}, nil
 }
+*/
