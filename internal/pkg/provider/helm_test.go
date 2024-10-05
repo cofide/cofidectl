@@ -7,7 +7,7 @@ import (
 )
 
 func TestHelmSPIREProvider(t *testing.T) {
-	p := NewHelmSPIREProvider("test-chart", "0.0.0")
-	assert.Equal(t, p.chart, "test-chart")
-	assert.Equal(t, p.version, "0.0.0")
+	p := NewHelmSPIREProvider()
+	assert.Equal(t, p.chart, "spire")
+	assert.Equal(t, p.version, "0.21.0")
 }
