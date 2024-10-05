@@ -39,7 +39,7 @@ func NewRootCmd(args []string, source plugin.DataSource) (*cobra.Command, error)
 
 	tzCmd := trustzone.NewTrustZoneCommand(source)
 	cmd.AddCommand(
-		tzCmd.GetCommand(),
+		tzCmd.GetRootCommand(),
 	)
 
 	return cmd, nil
