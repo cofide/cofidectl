@@ -7,11 +7,19 @@ import (
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
 
+	hclog "github.com/hashicorp/go-hclog"
+
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	go_plugin "github.com/hashicorp/go-plugin"
 )
 
 func main() {
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:   "plugin",
+		Output: os.Stdout,
+		Level:  hclog.Error,
+	})
+
 	client := go_plugin.NewClient(&go_plugin.ClientConfig{
 		HandshakeConfig: cofidectl_plugin.HandshakeConfig,
 		Plugins: map[string]go_plugin.Plugin{
@@ -19,6 +27,7 @@ func main() {
 		},
 		Cmd:              exec.Command("sh", "-c", "./cofidectl-connect-plugin"),
 		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
+		Logger:           logger,
 	})
 
 	defer client.Kill()
