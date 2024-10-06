@@ -31,29 +31,32 @@ type HelmSPIREProvider struct {
 	settings         *cli.EnvSettings
 	SPIREVersion     string
 	SPIRECRDsVersion string
+	spireClient      *action.Install
+	spireCRDsClient  *action.Install
 }
 
 func NewHelmSPIREProvider() *HelmSPIREProvider {
-	return &HelmSPIREProvider{
+	prov := &HelmSPIREProvider{
 		settings:         cli.New(),
 		SPIREVersion:     SPIREChartVersion,
 		SPIRECRDsVersion: SPIRECRDsChartVersion,
 	}
-}
 
-func (h *HelmSPIREProvider) Execute() {
-	cfg, err := h.initActionConfig()
+	cfg, err := prov.initActionConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
+	prov.spireCRDsClient = newInstall(cfg, SPIRECRDsChartName, prov.SPIRECRDsVersion)
+	prov.spireClient = newInstall(cfg, SPIREChartName, prov.SPIREVersion)
 
-	client := h.newHelmClient(cfg, SPIRECRDsChartName, h.SPIRECRDsVersion)
-	h.installChart(client, SPIRECRDsChartName)
-	log.Printf("Successfully installed %v %v", SPIRECRDsChartName, SPIREChartVersion)
+	return prov
+}
 
-	client = h.newHelmClient(cfg, SPIREChartName, SPIREChartVersion)
-	h.installChart(client, SPIREChartName)
-	log.Printf("Successfully installed %v %v", SPIREChartName, SPIREChartVersion)
+func (h *HelmSPIREProvider) Execute() {
+	h.installSPIRECRDs()
+	h.installSPIRE()
+
+	log.Print("✅ cofidectl up complete")
 }
 
 func DiscardLogger(format string, v ...any) {}
@@ -73,20 +76,27 @@ func (h *HelmSPIREProvider) initActionConfig() (*action.Configuration, error) {
 	return cfg, nil
 }
 
-func (h *HelmSPIREProvider) newHelmClient(cfg *action.Configuration, chart string, version string) *action.Install {
-	client := action.NewInstall(cfg)
-	client.Version = version
-	client.ReleaseName = chart
-	client.Namespace = SPIRENamespace
-	client.CreateNamespace = true
-
-	return client
+func newInstall(cfg *action.Configuration, chart string, version string) *action.Install {
+	install := action.NewInstall(cfg)
+	install.Version = version
+	install.ReleaseName = chart
+	install.Namespace = SPIRENamespace
+	install.CreateNamespace = true
+	return install
 }
 
-func (h *HelmSPIREProvider) installChart(client *action.Install, chartName string) (*release.Release, error) {
+func (h *HelmSPIREProvider) installSPIRE() (*release.Release, error) {
+	return installChart(h.spireClient, SPIREChartName, h.settings)
+}
+
+func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
+	return installChart(h.spireCRDsClient, SPIRECRDsChartName, h.settings)
+}
+
+func installChart(client *action.Install, chartName string, settings *cli.EnvSettings) (*release.Release, error) {
 	options, err := client.ChartPathOptions.LocateChart(
 		fmt.Sprintf("spire/%s", chartName),
-		h.settings,
+		settings,
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -97,5 +107,6 @@ func (h *HelmSPIREProvider) installChart(client *action.Install, chartName strin
 		log.Fatal(err)
 	}
 
+	log.Printf("Installing %v...", cr.Name())
 	return client.Run(cr, nil)
 }
