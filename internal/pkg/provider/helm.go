@@ -111,5 +111,5 @@ func installChart(client *action.Install, chartName string, settings *cli.EnvSet
 	}
 
 	log.Printf("Installing %v...", cr.Name())
-	return client.Run(cr, nil)
+	return client.Run(cr, nil) // TODO: inject Cofide Plan state into vals interface
 }
