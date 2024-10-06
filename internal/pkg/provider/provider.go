@@ -1,6 +1,6 @@
 package provider
 
-// SPIREProvider is the interface to downstream SPIRE installation methodologies for the Cofide stack
-type SPIREProvider interface {
+// WorkloadIdentityProvider is the interface to drive downstream workload identity methodologies for the Cofide stack
+type WorkloadIdentityProvider interface {
 	Execute() error
 }
