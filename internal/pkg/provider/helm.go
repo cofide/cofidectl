@@ -31,6 +31,7 @@ const (
 // API concepts and abstractions
 type HelmSPIREProvider struct {
 	settings         *cli.EnvSettings
+	cfg              *action.Configuration
 	SPIREVersion     string
 	SPIRECRDsVersion string
 	spireClient      *action.Install
@@ -44,12 +45,13 @@ func NewHelmSPIREProvider() *HelmSPIREProvider {
 		SPIRECRDsVersion: SPIRECRDsChartVersion,
 	}
 
-	cfg, err := prov.initActionConfig()
+	var err error
+	prov.cfg, err = prov.initActionConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	prov.spireCRDsClient = newInstall(cfg, SPIRECRDsChartName, prov.SPIRECRDsVersion)
-	prov.spireClient = newInstall(cfg, SPIREChartName, prov.SPIREVersion)
+	prov.spireCRDsClient = newInstall(prov.cfg, SPIRECRDsChartName, prov.SPIRECRDsVersion)
+	prov.spireClient = newInstall(prov.cfg, SPIREChartName, prov.SPIREVersion)
 
 	return prov
 }
@@ -89,14 +91,19 @@ func newInstall(cfg *action.Configuration, chart string, version string) *action
 }
 
 func (h *HelmSPIREProvider) installSPIRE() (*release.Release, error) {
-	return installChart(h.spireClient, SPIREChartName, h.settings)
+	return installChart(h.cfg, h.spireClient, SPIREChartName, h.settings)
 }
 
 func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
-	return installChart(h.spireCRDsClient, SPIRECRDsChartName, h.settings)
+	return installChart(h.cfg, h.spireCRDsClient, SPIRECRDsChartName, h.settings)
 }
 
-func installChart(client *action.Install, chartName string, settings *cli.EnvSettings) (*release.Release, error) {
+func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings) (*release.Release, error) {
+	if checkIfAlreadyInstalled(cfg, chartName, settings) {
+		log.Printf("%v already installed", chartName)
+		return nil, nil
+	}
+
 	options, err := client.ChartPathOptions.LocateChart(
 		fmt.Sprintf("spire/%s", chartName),
 		settings,
@@ -112,4 +119,14 @@ func installChart(client *action.Install, chartName string, settings *cli.EnvSet
 
 	log.Printf("Installing %v...", cr.Name())
 	return client.Run(cr, nil) // TODO: inject Cofide Plan state into vals interface
+}
+
+func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string, settings *cli.EnvSettings) bool {
+	history := action.NewHistory(cfg)
+	history.Max = 1
+	ledger, err := history.Run(chartName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return len(ledger) > 0
 }
