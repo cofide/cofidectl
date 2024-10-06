@@ -12,36 +12,32 @@ import (
 )
 
 const (
-	// general
-	spireNamespace = "spire"
-	repoName       = "spire"
-	repoUrl        = "https://spiffe.github.io/helm-charts-hardened/"
+	SPIRERepositoryURL      = "https://spiffe.github.io/helm-charts-hardened/"
+	SPIRERepositoryName     = "spire"
+	SPIRECRDsRepositoryName = "spire-crds"
 
-	// spire stack (server, agent, csi-driver, oidc-discovery-provider, controller-manager)
-	stackRepo         = "spire"
-	stackReleaseName  = "spire"
-	stackChartName    = "spire"
-	stackChartVersion = "0.21.0"
+	SPIREChartName        = "spire"
+	SPIREChartVersion     = "0.21.0"
+	SPIRECRDsChartName    = "spire-crds"
+	SPIRECRDsChartVersion = "0.4.0"
 
-	// spire crds
-	crdsRepo         = "spire-crds"
-	crdsReleaseName  = "spire-crds"
-	crdsChartName    = "spire-crds"
-	crdsChartVersion = "0.4.0"
+	SPIREReleaseName     = "spire"
+	SPIRECRDsReleaseName = "spire-crds"
+	SPIRENamespace       = "spire"
 )
 
 // HelmSPIREProvider implements a Helm-based installer for the Cofide stack
 type HelmSPIREProvider struct {
-	settings *cli.EnvSettings
-	chart    string
-	version  string
+	settings         *cli.EnvSettings
+	SPIREVersion     string
+	SPIRECRDsVersion string
 }
 
 func NewHelmSPIREProvider() *HelmSPIREProvider {
 	return &HelmSPIREProvider{
-		settings: cli.New(),
-		chart:    stackChartName,
-		version:  stackChartVersion,
+		settings:         cli.New(),
+		SPIREVersion:     SPIREChartVersion,
+		SPIRECRDsVersion: SPIRECRDsChartVersion,
 	}
 }
 
@@ -51,13 +47,13 @@ func (h *HelmSPIREProvider) Execute() {
 		log.Fatal(err)
 	}
 
-	client := h.newHelmClient(cfg, crdsChartName, crdsChartVersion)
-	h.installChart(client, crdsChartName)
-	log.Printf("Successfully installed %v %v", crdsChartName, crdsChartVersion)
+	client := h.newHelmClient(cfg, SPIRECRDsChartName, h.SPIRECRDsVersion)
+	h.installChart(client, SPIRECRDsChartName)
+	log.Printf("Successfully installed %v %v", SPIRECRDsChartName, SPIREChartVersion)
 
-	client = h.newHelmClient(cfg, stackChartName, stackChartVersion)
-	h.installChart(client, stackChartName)
-	log.Printf("Successfully installed %v %v", stackChartName, stackChartVersion)
+	client = h.newHelmClient(cfg, SPIREChartName, SPIREChartVersion)
+	h.installChart(client, SPIREChartName)
+	log.Printf("Successfully installed %v %v", SPIREChartName, SPIREChartVersion)
 }
 
 func DiscardLogger(format string, v ...any) {}
@@ -81,7 +77,7 @@ func (h *HelmSPIREProvider) newHelmClient(cfg *action.Configuration, chart strin
 	client := action.NewInstall(cfg)
 	client.Version = version
 	client.ReleaseName = chart
-	client.Namespace = spireNamespace
+	client.Namespace = SPIRENamespace
 	client.CreateNamespace = true
 
 	return client

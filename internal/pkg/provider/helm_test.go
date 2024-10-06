@@ -8,6 +8,6 @@ import (
 
 func TestHelmSPIREProvider(t *testing.T) {
 	p := NewHelmSPIREProvider()
-	assert.Equal(t, p.chart, "spire")
-	assert.Equal(t, p.version, "0.21.0")
+	assert.Equal(t, p.SPIREVersion, "0.21.0")
+	assert.Equal(t, p.SPIRECRDsVersion, "0.4.0")
 }
