@@ -26,7 +26,9 @@ const (
 	SPIRENamespace       = "spire"
 )
 
-// HelmSPIREProvider implements a Helm-based installer for the Cofide stack
+// HelmSPIREProvider implements a Helm-based installer for the Cofide stack. It uses the SPIFFE/SPIRE project's own
+// helm-charts-hardened Helm chart to install a SPIRE stack to a given Kubernetes context, making use of the Cofide
+// API concepts and abstractions
 type HelmSPIREProvider struct {
 	settings         *cli.EnvSettings
 	SPIREVersion     string
@@ -52,6 +54,7 @@ func NewHelmSPIREProvider() *HelmSPIREProvider {
 	return prov
 }
 
+// Execute installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
 func (h *HelmSPIREProvider) Execute() {
 	h.installSPIRECRDs()
 	h.installSPIRE()
