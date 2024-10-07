@@ -43,7 +43,7 @@ func (c *TrustZoneCommand) ListRootCommand() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(c.GetListCommand())
+	cmd.AddCommand(c.ListCommand())
 
 	return cmd
 }
@@ -52,7 +52,7 @@ var trustZoneListDesc = `
 This command will list trust zones in the Cofide configuration state.
 `
 
-func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
+func (c *TrustZoneCommand) ListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [NAME]",
 		Short: "List trust zones",
