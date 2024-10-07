@@ -3,29 +3,57 @@ package main
 import (
 	"log"
 	"os"
-	"os/exec"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
 
-	hclog "github.com/hashicorp/go-hclog"
-
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
 )
 
 func main() {
+
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
 		Level:  hclog.Error,
 	})
 
+	localDataSource, err := cofidectl_plugin.NewLocalDataSource("cofide.cue")
+
+	plugins, err := localDataSource.GetPlugins()
+
+	var ds cofidectl_plugin.DataSource
+
+	if len(plugins) > 0 && plugins[0] == "cofidectl-connect-plugin" {
+		ds, err = loadConnectPlugin(logger)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		ds = localDataSource
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rootCmd, err := cmd.NewRootCmd(os.Args[1:], ds)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err = rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func loadConnectPlugin(logger hclog.Logger) (cofidectl_plugin.DataSource, error) {
 	client := go_plugin.NewClient(&go_plugin.ClientConfig{
 		HandshakeConfig: cofidectl_plugin.HandshakeConfig,
 		Plugins: map[string]go_plugin.Plugin{
 			"connect_data_source": &cofidectl_plugin.DataSourcePlugin{},
 		},
-		Cmd:              exec.Command("sh", "-c", "./cofidectl-connect-plugin"),
 		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
 		Logger:           logger,
 	})
@@ -47,13 +75,5 @@ func main() {
 	}
 
 	plugin := raw.(cofidectl_plugin.DataSource)
-
-	rootCmd, err := cmd.NewRootCmd(os.Args[1:], plugin)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err = rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+	return plugin, nil
 }
