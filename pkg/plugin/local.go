@@ -1,17 +1,27 @@
 package plugin
 
 import (
+<<<<<<< HEAD
+=======
+	"encoding/json"
+>>>>>>> aec3d398f6ccc64a548bb60de1698cf2a1c2eda0
 	"fmt"
 	"log/slog"
 	"os"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
+<<<<<<< HEAD
 	cue_yaml "cuelang.org/go/encoding/yaml"
 
 	"gopkg.in/yaml.v3"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+=======
+	"cuelang.org/go/cue/load"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"google.golang.org/protobuf/encoding/protojson"
+>>>>>>> aec3d398f6ccc64a548bb60de1698cf2a1c2eda0
 )
 
 // TODO: use Go embedding eg //go:embed cofidectl-schema.cue
