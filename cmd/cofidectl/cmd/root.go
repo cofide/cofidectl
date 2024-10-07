@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
-	go_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ const (
 
 var longDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
 
-func NewRootCmd(args []string, source go_plugin.DataSource) (*cobra.Command, error) {
+func NewRootCmd(args []string, source cofidectl_plugin.DataSource) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:          "cofidectl",
 		Short:        "cofidectl",
@@ -39,7 +39,7 @@ func NewRootCmd(args []string, source go_plugin.DataSource) (*cobra.Command, err
 
 	tzCmd := trustzone.NewTrustZoneCommand(source)
 	cmd.AddCommand(
-		tzCmd.ListCommand(),
+		tzCmd.ListRootCommand(),
 	)
 
 	return cmd, nil

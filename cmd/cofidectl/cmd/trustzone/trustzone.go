@@ -3,28 +3,35 @@ package trustzone
 import (
 	"fmt"
 	"log/slog"
+	"os"
 
-	go_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type TrustZoneCommand struct {
-	source go_plugin.DataSource
+	source cofidectl_plugin.DataSource
 }
 
-func NewTrustZoneCommand(source go_plugin.DataSource) *TrustZoneCommand {
+func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
 	return &TrustZoneCommand{
 		source: source,
 	}
 }
 
-func (c *TrustZoneCommand) ListCommand() *cobra.Command {
+var trustZoneDesc = `
+This command consists of multiple sub-commands to administer Cofide trust zones.
+`
+
+func (c *TrustZoneCommand) ListRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "Lists existing trust zones (if any)",
+		Use:   "trust-zone list",
+		Short: "list trust-zones",
+		Long:  trustZoneDesc,
 		Args:  cobra.ExactArgs(0),
 		PreRun: func(cmd *cobra.Command, args []string) {
-			//potentially good place to init the grpc client (lazily)
+			// TODO: potentially good place to init the grpc client (lazily)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			trustZones, err := c.source.ListTrustZones()
@@ -32,6 +39,44 @@ func (c *TrustZoneCommand) ListCommand() *cobra.Command {
 				return fmt.Errorf("failed to list trust zones")
 			}
 			slog.Info("retrieved trust zones", "trust_zones", trustZones)
+			return nil
+		},
+	}
+
+	cmd.AddCommand(c.ListCommand())
+
+	return cmd
+}
+
+var trustZoneListDesc = `
+This command will list trust zones in the Cofide configuration state.
+`
+
+func (c *TrustZoneCommand) ListCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list [NAME]",
+		Short: "List trust zones",
+		Long:  trustZoneListDesc,
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			trustZones, err := c.source.ListTrustZones()
+			if err != nil {
+				return err
+			}
+
+			data := make([][]string, len(trustZones))
+			for i, trustZone := range trustZones {
+				data[i] = []string{
+					trustZone.Name,
+					trustZone.TrustDomain,
+				}
+			}
+
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"Name", "Trust Domain"})
+			table.SetBorder(false)
+			table.AppendBulk(data)
+			table.Render()
 			return nil
 		},
 	}

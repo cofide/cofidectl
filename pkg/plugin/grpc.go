@@ -21,37 +21,3 @@ func (c *DataSourcePluginClientGRPC) ListTrustZones() ([]*trust_zone_proto.Trust
 
 	return resp.TrustZones, nil
 }
-
-// DataSourcePluginServerGRPC is used by plugins to map GRPC calls from the clients to
-// methods of the DataSource interface.
-type DataSourcePluginServerGRPC struct {
-	Impl DataSource
-}
-
-func (c *DataSourcePluginServerGRPC) ListTrustZones(ctx context.Context, req *cofidectl_proto.ListTrustZonesRequest) (*cofidectl_proto.ListTrustZonesResponse, error) {
-	v, err := c.Impl.ListTrustZones()
-	if err != nil {
-		return nil, err
-	}
-	return &cofidectl_proto.ListTrustZonesResponse{TrustZones: v}, nil
-}
-
-/*
-func (c *DataSourcePluginClientGRPC) CreateTrustZone() (*trust_zone_proto.TrustZone, error) {
-	resp, err := c.client.CreateTrustZone(context.Background(), &cofidectl_proto.CreateTrustZoneRequest{})
-	if err != nil {
-		return nil, err
-	}
-
-	return resp.TrustZone, nil
-}
-
-func (c *DataSourcePluginClientGRPC) CreateAttestationPolicy() (*attestation_policy_proto.AttestationPolicy, error) {
-	resp, err := c.client.CreateAttestationPolicy(context.Background(), &cofidectl_proto.CreateAttestationPolicyRequest{})
-	if err != nil {
-		return nil, err
-	}
-
-	return resp.AttestationPolicy, nil
-}
-*/
