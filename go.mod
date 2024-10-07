@@ -3,6 +3,7 @@ module github.com/cofide/cofidectl
 go 1.22.6
 
 require (
+	cuelang.org/go v0.10.0
 	github.com/cofide/cofide-api-sdk v0.0.0-unpublished
 	github.com/gobeam/stringy v0.0.7
 	github.com/hashicorp/go-hclog v0.14.1
@@ -17,9 +18,10 @@ replace github.com/cofide/cofide-connect v0.0.0-unpublished => ../cofide-connect
 replace github.com/cofide/cofide-api-sdk v0.0.0-unpublished => ../cofide-api-sdk
 
 require (
+	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
-	github.com/rogpeppe/go-internal v1.12.1-0.20240709150035-ccf4b4329d21 // indirect
+	golang.org/x/mod v0.20.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
