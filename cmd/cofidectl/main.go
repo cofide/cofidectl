@@ -12,30 +12,32 @@ import (
 )
 
 func main() {
-
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
 		Level:  hclog.Error,
 	})
 
-	localDataSource, err := cofidectl_plugin.NewLocalDataSource("cofide.cue")
-
-	plugins, err := localDataSource.GetPlugins()
-
 	var ds cofidectl_plugin.DataSource
 
+	// default to the local data source
+	ds, err := cofidectl_plugin.NewLocalDataSource("cofide.cue")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// determine plugins to be loaded
+	plugins, err := ds.(*cofidectl_plugin.LocalDataSource).GetPlugins()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// if the Connect plugin is enabled use it in place of the local data source
 	if len(plugins) > 0 && plugins[0] == "cofidectl-connect-plugin" {
 		ds, err = loadConnectPlugin(logger)
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else {
-		ds = localDataSource
-	}
-
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	rootCmd, err := cmd.NewRootCmd(os.Args[1:], ds)
@@ -44,7 +46,7 @@ func main() {
 	}
 
 	if err = rootCmd.Execute(); err != nil {
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
