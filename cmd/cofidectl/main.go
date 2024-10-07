@@ -21,7 +21,7 @@ func main() {
 	var ds cofidectl_plugin.DataSource
 
 	// default to the local data source
-	ds, err := cofidectl_plugin.NewLocalDataSource("cofide.cue")
+	ds, err := cofidectl_plugin.NewLocalDataSource("cofide.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}

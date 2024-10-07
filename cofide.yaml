@@ -1,0 +1,4 @@
+plugins: []
+trust_zones:
+    - name: matt
+      trustdomain: foo.com

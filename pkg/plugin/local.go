@@ -1,39 +1,47 @@
 package plugin
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	"cuelang.org/go/cue/load"
+	cue_yaml "cuelang.org/go/encoding/yaml"
+
+	"gopkg.in/yaml.v3"
+
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/trust_zone/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
+// TODO: use Go embedding eg //go:embed cofidectl-schema.cue
 const schemaCue = `
 #Plugins: {
 	name: string
 }
+
 #TrustZone: {
 	name: string
 	trust_domain: string
 }
 
 #Config: {
-	plugins: [...#TrustZone]
+	plugins: [...#Plugins]
 	trust_zones: [...#TrustZone]
 }
 
 config: #Config
 `
 
+type Config struct {
+	Plugins     []string                      `yaml:"plugins"`
+	Trust_Zones []*trust_zone_proto.TrustZone `yaml:"trust_zones"`
+}
+
 type LocalDataSource struct {
-	filePath    string
-	plugins     []string
-	trustZones  []*trust_zone_proto.TrustZone
-	schemaValue cue.Value
+	filePath   string
+	config     Config
+	cueContext *cue.Context
 }
 
 func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
@@ -47,83 +55,62 @@ func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
 }
 
 func (lds *LocalDataSource) loadState() error {
-	// load file from disk
-	ctx := cuecontext.New()
-	instances := load.Instances([]string{lds.filePath}, nil)
-	if len(instances) == 0 {
-		return fmt.Errorf("no Cue instances found")
+	// load YAML file from disk
+	yamlData, err := os.ReadFile(lds.filePath)
+	if err != nil {
+		return fmt.Errorf("error reading YAML file: %s", err)
 	}
 
-	dataValue := ctx.BuildInstance(instances[0])
-	if dataValue.Err() != nil {
-		return fmt.Errorf("error building Cue instance: %s", dataValue.Err())
+	lds.cueContext = cuecontext.New()
+
+	// validate the YAML using the Cue schema
+	schema := lds.cueContext.CompileString(schemaCue)
+	if schema.Err() != nil {
+		return fmt.Errorf("error compiling Cue schema: %s", err)
 	}
 
-	schemaValue := ctx.CompileString(schemaCue)
-	if schemaValue.Err() != nil {
-		return fmt.Errorf("error compiling schema: %s", schemaValue.Err())
+	if err = cue_yaml.Validate(yamlData, schema); err != nil {
+		return fmt.Errorf("error validating YAML: %s", err)
 	}
 
-	lds.schemaValue = schemaValue.Unify(dataValue)
-	if lds.schemaValue.Err() != nil {
-		return fmt.Errorf("error unifying schema and data: %s", lds.schemaValue.Err())
+	if err := yaml.Unmarshal(yamlData, &lds.config); err != nil {
+		return fmt.Errorf("error unmarshaling YAML: %s", err)
 	}
+
+	//slog.Info("Cofide configuration has been successfully validated")
 
 	return nil
 }
 
-func (lds *LocalDataSource) getConfig(key string) (cue.Value, error) {
-	value := lds.schemaValue.LookupPath(cue.ParsePath(fmt.Sprintf("config.%s", key)))
-	return value, nil
+func (lds *LocalDataSource) GetConfig() (Config, error) {
+	return lds.config, nil
 }
 
 func (lds *LocalDataSource) GetPlugins() ([]string, error) {
-	pluginValues, err := lds.getConfig("plugins")
-	if err != nil {
-		return nil, err
-	}
+	return lds.config.Plugins, nil
+}
 
-	err = pluginValues.Decode(&lds.plugins)
-	if err != nil {
-		return nil, err
+func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
+	lds.config.Trust_Zones = append(lds.config.Trust_Zones, trustZone)
+	if err := lds.UpdateDataFile(); err != nil {
+		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
 	}
-	return lds.plugins, nil
+	//slog.Info("Successfully updated local config", "trust_zone", trustZone.TrustDomain)
+	return nil
+}
+
+func (lds *LocalDataSource) UpdateDataFile() error {
+	data, err := yaml.Marshal(lds.config)
+	if err != nil {
+		return fmt.Errorf("error marshalling config: %v", err)
+	}
+	os.WriteFile(lds.filePath, data, 0644)
+
+	slog.Info("Successfully added new trust zone", "trust_zone", lds.filePath)
+
+	return nil
 }
 
 func (lds *LocalDataSource) GetTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-	trustZoneValues, err := lds.getConfig("trust_zones")
-	if err != nil {
-		return nil, err
-	}
-
-	jsonBytes, err := trustZoneValues.MarshalJSON()
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling to JSON: %s", err)
-	}
-
-	// unmarshal JSON
-	var rawTrustZones []map[string]interface{}
-	err = json.Unmarshal(jsonBytes, &rawTrustZones)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshaling to raw: %s", err)
-	}
-
-	for _, rawTrustZone := range rawTrustZones {
-		trustZoneJson, err := json.Marshal(rawTrustZone)
-		if err != nil {
-			slog.Error("error marshaling individual trust zone", "error", err)
-			continue
-		}
-
-		trustZone := &trust_zone_proto.TrustZone{}
-		err = protojson.Unmarshal(trustZoneJson, trustZone)
-		if err != nil {
-			slog.Error("error unmarshaling to protocol buffer", "error", err)
-			continue
-		}
-
-		lds.trustZones = append(lds.trustZones, trustZone)
-	}
-
-	return lds.trustZones, nil
+	return lds.config.Trust_Zones, nil
 }

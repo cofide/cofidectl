@@ -1,11 +1,11 @@
 package trustzone
 
 import (
-	"fmt"
-	"log/slog"
 	"os"
 
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/trust_zone/v1"
 	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -26,24 +26,14 @@ This command consists of multiple sub-commands to administer Cofide trust zones.
 
 func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "trust-zone list [ARGS]",
-		Short: "list trust-zones",
+		Use:   "trust-zone add|list [ARGS]",
+		Short: "add, list trust zones",
 		Long:  trustZoneDesc,
-		Args:  cobra.ExactArgs(0),
-		PreRun: func(cmd *cobra.Command, args []string) {
-			// TODO: potentially good place to init the grpc client (lazily)
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			trustZones, err := c.source.GetTrustZones()
-			if err != nil {
-				return fmt.Errorf("failed to get trust zones")
-			}
-			slog.Info("retrieved trust zones", "trust_zones", trustZones)
-			return nil
-		},
+		Args:  cobra.NoArgs,
 	}
 
 	cmd.AddCommand(c.GetListCommand())
+	cmd.AddCommand(c.GetAddCommand())
 
 	return cmd
 }
@@ -54,10 +44,10 @@ This command will list trust zones in the Cofide configuration state.
 
 func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list [NAME]",
-		Short: "List trust zones",
+		Use:   "list [ARGS]",
+		Short: "List trust-zones",
 		Long:  trustZoneListDesc,
-		Args:  cobra.ExactArgs(0),
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			trustZones, err := c.source.GetTrustZones()
 			if err != nil {
@@ -80,6 +70,42 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 			return nil
 		},
 	}
+
+	return cmd
+}
+
+var trustZoneAddDesc = `
+This command will add a new trust zone to the Cofide configuration state.
+`
+
+type Opts struct {
+	name         string
+	trust_domain string
+}
+
+func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
+	opts := Opts{}
+	cmd := &cobra.Command{
+		Use:   "add [NAME]",
+		Short: "Add a new trust zone",
+		Long:  trustZoneAddDesc,
+		Args:  cobra.ExactArgs(1),
+		PreRun: func(cmd *cobra.Command, args []string) {
+			str := stringy.New(args[0])
+			opts.name = str.KebabCase().ToLower()
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			newTrustZone := &trust_zone_proto.TrustZone{
+				Name:        opts.name,
+				TrustDomain: opts.trust_domain,
+			}
+			return c.source.AddTrustZone(newTrustZone)
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
+	cmd.MarkFlagRequired("trust-domain")
 
 	return cmd
 }
