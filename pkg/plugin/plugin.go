@@ -3,7 +3,7 @@ package plugin
 import (
 	"context"
 
-	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/cofidectl_plugin/v1"
+	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/proto/cofidectl_plugin/v1"
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 )
@@ -30,12 +30,12 @@ type GRPCServer struct {
 	Impl DataSource
 }
 
-func (s *GRPCServer) GetTrustZones(ctx context.Context, req *cofidectl_proto.GetTrustZonesRequest) (*cofidectl_proto.GetTrustZonesResponse, error) {
-	resp, err := s.Impl.GetTrustZones()
+func (s *GRPCServer) ListTrustZones(ctx context.Context, req *cofidectl_proto.ListTrustZonesRequest) (*cofidectl_proto.ListTrustZonesResponse, error) {
+	resp, err := s.Impl.ListTrustZones()
 	if err != nil {
 		return nil, err
 	}
-	return &cofidectl_proto.GetTrustZonesResponse{TrustZones: resp}, nil
+	return &cofidectl_proto.ListTrustZonesResponse{TrustZones: resp}, nil
 }
 
 /*

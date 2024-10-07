@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 )
 
 // TODO: use Go embedding eg //go:embed cofidectl-schema.cue
@@ -111,6 +111,6 @@ func (lds *LocalDataSource) UpdateDataFile() error {
 	return nil
 }
 
-func (lds *LocalDataSource) GetTrustZones() ([]*trust_zone_proto.TrustZone, error) {
+func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
 	return lds.config.Trust_Zones, nil
 }

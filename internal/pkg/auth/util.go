@@ -48,5 +48,4 @@ func GetTokenFromCredentialsFile() (string, error) {
 	}
 
 	return "", fmt.Errorf("file is empty")
-
 }

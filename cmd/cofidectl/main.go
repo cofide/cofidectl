@@ -5,9 +5,8 @@ import (
 	"os"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
-
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
 )
 

@@ -3,18 +3,19 @@ package trustzone
 import (
 	"os"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/trust_zone/v1"
-	"github.com/cofide/cofidectl/pkg/plugin"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type TrustZoneCommand struct {
-	source plugin.DataSource
+	source cofidectl_plugin.DataSource
 }
 
-func NewTrustZoneCommand(source plugin.DataSource) *TrustZoneCommand {
+func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
 	return &TrustZoneCommand{
 		source: source,
 	}
@@ -49,7 +50,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 		Long:  trustZoneListDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			trustZones, err := c.source.GetTrustZones()
+			trustZones, err := c.source.ListTrustZones()
 			if err != nil {
 				return err
 			}
