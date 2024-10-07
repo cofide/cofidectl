@@ -5,16 +5,16 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/cofide/cofidectl/pkg/plugin"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type TrustZoneCommand struct {
-	source plugin.DataSource
+	source cofidectl_plugin.DataSource
 }
 
-func NewTrustZoneCommand(source plugin.DataSource) *TrustZoneCommand {
+func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
 	return &TrustZoneCommand{
 		source: source,
 	}
@@ -24,9 +24,9 @@ var trustZoneDesc = `
 This command consists of multiple sub-commands to administer Cofide trust zones.
 `
 
-func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
+func (c *TrustZoneCommand) ListRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "trust-zone list [ARGS]",
+		Use:   "trust-zone list",
 		Short: "list trust-zones",
 		Long:  trustZoneDesc,
 		Args:  cobra.ExactArgs(0),
@@ -34,9 +34,9 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 			// TODO: potentially good place to init the grpc client (lazily)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			trustZones, err := c.source.GetTrustZones()
+			trustZones, err := c.source.ListTrustZones()
 			if err != nil {
-				return fmt.Errorf("failed to get trust zones")
+				return fmt.Errorf("failed to list trust zones")
 			}
 			slog.Info("retrieved trust zones", "trust_zones", trustZones)
 			return nil
@@ -59,7 +59,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 		Long:  trustZoneListDesc,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			trustZones, err := c.source.GetTrustZones()
+			trustZones, err := c.source.ListTrustZones()
 			if err != nil {
 				return err
 			}

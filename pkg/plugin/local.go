@@ -8,7 +8,7 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/load"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -90,7 +90,7 @@ func (lds *LocalDataSource) GetPlugins() ([]string, error) {
 	return lds.plugins, nil
 }
 
-func (lds *LocalDataSource) GetTrustZones() ([]*trust_zone_proto.TrustZone, error) {
+func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
 	trustZoneValues, err := lds.getConfig("trust_zones")
 	if err != nil {
 		return nil, err
