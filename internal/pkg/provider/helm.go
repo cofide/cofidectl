@@ -121,7 +121,7 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 	return client.Run(cr, nil) // TODO: inject Cofide Plan state into vals interface
 }
 
-func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string, settings *cli.EnvSettings) bool {
+func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) bool {
 	history := action.NewHistory(cfg)
 	history.Max = 1
 	ledger, err := history.Run(chartName)
