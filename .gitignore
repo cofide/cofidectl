@@ -8,3 +8,6 @@ cofide.plan
 # ide workspaces
 .idea
 .vscode
+
+# Plugins
+cofidectl-connect-plugin

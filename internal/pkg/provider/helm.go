@@ -99,7 +99,7 @@ func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
 }
 
 func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings) (*release.Release, error) {
-	if checkIfAlreadyInstalled(cfg, chartName, settings) {
+	if checkIfAlreadyInstalled(cfg, chartName) {
 		log.Printf("%v already installed", chartName)
 		return nil, nil
 	}
