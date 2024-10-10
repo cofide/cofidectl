@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 )
 
@@ -8,5 +10,8 @@ import (
 type DataSource interface {
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
 	AddTrustZone(*trust_zone_proto.TrustZone) error
-	//CreateAttestationPolicy() (*attestation_policy_proto.AttestationPolicy, error)
+	AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) error
+	ListAttestationPolicy() ([]*attestation_policy_proto.AttestationPolicy, error)
+	AddFederation(*federation_proto.Federation) error
+	ListFederation() ([]*federation_proto.Federation, error)
 }

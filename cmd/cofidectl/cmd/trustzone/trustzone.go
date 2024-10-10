@@ -60,11 +60,12 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 				data[i] = []string{
 					trustZone.Name,
 					trustZone.TrustDomain,
+					trustZone.KubernetesCluster,
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Domain"})
+			table.SetHeader([]string{"Name", "Trust Domain", "Cluster"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()

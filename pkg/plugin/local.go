@@ -11,6 +11,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 )
 
@@ -25,17 +27,28 @@ const schemaCue = `
 	trust_domain: string
 }
 
+#AttestationPolicy: {
+	trust_zone: string
+	namespace: string
+	pod_annotation_key: string
+	pod_annotation_value: string
+}
+
+
 #Config: {
 	plugins: [...#Plugins]
 	trust_zones: [...#TrustZone]
+	attestation_policy: [...#AttestationPolicy]
 }
 
 config: #Config
 `
 
 type Config struct {
-	Plugins     []string                      `yaml:"plugins"`
-	Trust_Zones []*trust_zone_proto.TrustZone `yaml:"trust_zones"`
+	Plugins           []string                                      `yaml:"plugins"`
+	TrustZones        []*trust_zone_proto.TrustZone                 `yaml:"trust_zones"`
+	AttestationPolicy []*attestation_policy_proto.AttestationPolicy `yaml:"attestation_policy"`
+	Federations       []*federation_proto.Federation                `yaml:"federations"`
 }
 
 type LocalDataSource struct {
@@ -77,8 +90,6 @@ func (lds *LocalDataSource) loadState() error {
 		return fmt.Errorf("error unmarshaling YAML: %s", err)
 	}
 
-	//slog.Info("Cofide configuration has been successfully validated")
-
 	return nil
 }
 
@@ -91,11 +102,26 @@ func (lds *LocalDataSource) GetPlugins() ([]string, error) {
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
-	lds.config.Trust_Zones = append(lds.config.Trust_Zones, trustZone)
+	lds.config.TrustZones = append(lds.config.TrustZones, trustZone)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
 	}
-	//slog.Info("Successfully updated local config", "trust_zone", trustZone.TrustDomain)
+	return nil
+}
+
+func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
+	lds.config.AttestationPolicy = append(lds.config.AttestationPolicy, policy)
+	if err := lds.UpdateDataFile(); err != nil {
+		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
+	}
+	return nil
+}
+
+func (lds *LocalDataSource) AddFederation(federation *federation_proto.Federation) error {
+	lds.config.Federations = append(lds.config.Federations, federation)
+	if err := lds.UpdateDataFile(); err != nil {
+		return fmt.Errorf("failed to add federation to local config: %s", err)
+	}
 	return nil
 }
 
@@ -112,5 +138,13 @@ func (lds *LocalDataSource) UpdateDataFile() error {
 }
 
 func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-	return lds.config.Trust_Zones, nil
+	return lds.config.TrustZones, nil
+}
+
+func (lds *LocalDataSource) ListAttestationPolicy() ([]*attestation_policy_proto.AttestationPolicy, error) {
+	return lds.config.AttestationPolicy, nil
+}
+
+func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, error) {
+	return lds.config.Federations, nil
 }
