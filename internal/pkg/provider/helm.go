@@ -130,7 +130,8 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) bool {
 	history := action.NewHistory(cfg)
 	history.Max = 1
 	ledger, err := history.Run(chartName)
-	if err != driver.ErrReleaseNotFound {
+
+	if err != nil && err != driver.ErrReleaseNotFound {
 		log.Fatal(err)
 	}
 
