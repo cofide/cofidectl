@@ -81,8 +81,9 @@ This command will add a new trust zone to the Cofide configuration state.
 `
 
 type Opts struct {
-	name         string
-	trust_domain string
+	name               string
+	trust_domain       string
+	kubernetes_cluster string
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
@@ -98,8 +99,9 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			newTrustZone := &trust_zone_proto.TrustZone{
-				Name:        opts.name,
-				TrustDomain: opts.trust_domain,
+				Name:              opts.name,
+				TrustDomain:       opts.trust_domain,
+				KubernetesCluster: opts.kubernetes_cluster,
 			}
 			return c.source.AddTrustZone(newTrustZone)
 		},
@@ -107,7 +109,9 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
+	f.StringVar(&opts.kubernetes_cluster, "k8s-cluster", "", "Kubernetes cluster associated with this trust zone")
 	cmd.MarkFlagRequired("trust-domain")
+	cmd.MarkFlagRequired("k8s-cluster")
 
 	return cmd
 }

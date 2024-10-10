@@ -61,7 +61,9 @@ func (u *UpCommand) generateSPIREValues() (map[string]interface{}, error) {
 	valuesCUE := ctx.CompileBytes([]byte{})
 
 	// TODO: This should gracefully handle the case where more than one trust zone has been defined.
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.clusterName"), trustZones[0].KubernetesCluster)
 	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.trustDomain"), trustZones[0].TrustDomain)
+
 	valuesJSON, err := valuesCUE.MarshalJSON()
 	if err != nil {
 		// TODO: Improve error messaging.
