@@ -22,12 +22,13 @@ func NewRootCmd(args []string, source cofidectl_plugin.DataSource) (*cobra.Comma
 	tzCmd := trustzone.NewTrustZoneCommand(source)
 	apCmd := attestationpolicy.NewAttestationPolicyCommand(source)
 	fedCmd := federation.NewFederationCommand(source)
+	upCmd := NewUpCommand(source)
 
 	cmd.AddCommand(
 		tzCmd.GetRootCommand(),
 		apCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
-		newUpCmd(),
+		upCmd.UpCmd(),
 	)
 
 	return cmd, nil

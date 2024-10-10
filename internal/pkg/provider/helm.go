@@ -9,6 +9,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
 const (
@@ -36,13 +37,17 @@ type HelmSPIREProvider struct {
 	SPIRECRDsVersion string
 	spireClient      *action.Install
 	spireCRDsClient  *action.Install
+	spireValues      map[string]interface{}
+	spireCRDsValues  map[string]interface{}
 }
 
-func NewHelmSPIREProvider() *HelmSPIREProvider {
+func NewHelmSPIREProvider(spireValues, spireCRDsValues map[string]interface{}) *HelmSPIREProvider {
 	prov := &HelmSPIREProvider{
 		settings:         cli.New(),
 		SPIREVersion:     SPIREChartVersion,
 		SPIRECRDsVersion: SPIRECRDsChartVersion,
+		spireValues:      spireValues,
+		spireCRDsValues:  spireCRDsValues,
 	}
 
 	var err error
@@ -91,14 +96,14 @@ func newInstall(cfg *action.Configuration, chart string, version string) *action
 }
 
 func (h *HelmSPIREProvider) installSPIRE() (*release.Release, error) {
-	return installChart(h.cfg, h.spireClient, SPIREChartName, h.settings)
+	return installChart(h.cfg, h.spireClient, SPIREChartName, h.settings, h.spireValues)
 }
 
 func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
-	return installChart(h.cfg, h.spireCRDsClient, SPIRECRDsChartName, h.settings)
+	return installChart(h.cfg, h.spireCRDsClient, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
 }
 
-func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings) (*release.Release, error) {
+func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
 	if checkIfAlreadyInstalled(cfg, chartName) {
 		log.Printf("%v already installed", chartName)
 		return nil, nil
@@ -118,15 +123,16 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 	}
 
 	log.Printf("Installing %v...", cr.Name())
-	return client.Run(cr, nil) // TODO: inject Cofide Plan state into vals interface
+	return client.Run(cr, values)
 }
 
 func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) bool {
 	history := action.NewHistory(cfg)
 	history.Max = 1
 	ledger, err := history.Run(chartName)
-	if err != nil {
+	if err != driver.ErrReleaseNotFound {
 		log.Fatal(err)
 	}
+
 	return len(ledger) > 0
 }
