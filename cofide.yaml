@@ -1,6 +1,0 @@
-trust_zones:
-    - name: matt2
-      trustdomain: matt2.test
-      kubernetescluster: ""
-      kubernetescontext: ""
-      trustprovider: null
