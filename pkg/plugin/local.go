@@ -35,7 +35,7 @@ const schemaCue = `
 	pod_annotation_value: string
 }
 
-#federation: {
+#Federation: {
 	left: string
 	right: string
 }
