@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -45,10 +46,10 @@ config: #Config
 `
 
 type Config struct {
-	Plugins           []string                                      `yaml:"plugins"`
-	TrustZones        []*trust_zone_proto.TrustZone                 `yaml:"trust_zones"`
-	AttestationPolicy []*attestation_policy_proto.AttestationPolicy `yaml:"attestation_policy"`
-	Federations       []*federation_proto.Federation                `yaml:"federations"`
+	Plugins           []string                                      `yaml:"plugins,omitempty"`
+	TrustZones        []*trust_zone_proto.TrustZone                 `yaml:"trust_zones,omitempty"`
+	AttestationPolicy []*attestation_policy_proto.AttestationPolicy `yaml:"attestation_policy,omitempty"`
+	Federations       []*federation_proto.Federation                `yaml:"federations,omitempty"`
 }
 
 type LocalDataSource struct {
@@ -68,7 +69,18 @@ func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
 }
 
 func (lds *LocalDataSource) loadState() error {
-	// load YAML file from disk
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("error determining current working directory: %s", "error")
+	}
+	cfgFile := cwd + "/cofide.yaml"
+	// check to see if the configuration file exists
+	if _, err := os.Stat(lds.filePath); errors.Is(err, os.ErrNotExist) {
+		// no existing configuration here
+		slog.Info("initialising Cofide configuration", "config_file", cfgFile)
+		return lds.UpdateDataFile()
+	}
+	// load YAML config file from disk
 	yamlData, err := os.ReadFile(lds.filePath)
 	if err != nil {
 		return fmt.Errorf("error reading YAML file: %s", err)
