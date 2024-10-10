@@ -35,7 +35,7 @@ const schemaCue = `
 	pod_annotation_value: string
 }
 
-#federation: {
+#Federation: {
 	left: string
 	right: string
 }
@@ -45,7 +45,6 @@ const schemaCue = `
 	trust_zones: [...#TrustZone]
 	attestation_policy: [...#AttestationPolicy]
 	federation: [...#Federation]
-
 }
 
 config: #Config
