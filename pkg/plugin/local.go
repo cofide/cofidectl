@@ -35,11 +35,17 @@ const schemaCue = `
 	pod_annotation_value: string
 }
 
+#federation: {
+	left: string
+	right: string
+}
 
 #Config: {
 	plugins: [...#Plugins]
 	trust_zones: [...#TrustZone]
 	attestation_policy: [...#AttestationPolicy]
+	federation: [...#Federation]
+
 }
 
 config: #Config

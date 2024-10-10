@@ -1,4 +1,6 @@
-plugins: []
 trust_zones:
-    - name: matt
-      trustdomain: foo.com
+    - name: matt2
+      trustdomain: matt2.test
+      kubernetescluster: ""
+      kubernetescontext: ""
+      trustprovider: null
