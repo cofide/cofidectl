@@ -1,10 +1,14 @@
-package provider
+package helm
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 
+	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/cuecontext"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
@@ -136,4 +140,47 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) bool {
 	}
 
 	return len(ledger) > 0
+}
+
+type HelmValuesGenerator struct {
+	source cofidectl_plugin.DataSource
+}
+
+func NewHelmValuesGenerator(source cofidectl_plugin.DataSource) *HelmValuesGenerator {
+	return &HelmValuesGenerator{source: source}
+}
+
+func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
+	trustZones, err := g.source.ListTrustZones()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(trustZones) < 1 {
+		return nil, fmt.Errorf("no trust zones have been configured")
+	}
+
+	ctx := cuecontext.New()
+	valuesCUE := ctx.CompileBytes([]byte{})
+
+	// TODO: This should gracefully handle the case where more than one trust zone has been defined.
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.clusterName"), trustZones[0].KubernetesCluster)
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.trustDomain"), trustZones[0].TrustDomain)
+
+	valuesJSON, err := valuesCUE.MarshalJSON()
+	if err != nil {
+		// TODO: Improve error messaging.
+		return nil, err
+	}
+
+	var values map[string]interface{}
+
+	err = json.Unmarshal([]byte(valuesJSON), &values)
+	if err != nil {
+		// TODO: Improve error messaging.
+		return nil, err
+	}
+
+	return values, nil
+
 }
