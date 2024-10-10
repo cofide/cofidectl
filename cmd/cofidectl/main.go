@@ -39,7 +39,7 @@ func main() {
 		}
 	}
 
-	rootCmd, err := cmd.NewRootCmd(os.Args[1:], ds)
+	rootCmd, err := cmd.NewRootCommand(ds, os.Args[1:]).GetRootCommand()
 	if err != nil {
 		log.Fatal(err)
 	}
