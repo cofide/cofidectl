@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
+	"golang.org/x/exp/rand"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
@@ -57,11 +59,31 @@ func NewHelmSPIREProvider() *HelmSPIREProvider {
 }
 
 // Execute installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
-func (h *HelmSPIREProvider) Execute() {
-	h.installSPIRECRDs()
-	h.installSPIRE()
+func (h *HelmSPIREProvider) Execute() (<-chan ProviderStatus, error) {
+	statusCh := make(chan ProviderStatus)
 
-	log.Print("✅ cofidectl up complete")
+	go func() {
+		defer close(statusCh)
+
+		statusCh <- ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
+		time.Sleep(time.Duration(rand.Intn(3)+1) * time.Second)
+
+		statusCh <- ProviderStatus{Stage: "Installing", Message: "Installing CRDs to cluster"}
+		time.Sleep(time.Duration(rand.Intn(3)+1) * time.Second)
+
+		//h.installSPIRECRDs()
+
+		statusCh <- ProviderStatus{Stage: "Installing", Message: "Installing to cluster"}
+		time.Sleep(time.Duration(rand.Intn(3)+1) * time.Second)
+
+		//h.installSPIRE()
+
+		statusCh <- ProviderStatus{Stage: "Complete", Message: "Installation complete", Done: true}
+
+	}()
+
+	return statusCh, nil
+
 }
 
 func DiscardLogger(format string, v ...any) {}
