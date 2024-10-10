@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/exp/rand"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
@@ -66,20 +65,16 @@ func (h *HelmSPIREProvider) Execute() (<-chan ProviderStatus, error) {
 		defer close(statusCh)
 
 		statusCh <- ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
-		time.Sleep(time.Duration(rand.Intn(3)+1) * time.Second)
+		time.Sleep(time.Duration(1) * time.Second)
 
 		statusCh <- ProviderStatus{Stage: "Installing", Message: "Installing CRDs to cluster"}
-		time.Sleep(time.Duration(rand.Intn(3)+1) * time.Second)
-
-		//h.installSPIRECRDs()
+		h.installSPIRECRDs()
 
 		statusCh <- ProviderStatus{Stage: "Installing", Message: "Installing to cluster"}
-		time.Sleep(time.Duration(rand.Intn(3)+1) * time.Second)
-
-		//h.installSPIRE()
+		h.installSPIRE()
 
 		statusCh <- ProviderStatus{Stage: "Complete", Message: "Installation complete", Done: true}
-
+		time.Sleep(time.Duration(1) * time.Second)
 	}()
 
 	return statusCh, nil
