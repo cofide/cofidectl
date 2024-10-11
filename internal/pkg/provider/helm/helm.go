@@ -85,7 +85,7 @@ func (h *HelmSPIREProvider) Execute() (<-chan provider.ProviderStatus, error) {
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing to cluster"}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing SPIRE chart to cluster"}
 		_, err = h.installSPIRE()
 		if err != nil {
 			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install chart", Done: true, Error: err}
