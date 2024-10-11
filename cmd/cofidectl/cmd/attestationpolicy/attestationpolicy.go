@@ -2,6 +2,7 @@ package attestationpolicy
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -102,7 +103,7 @@ type AttestationPolicyOpts struct {
 func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
-		Use:   "add [NAME]",
+		Use:   "add [KIND]",
 		Short: "Add a new attestation policy",
 		Long:  attestationPolicyAddCmdDesc,
 		Args:  require.ExactArgs(1),
@@ -118,7 +119,13 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			kind, err := GetAttestationPolicyKind(opts.kind)
+			if err != nil {
+				return err
+			}
 			newAttestationPolicy := &attestationpolicy_proto.AttestationPolicy{
+				Kind: kind,
 				Options: &attestationpolicy_proto.AttestionPolicyOptions{
 					Namespace: opts.attestationPolicyOpts.Namespace,
 					PodKey:    opts.attestationPolicyOpts.PodKey,
@@ -153,4 +160,16 @@ func validateOpts(opts Opts) bool {
 	}
 
 	return true
+}
+
+func GetAttestationPolicyKind(s string) (attestationpolicy_proto.AttestionPolicyKind, error) {
+	switch s {
+	case "annotated":
+		return attestationpolicy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_ANNOTATED, nil
+	case "namespace":
+		return attestationpolicy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_NAMESPACE, nil
+	}
+
+	// TODO: Update error message.
+	return attestationpolicy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %s", s))
 }

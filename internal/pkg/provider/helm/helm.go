@@ -192,6 +192,21 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	// TODO: This should gracefully handle the case where more than one trust zone has been defined.
 	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.clusterName"), trustZones[0].KubernetesCluster)
 	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.trustDomain"), trustZones[0].TrustDomain)
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.recommendations.create"), true)
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.installAndUpgradeHooks.enabled"), false)
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.deleteHooks.enabled"), false)
+
+	// NOTE: https://github.com/cue-lang/cue/issues/358
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-agent"."fullnameOverride"`), "spire-agent")
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-agent"."logLevel"`), "DEBUG")
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-agent"."server"."address"`), fmt.Sprintf("%s.%s", "spire-server", "spire"))
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."caKeyType"`), "rsa-2048")
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."controllerManager"."enabled"`), true)
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."caTTL"`), "12h")
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."fullnameOverride"`), "spire-server")
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."logLevel"`), "DEBUG")
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spiffe-oidc-discovery-provider"."enabled"`), false)
+	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spiffe-csi-driver"."fullnameOverride"`), "spiffe-csi-driver")
 
 	valuesJSON, err := valuesCUE.MarshalJSON()
 	if err != nil {
