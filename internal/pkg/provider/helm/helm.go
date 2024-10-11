@@ -9,6 +9,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
+	"github.com/cofide/cofidectl/internal/pkg/plan"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 
@@ -191,8 +192,10 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	ctx := cuecontext.New()
 	valuesCUE := ctx.CompileBytes([]byte{})
 
-	agentConfig := trustZones[0].TrustProvider.AgentConfig
-	serverConfig := trustZones[0].TrustProvider.ServerConfig
+	trustProvider := plan.NewTrustProvider(trustZones[0].TrustProvider.Kind)
+
+	agentConfig := trustProvider.AgentConfig
+	serverConfig := trustProvider.ServerConfig
 
 	// TODO: This should gracefully handle the case where more than one trust zone has been defined.
 	valuesMap := map[string]interface{}{
