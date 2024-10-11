@@ -150,6 +150,8 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
 
 	kubeRepo := kubeutil.NewKubeRepository(client)
 	contexts, err := kubeRepo.GetContexts()
+	cobra.CheckErr(err)
+
 	kubeContext, _ := cmd.Flags().GetString("context")
 
 	if kubeContext != "" {
