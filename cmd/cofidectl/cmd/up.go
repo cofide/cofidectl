@@ -52,7 +52,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			}
 
 			for status := range statusCh {
-				s.Suffix = fmt.Sprintf(" %s: %s", status.Stage, status.Message)
+				s.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
 
 				if status.Done {
 					s.Stop()
