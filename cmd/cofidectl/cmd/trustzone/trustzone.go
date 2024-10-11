@@ -5,8 +5,10 @@ import (
 	"os"
 	"slices"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/manifoldco/promptui"
+
+	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
@@ -25,7 +27,7 @@ func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
 	}
 }
 
-var trustZoneDesc = `
+var trustZoneRootCmdDesc = `
 This command consists of multiple sub-commands to administer Cofide trust zones.
 `
 
@@ -33,7 +35,7 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trust-zone add|list [ARGS]",
 		Short: "add, list trust zones",
-		Long:  trustZoneDesc,
+		Long:  trustZoneRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
@@ -43,7 +45,7 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	return cmd
 }
 
-var trustZoneListDesc = `
+var trustZoneListCmdDesc = `
 This command will list trust zones in the Cofide configuration state.
 `
 
@@ -51,7 +53,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [ARGS]",
 		Short: "List trust-zones",
-		Long:  trustZoneListDesc,
+		Long:  trustZoneListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			trustZones, err := c.source.ListTrustZones()
@@ -80,7 +82,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
-var trustZoneAddDesc = `
+var trustZoneAddCmdDesc = `
 This command will add a new trust zone to the Cofide configuration state.
 `
 
@@ -97,7 +99,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add [NAME]",
 		Short: "Add a new trust zone",
-		Long:  trustZoneAddDesc,
+		Long:  trustZoneAddCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		PreRun: func(cmd *cobra.Command, args []string) {
 			str := stringy.New(args[0])
@@ -108,11 +110,13 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:              opts.name,
 				TrustDomain:       opts.trust_domain,
 				KubernetesCluster: opts.kubernetes_cluster,
 				KubernetesContext: opts.context,
+				TrustProvider:     GetTrustProvider(opts.profile),
 			}
 			return c.source.AddTrustZone(newTrustZone)
 		},
@@ -174,4 +178,44 @@ func promptContext(contexts []string, currentContext string) string {
 
 func checkContext(contexts []string, context string) bool {
 	return slices.Contains(contexts, context)
+}
+
+// TODO: Rethink the location of this method.
+func GetTrustProvider(profile string) *trust_provider_proto.TrustProvider {
+	switch profile {
+	case "kubernetes":
+		{
+			tp := trust_provider_proto.TrustProvider{
+				Name: "kubernetes",
+				Kind: "k8s",
+				AgentConfig: &trust_provider_proto.TrustProviderAgentConfig{
+					WorkloadAttestor:        "k8s",
+					WorkloadAttestorEnabled: true,
+					WorkloadAttestorConfig: &trust_provider_proto.WorkloadAttestorConfig{
+						Enabled:                     true,
+						SkipKubeletVerification:     true,
+						DisableContainerSelectors:   false,
+						UseNewContainerLocator:      false,
+						VerboseContainerLocatorLogs: false,
+					},
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+				},
+				ServerConfig: &trust_provider_proto.TrustProviderServerConfig{
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+					NodeAttestorConfig: &trust_provider_proto.NodeAttestorConfig{
+						Enabled:                 true,
+						ServiceAccountAllowList: []string{"spire:spire-agent"},
+						Audience:                []string{"spire-server"},
+						AllowedNodeLabelKeys:    []string{},
+						AllowedPodLabelKeys:     []string{},
+					},
+				},
+			}
+			return &tp
+		}
+	default:
+		return nil
+	}
 }
