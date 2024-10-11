@@ -68,17 +68,24 @@ func (h *HelmSPIREProvider) Execute() (<-chan ProviderStatus, error) {
 		time.Sleep(time.Duration(1) * time.Second)
 
 		statusCh <- ProviderStatus{Stage: "Installing", Message: "Installing CRDs to cluster"}
-		h.installSPIRECRDs()
+		_, err := h.installSPIRECRDs()
+		if err != nil {
+			statusCh <- ProviderStatus{Stage: "Installing", Message: "Failed to install CRDs", Done: true, Error: err}
+			return
+		}
 
 		statusCh <- ProviderStatus{Stage: "Installing", Message: "Installing to cluster"}
-		h.installSPIRE()
+		_, err = h.installSPIRE()
+		if err != nil {
+			statusCh <- ProviderStatus{Stage: "Installing", Message: "Failed to install chart", Done: true, Error: err}
+			return
+		}
 
 		statusCh <- ProviderStatus{Stage: "Complete", Message: "Installation complete", Done: true}
 		time.Sleep(time.Duration(1) * time.Second)
 	}()
 
 	return statusCh, nil
-
 }
 
 func DiscardLogger(format string, v ...any) {}
@@ -116,7 +123,11 @@ func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
 }
 
 func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings) (*release.Release, error) {
-	if checkIfAlreadyInstalled(cfg, chartName) {
+	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
+	}
+	if alreadyInstalled {
 		log.Printf("%v already installed", chartName)
 		return nil, nil
 	}
@@ -138,12 +149,12 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 	return client.Run(cr, nil) // TODO: inject Cofide Plan state into vals interface
 }
 
-func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) bool {
+func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool, error) {
 	history := action.NewHistory(cfg)
 	history.Max = 1
 	ledger, err := history.Run(chartName)
 	if err != nil {
-		log.Fatal(err)
+		return false, err
 	}
-	return len(ledger) > 0
+	return len(ledger) > 0, nil
 }
