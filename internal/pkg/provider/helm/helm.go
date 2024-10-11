@@ -9,7 +9,9 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
+	"github.com/cofide/cofidectl/internal/pkg/provider"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
@@ -67,30 +69,30 @@ func NewHelmSPIREProvider(spireValues, spireCRDsValues map[string]interface{}) *
 }
 
 // Execute installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
-func (h *HelmSPIREProvider) Execute() (<-chan ProviderStatus, error) {
-	statusCh := make(chan ProviderStatus)
+func (h *HelmSPIREProvider) Execute() (<-chan provider.ProviderStatus, error) {
+	statusCh := make(chan provider.ProviderStatus)
 
 	go func() {
 		defer close(statusCh)
 
-		statusCh <- ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
+		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
 		time.Sleep(time.Duration(1) * time.Second)
 
-		statusCh <- ProviderStatus{Stage: "Installing", Message: "Installing CRDs to cluster"}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing CRDs to cluster"}
 		_, err := h.installSPIRECRDs()
 		if err != nil {
-			statusCh <- ProviderStatus{Stage: "Installing", Message: "Failed to install CRDs", Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install CRDs", Done: true, Error: err}
 			return
 		}
 
-		statusCh <- ProviderStatus{Stage: "Installing", Message: "Installing to cluster"}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing to cluster"}
 		_, err = h.installSPIRE()
 		if err != nil {
-			statusCh <- ProviderStatus{Stage: "Installing", Message: "Failed to install chart", Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install chart", Done: true, Error: err}
 			return
 		}
 
-		statusCh <- ProviderStatus{Stage: "Complete", Message: "Installation complete", Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Complete", Message: "Installation complete", Done: true}
 		time.Sleep(time.Duration(1) * time.Second)
 	}()
 
@@ -131,7 +133,7 @@ func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
 	return installChart(h.cfg, h.spireCRDsClient, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
 }
 
-func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings) (*release.Release, error) {
+func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
