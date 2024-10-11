@@ -149,8 +149,6 @@ func (lds *LocalDataSource) UpdateDataFile() error {
 	}
 	os.WriteFile(lds.filePath, data, 0644)
 
-	slog.Info("Successfully added new trust zone", "trust_zone", lds.filePath)
-
 	return nil
 }
 

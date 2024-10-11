@@ -1,7 +1,12 @@
 package cmd
 
 import (
+	"fmt"
+	"time"
+
+	"github.com/briandowns/spinner"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
+	"github.com/fatih/color"
 
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
@@ -36,9 +41,33 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			spireCRDsValues := map[string]interface{}{}
 
 			prov := helm.NewHelmSPIREProvider(spireValues, spireCRDsValues)
-			prov.Execute()
 
-			return nil
+			// create a spinner to display whilst installation is underway
+			s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
+			s.Start()
+			statusCh, err := prov.Execute()
+			if err != nil {
+				s.Stop()
+				return fmt.Errorf("failed to start installation: %w", err)
+			}
+
+			for status := range statusCh {
+				s.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
+
+				if status.Done {
+					s.Stop()
+					if status.Error != nil {
+						fmt.Printf("❌ %s: %s\n", status.Stage, status.Message)
+						return fmt.Errorf("installation failed: %w", status.Error)
+					}
+					green := color.New(color.FgGreen).SprintFunc()
+					fmt.Printf("%s %s: %s\n", green("✅"), status.Stage, status.Message)
+					return nil
+				}
+			}
+
+			s.Stop()
+			return fmt.Errorf("unexpected end of status channel")
 		},
 	}
 	return cmd
