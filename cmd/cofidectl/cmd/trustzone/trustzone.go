@@ -111,12 +111,17 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
+			trustProvider, err := GetTrustProvider(opts.profile)
+			if err != nil {
+				return err
+			}
+
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:              opts.name,
 				TrustDomain:       opts.trust_domain,
 				KubernetesCluster: opts.kubernetes_cluster,
 				KubernetesContext: opts.context,
-				TrustProvider:     GetTrustProvider(opts.profile),
+				TrustProvider:     trustProvider,
 			}
 			return c.source.AddTrustZone(newTrustZone)
 		},
@@ -181,7 +186,7 @@ func checkContext(contexts []string, context string) bool {
 }
 
 // TODO: Rethink the location of this method.
-func GetTrustProvider(profile string) *trust_provider_proto.TrustProvider {
+func GetTrustProvider(profile string) (*trust_provider_proto.TrustProvider, error) {
 	switch profile {
 	case "kubernetes":
 		{
@@ -213,9 +218,9 @@ func GetTrustProvider(profile string) *trust_provider_proto.TrustProvider {
 					},
 				},
 			}
-			return &tp
+			return &tp, nil
 		}
 	default:
-		return nil
+		return nil, fmt.Errorf("an unknown profile was specified")
 	}
 }
