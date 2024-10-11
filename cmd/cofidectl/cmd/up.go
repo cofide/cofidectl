@@ -17,7 +17,7 @@ func NewUpCommand(source cofidectl_plugin.DataSource) *UpCommand {
 	}
 }
 
-var upDesc = `
+var upCmdDesc = `
 This command deploys a Cofide configuration
 `
 
@@ -25,7 +25,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up [ARGS]",
 		Short: "Deploy a Cofide configuration",
-		Long:  upDesc,
+		Long:  upCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			generator := helm.NewHelmValuesGenerator(u.source)

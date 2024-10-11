@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var longDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
-
 type RootCommand struct {
 	source      cofidectl_plugin.DataSource
 	cfgFile     string
@@ -28,11 +26,13 @@ func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootComm
 	}
 }
 
+var rootCmdDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
+
 func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:          "cofidectl",
 		Short:        "Cofide CLI",
-		Long:         longDesc,
+		Long:         rootCmdDesc,
 		SilenceUsage: true,
 	}
 

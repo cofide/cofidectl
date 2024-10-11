@@ -27,7 +27,7 @@ func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
 	}
 }
 
-var trustZoneDesc = `
+var trustZoneRootCmdDesc = `
 This command consists of multiple sub-commands to administer Cofide trust zones.
 `
 
@@ -35,7 +35,7 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trust-zone add|list [ARGS]",
 		Short: "add, list trust zones",
-		Long:  trustZoneDesc,
+		Long:  trustZoneRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
@@ -45,7 +45,7 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	return cmd
 }
 
-var trustZoneListDesc = `
+var trustZoneListCmdDesc = `
 This command will list trust zones in the Cofide configuration state.
 `
 
@@ -53,7 +53,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [ARGS]",
 		Short: "List trust-zones",
-		Long:  trustZoneListDesc,
+		Long:  trustZoneListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			trustZones, err := c.source.ListTrustZones()
@@ -82,7 +82,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
-var trustZoneAddDesc = `
+var trustZoneAddCmdDesc = `
 This command will add a new trust zone to the Cofide configuration state.
 `
 
@@ -99,7 +99,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add [NAME]",
 		Short: "Add a new trust zone",
-		Long:  trustZoneAddDesc,
+		Long:  trustZoneAddCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		PreRun: func(cmd *cobra.Command, args []string) {
 			str := stringy.New(args[0])
