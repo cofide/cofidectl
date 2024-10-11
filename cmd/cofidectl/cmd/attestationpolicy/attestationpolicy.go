@@ -7,12 +7,11 @@ import (
 	"os"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	"helm.sh/helm/v3/cmd/helm/require"
-
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/cmd/helm/require"
 )
 
 type AttestationPolicyCommand struct {
