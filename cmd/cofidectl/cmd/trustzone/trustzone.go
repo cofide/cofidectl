@@ -153,13 +153,13 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
 	cobra.CheckErr(err)
 
 	kubeContext, _ := cmd.Flags().GetString("context")
-
 	if kubeContext != "" {
 		if checkContext(contexts, kubeContext) {
 			return nil
 		}
 		fmt.Printf("could not find kubectl context '%s'", kubeContext)
 	}
+
 	kubeContext = promptContext(contexts, client.CmdConfig.CurrentContext)
 	cmd.Flags().Set("context", kubeContext)
 	return nil
