@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	attestationpolicy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	"helm.sh/helm/v3/cmd/helm/require"
 
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
@@ -124,9 +124,9 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			newAttestationPolicy := &attestationpolicy_proto.AttestationPolicy{
+			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
 				Kind: kind,
-				Options: &attestationpolicy_proto.AttestionPolicyOptions{
+				Options: &attestation_policy_proto.AttestionPolicyOptions{
 					Namespace: opts.attestationPolicyOpts.Namespace,
 					PodKey:    opts.attestationPolicyOpts.PodKey,
 					PodValue:  opts.attestationPolicyOpts.PodValue,
@@ -162,14 +162,14 @@ func validateOpts(opts Opts) bool {
 	return true
 }
 
-func GetAttestationPolicyKind(s string) (attestationpolicy_proto.AttestionPolicyKind, error) {
+func GetAttestationPolicyKind(s string) (attestation_policy_proto.AttestionPolicyKind, error) {
 	switch s {
 	case "annotated":
-		return attestationpolicy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_ANNOTATED, nil
+		return attestation_policy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_ANNOTATED, nil
 	case "namespace":
-		return attestationpolicy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_NAMESPACE, nil
+		return attestation_policy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_NAMESPACE, nil
 	}
 
 	// TODO: Update error message.
-	return attestationpolicy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %s", s))
+	return attestation_policy_proto.AttestionPolicyKind_ATTESTION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %s", s))
 }
