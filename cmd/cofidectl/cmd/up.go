@@ -37,7 +37,7 @@ func newUpCmd() *cobra.Command {
 						return fmt.Errorf("installation failed: %w", status.Error)
 					}
 					green := color.New(color.FgGreen).SprintFunc()
-					fmt.Printf("%s installation completed\n", green("✅"))
+					fmt.Printf("%s %s: %s\n", green("✅"), status.Stage, status.Message)
 					return nil
 				}
 			}
