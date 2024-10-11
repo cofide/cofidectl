@@ -75,24 +75,24 @@ func (h *HelmSPIREProvider) Execute() (<-chan provider.ProviderStatus, error) {
 	go func() {
 		defer close(statusCh)
 
-		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
+		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation\n"}
 		time.Sleep(time.Duration(1) * time.Second)
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing CRDs to cluster"}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing CRDs to cluster\n"}
 		_, err := h.installSPIRECRDs()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install CRDs", Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install CRDs\n", Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing to cluster"}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing to cluster\n"}
 		_, err = h.installSPIRE()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install chart", Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install chart\n", Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Complete", Message: "Installation complete", Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Complete", Message: "Installation complete\n", Done: true}
 		time.Sleep(time.Duration(1) * time.Second)
 	}()
 
