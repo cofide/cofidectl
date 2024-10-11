@@ -163,24 +163,43 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	ctx := cuecontext.New()
 	valuesCUE := ctx.CompileBytes([]byte{})
 
-	// TODO: This should gracefully handle the case where more than one trust zone has been defined.
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.clusterName"), trustZones[0].KubernetesCluster)
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.trustDomain"), trustZones[0].TrustDomain)
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.spire.recommendations.create"), true)
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.installAndUpgradeHooks.enabled"), false)
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath("global.deleteHooks.enabled"), false)
+	agentConfig := trustZones[0].TrustProvider.AgentConfig
+	serverConfig := trustZones[0].TrustProvider.ServerConfig
 
-	// NOTE: https://github.com/cue-lang/cue/issues/358
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-agent"."fullnameOverride"`), "spire-agent")
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-agent"."logLevel"`), "DEBUG")
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-agent"."server"."address"`), fmt.Sprintf("%s.%s", "spire-server", "spire"))
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."caKeyType"`), "rsa-2048")
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."controllerManager"."enabled"`), true)
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."caTTL"`), "12h")
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."fullnameOverride"`), "spire-server")
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spire-server"."logLevel"`), "DEBUG")
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spiffe-oidc-discovery-provider"."enabled"`), false)
-	valuesCUE = valuesCUE.FillPath(cue.ParsePath(`"spiffe-csi-driver"."fullnameOverride"`), "spiffe-csi-driver")
+	// TODO: This should gracefully handle the case where more than one trust zone has been defined.
+	valuesMap := map[string]interface{}{
+		"global.spire.clusterName":              trustZones[0].KubernetesCluster,
+		"global.spire.trustDomain":              trustZones[0].TrustDomain,
+		"global.spire.recommendations.create":   true,
+		"global.installAndUpgradeHooks.enabled": false,
+		"global.deleteHooks.enabled":            false,
+		// NOTE: https://github.com/cue-lang/cue/issues/358
+		`"spire-agent"."fullnameOverride"`: "spire-agent",
+		`"spire-agent"."logLevel"`:         "DEBUG",
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "nodeAttestor", agentConfig.NodeAttestor, "enabled"):                              agentConfig.NodeAttestorEnabled,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "disableContainerSelectors"):   agentConfig.WorkloadAttestorConfig.DisableContainerSelectors,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "enabled"):                     agentConfig.WorkloadAttestorConfig.Enabled,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "skipKubeletVerification"):     agentConfig.WorkloadAttestorConfig.SkipKubeletVerification,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "useNewContainerLocator"):      agentConfig.WorkloadAttestorConfig.UseNewContainerLocator,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "verboseContainerLocatorLogs"): agentConfig.WorkloadAttestorConfig.VerboseContainerLocatorLogs,
+		`"spire-agent"."server"."address"`:             fmt.Sprintf("%s.%s", "spire-server", "spire"),
+		`"spire-server"."caKeyType"`:                   "rsa-2048",
+		`"spire-server"."controllerManager"."enabled"`: true,
+		`"spire-server"."caTTL"`:                       "12h",
+		`"spire-server"."fullnameOverride"`:            "spire-server",
+		`"spire-server"."logLevel"`:                    "DEBUG",
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "audience"):                serverConfig.NodeAttestorConfig.Audience,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "allowedPodLabelKeys"):     serverConfig.NodeAttestorConfig.AllowedPodLabelKeys,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "allowedNodeLabelKeys"):    serverConfig.NodeAttestorConfig.AllowedNodeLabelKeys,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "enabled"):                 serverConfig.NodeAttestorConfig.Enabled,
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "serviceAccountAllowList"): serverConfig.NodeAttestorConfig.ServiceAccountAllowList,
+		`"spiffe-oidc-discovery-provider"."enabled"`: false,
+		`"spiffe-csi-driver"."fullnameOverride"`:     "spiffe-csi-driver",
+	}
+
+	for path, value := range valuesMap {
+		valuesCUE = valuesCUE.FillPath(cue.ParsePath(path), value)
+	}
 
 	valuesJSON, err := valuesCUE.MarshalJSON()
 	if err != nil {
