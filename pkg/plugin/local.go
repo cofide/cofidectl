@@ -45,7 +45,6 @@ const schemaCue = `
 	trust_zones: [...#TrustZone]
 	attestation_policy: [...#AttestationPolicy]
 	federation: [...#Federation]
-
 }
 
 config: #Config

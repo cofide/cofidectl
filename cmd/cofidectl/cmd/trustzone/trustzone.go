@@ -85,11 +85,11 @@ This command will add a new trust zone to the Cofide configuration state.
 `
 
 type Opts struct {
-	name         string
-	trust_domain string
-	cluster      string
-	context      string
-	profile      string
+	name               string
+	trust_domain       string
+	kubernetes_cluster string
+	context            string
+	profile            string
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
@@ -111,7 +111,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:              opts.name,
 				TrustDomain:       opts.trust_domain,
-				KubernetesCluster: opts.cluster,
+				KubernetesCluster: opts.kubernetes_cluster,
 				KubernetesContext: opts.context,
 			}
 			return c.source.AddTrustZone(newTrustZone)
@@ -120,12 +120,12 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
-	f.StringVar(&opts.cluster, "cluster", "", "Kubernetes cluster to use for this trust zone")
+	f.StringVar(&opts.kubernetes_cluster, "k8s-cluster", "", "Kubernetes cluster associated with this trust zone")
 	f.StringVar(&opts.context, "context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. k8s, istio)")
 
 	cmd.MarkFlagRequired("trust-domain")
-	cmd.MarkFlagRequired("cluster")
+	cmd.MarkFlagRequired("k8s-cluster")
 	cmd.MarkFlagRequired("profile")
 
 	return cmd

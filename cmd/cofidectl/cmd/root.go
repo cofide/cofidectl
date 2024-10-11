@@ -44,6 +44,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	cmd.PersistentFlags().StringVar(&r.kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 	cmd.PersistentFlags().StringVar(&r.cfgFile, "config", "", "config file (default is $HOME/.cofide.yaml)")
 
+	upCmd := NewUpCommand(r.source)
 	tzCmd := trustzone.NewTrustZoneCommand(r.source)
 	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
 	fedCmd := federation.NewFederationCommand(r.source)
@@ -52,7 +53,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		tzCmd.GetRootCommand(),
 		apCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
-		newUpCmd(),
+		upCmd.UpCmd(),
 	)
 
 	return cmd, nil

@@ -5,18 +5,42 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/cofide/cofidectl/internal/pkg/provider"
+	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/fatih/color"
+
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
 )
 
-func newUpCmd() *cobra.Command {
+type UpCommand struct {
+	source cofidectl_plugin.DataSource
+}
+
+func NewUpCommand(source cofidectl_plugin.DataSource) *UpCommand {
+	return &UpCommand{
+		source: source,
+	}
+}
+
+var upDesc = `
+This command deploys a Cofide configuration
+`
+
+func (u *UpCommand) UpCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up [ARGS]",
 		Short: "Deploy a Cofide configuration",
+		Long:  upDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			prov := provider.NewHelmSPIREProvider()
+			generator := helm.NewHelmValuesGenerator(u.source)
+			spireValues, err := generator.GenerateValues()
+			if err != nil {
+				return err
+			}
+			spireCRDsValues := map[string]interface{}{}
+
+			prov := helm.NewHelmSPIREProvider(spireValues, spireCRDsValues)
 
 			// create a spinner to display whilst installation is underway
 			s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
