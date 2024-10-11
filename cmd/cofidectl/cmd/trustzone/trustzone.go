@@ -111,17 +111,14 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
-			trustProvider, err := plan.GetTrustProvider(opts.profile)
-			if err != nil {
-				return err
-			}
+			trustProvider := plan.NewTrustProvider(opts.profile)
 
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:              opts.name,
 				TrustDomain:       opts.trust_domain,
 				KubernetesCluster: opts.kubernetes_cluster,
 				KubernetesContext: opts.context,
-				TrustProvider:     trustProvider,
+				TrustProvider:     trustProvider.Proto,
 			}
 			return c.source.AddTrustZone(newTrustZone)
 		},
