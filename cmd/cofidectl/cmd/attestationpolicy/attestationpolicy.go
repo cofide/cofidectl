@@ -53,21 +53,23 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			trustZones, err := c.source.ListTrustZones()
+			attestationPolicies, err := c.source.ListAttestationPolicy()
 			if err != nil {
 				return err
 			}
 
-			data := make([][]string, len(trustZones))
-			for i, trustZone := range trustZones {
+			data := make([][]string, len(attestationPolicies))
+			for i, policy := range attestationPolicies {
 				data[i] = []string{
-					trustZone.Name,
-					trustZone.TrustDomain,
+					policy.Kind.String(),
+					policy.Options.Namespace,
+					policy.Options.PodKey,
+					policy.Options.PodValue,
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Domain"})
+			table.SetHeader([]string{"Kind", "Namespace", "Pod Key", "Pod Value"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
