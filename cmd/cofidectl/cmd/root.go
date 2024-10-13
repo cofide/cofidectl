@@ -13,10 +13,8 @@ import (
 )
 
 type RootCommand struct {
-	source      cofidectl_plugin.DataSource
-	cfgFile     string
-	kubeCfgFile string
-	args        []string
+	source cofidectl_plugin.DataSource
+	args   []string
 }
 
 func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootCommand {
