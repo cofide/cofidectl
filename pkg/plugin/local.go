@@ -15,6 +15,7 @@ import (
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"github.com/cofide/cofidectl/internal/pkg/plan"
 )
 
 // TODO: use Go embedding eg //go:embed cofidectl-schema.cue
@@ -52,20 +53,23 @@ config: #Config
 
 type Config struct {
 	Plugins           []string                                      `yaml:"plugins,omitempty"`
-	TrustZones        []*trust_zone_proto.TrustZone                 `yaml:"trust_zones,omitempty"`
+	TrustZones        map[string]*plan.TrustZone                    `yaml:"trust_zones,omitempty"`
 	AttestationPolicy []*attestation_policy_proto.AttestationPolicy `yaml:"attestation_policy,omitempty"`
 	Federations       []*federation_proto.Federation                `yaml:"federations,omitempty"`
 }
 
 type LocalDataSource struct {
 	filePath   string
-	config     Config
+	config     *Config
 	cueContext *cue.Context
 }
 
 func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
+	trustZones := make(map[string]*plan.TrustZone)
+	cfg := &Config{TrustZones: trustZones}
 	lds := &LocalDataSource{
 		filePath: filePath,
+		config:   cfg,
 	}
 	if err := lds.loadState(); err != nil {
 		return nil, err
@@ -110,7 +114,7 @@ func (lds *LocalDataSource) loadState() error {
 	return nil
 }
 
-func (lds *LocalDataSource) GetConfig() (Config, error) {
+func (lds *LocalDataSource) GetConfig() (*Config, error) {
 	return lds.config, nil
 }
 
@@ -119,7 +123,7 @@ func (lds *LocalDataSource) GetPlugins() ([]string, error) {
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
-	lds.config.TrustZones = append(lds.config.TrustZones, trustZone)
+	lds.config.TrustZones[trustZone.TrustDomain] = plan.NewTrustZone(trustZone)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
 	}
@@ -153,7 +157,7 @@ func (lds *LocalDataSource) UpdateDataFile() error {
 }
 
 func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-	return lds.config.TrustZones, nil
+	return nil, nil
 }
 
 func (lds *LocalDataSource) ListAttestationPolicy() ([]*attestation_policy_proto.AttestationPolicy, error) {

@@ -12,19 +12,16 @@ const (
 )
 
 type TrustProvider struct {
-	Name         string `yaml:"name"`
+	Name         string `yaml:"name,omitempty"`
 	Kind         string `yaml:"kind"`
 	AgentConfig  TrustProviderAgentConfig
 	ServerConfig TrustProviderServerConfig
 	Proto        *trust_provider_proto.TrustProvider
 }
 
-func NewTrustProvider(profile string) *TrustProvider {
+func NewTrustProvider(kind string) *TrustProvider {
 	return &TrustProvider{
-		Kind: profile,
-		Proto: &trust_provider_proto.TrustProvider{
-			Kind: profile,
-		},
+		Kind: kind,
 	}
 }
 

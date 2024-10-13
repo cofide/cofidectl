@@ -7,10 +7,10 @@ import (
 
 	"github.com/manifoldco/promptui"
 
+	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
-	"github.com/cofide/cofidectl/internal/pkg/plan"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
@@ -111,14 +111,12 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
-			trustProvider := plan.NewTrustProvider(opts.profile)
-
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:              opts.name,
 				TrustDomain:       opts.trust_domain,
 				KubernetesCluster: opts.kubernetes_cluster,
 				KubernetesContext: opts.context,
-				TrustProvider:     trustProvider.Proto,
+				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: opts.profile},
 			}
 			return c.source.AddTrustZone(newTrustZone)
 		},
