@@ -20,9 +20,11 @@ type TrustProvider struct {
 }
 
 func NewTrustProvider(kind string) *TrustProvider {
-	return &TrustProvider{
+	tp := &TrustProvider{
 		Kind: kind,
 	}
+	tp.GetValues()
+	return tp
 }
 
 func (tp *TrustProvider) GetValues() error {

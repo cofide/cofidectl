@@ -157,7 +157,11 @@ func (lds *LocalDataSource) UpdateDataFile() error {
 }
 
 func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-	return nil, nil
+	trustZoneAsProtos := make([]*trust_zone_proto.TrustZone, 0, len(lds.config.TrustZones))
+	for _, trustZone := range lds.config.TrustZones {
+		trustZoneAsProtos = append(trustZoneAsProtos, trustZone.TrustZoneProto)
+	}
+	return trustZoneAsProtos, nil
 }
 
 func (lds *LocalDataSource) ListAttestationPolicy() ([]*attestation_policy_proto.AttestationPolicy, error) {

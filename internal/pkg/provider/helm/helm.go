@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -207,11 +208,11 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		`"spire-agent"."fullnameOverride"`:      "spire-agent", // NOTE: https://github.com/cue-lang/cue/issues/358
 		`"spire-agent"."logLevel"`:              "DEBUG",
 		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "nodeAttestor", agentConfig.NodeAttestor, "enabled"):                              agentConfig.NodeAttestorEnabled,
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "disableContainerSelectors"):   agentConfig.WorkloadAttestorConfig["DisableContainerSelectors"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "enabled"):                     agentConfig.WorkloadAttestorConfig["Enabled"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "skipKubeletVerification"):     agentConfig.WorkloadAttestorConfig["SkipKubeletVerification"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "useNewContainerLocator"):      agentConfig.WorkloadAttestorConfig["UseNewContainerLocator"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "verboseContainerLocatorLogs"): agentConfig.WorkloadAttestorConfig["VerboseContainerLocatorLogs"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "disableContainerSelectors"):   agentConfig.WorkloadAttestorConfig["disableContainerSelectors"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "enabled"):                     agentConfig.WorkloadAttestorConfig["enabled"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "skipKubeletVerification"):     agentConfig.WorkloadAttestorConfig["skipKubeletVerification"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "useNewContainerLocator"):      agentConfig.WorkloadAttestorConfig["useNewContainerLocator"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "verboseContainerLocatorLogs"): agentConfig.WorkloadAttestorConfig["verboseContainerLocatorLogs"],
 		`"spire-agent"."server"."address"`:                                                       fmt.Sprintf("%s.%s", "spire-server", "spire"),
 		`"spire-server"."caKeyType"`:                                                             "rsa-2048",
 		`"spire-server"."controllerManager"."enabled"`:                                           true,
@@ -219,11 +220,11 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		`"spire-server"."caTTL"`:                                                                 "12h",
 		`"spire-server"."fullnameOverride"`:                                                      "spire-server",
 		`"spire-server"."logLevel"`:                                                              "DEBUG",
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "audience"):                serverConfig.NodeAttestorConfig["Audience"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "allowedPodLabelKeys"):     serverConfig.NodeAttestorConfig["AllowedPodLabelKeys"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "allowedNodeLabelKeys"):    serverConfig.NodeAttestorConfig["AllowedNodeLabelKeys"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "enabled"):                 serverConfig.NodeAttestorConfig["Enabled"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "serviceAccountAllowList"): serverConfig.NodeAttestorConfig["ServiceAccountAllowList"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "audience"):                serverConfig.NodeAttestorConfig["audience"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "allowedPodLabelKeys"):     serverConfig.NodeAttestorConfig["allowedPodLabelKeys"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "allowedNodeLabelKeys"):    serverConfig.NodeAttestorConfig["allowedNodeLabelKeys"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "enabled"):                 serverConfig.NodeAttestorConfig["enabled"],
+		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "serviceAccountAllowList"): serverConfig.NodeAttestorConfig["serviceAccountAllowList"],
 		`"spiffe-oidc-discovery-provider"."enabled"`: false,
 		`"spiffe-csi-driver"."fullnameOverride"`:     "spiffe-csi-driver",
 	}
@@ -234,7 +235,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 
 	valuesJSON, err := valuesCUE.MarshalJSON()
 	if err != nil {
-		// TODO: Improve error messaging.
+		slog.Error("marshal to json", "err", err)
 		return nil, err
 	}
 
