@@ -10,9 +10,10 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+
 	"github.com/cofide/cofidectl/internal/pkg/plan"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -48,15 +49,20 @@ type HelmSPIREProvider struct {
 	spireCRDsClient  *action.Install
 	spireValues      map[string]interface{}
 	spireCRDsValues  map[string]interface{}
+	trustZone        *trust_zone_proto.TrustZone
 }
 
-func NewHelmSPIREProvider(spireValues, spireCRDsValues map[string]interface{}) *HelmSPIREProvider {
+func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, spireCRDsValues map[string]interface{}) *HelmSPIREProvider {
+	settings := cli.New()
+	settings.KubeContext = trustZone.KubernetesContext
+
 	prov := &HelmSPIREProvider{
-		settings:         cli.New(),
+		settings:         settings,
 		SPIREVersion:     SPIREChartVersion,
 		SPIRECRDsVersion: SPIRECRDsChartVersion,
 		spireValues:      spireValues,
 		spireCRDsValues:  spireCRDsValues,
+		trustZone:        trustZone,
 	}
 
 	var err error
@@ -94,7 +100,7 @@ func (h *HelmSPIREProvider) Execute() (<-chan provider.ProviderStatus, error) {
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Complete", Message: "Installation complete", Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Installed", Message: fmt.Sprintf("Installation completed for %s on %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
 		time.Sleep(time.Duration(1) * time.Second)
 	}()
 
@@ -173,35 +179,26 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 }
 
 type HelmValuesGenerator struct {
-	source cofidectl_plugin.DataSource
+	trustZone *trust_zone_proto.TrustZone
 }
 
-func NewHelmValuesGenerator(source cofidectl_plugin.DataSource) *HelmValuesGenerator {
-	return &HelmValuesGenerator{source: source}
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone) *HelmValuesGenerator {
+	return &HelmValuesGenerator{trustZone: trustZone}
 }
 
 func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
-	trustZones, err := g.source.ListTrustZones()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(trustZones) < 1 {
-		return nil, fmt.Errorf("no trust zones have been configured")
-	}
-
 	ctx := cuecontext.New()
 	valuesCUE := ctx.CompileBytes([]byte{})
 
-	trustProvider := plan.NewTrustProvider(trustZones[0].TrustProvider.Kind)
+	trustProvider := plan.NewTrustProvider(g.trustZone.TrustProvider.Kind)
 
 	agentConfig := trustProvider.AgentConfig
 	serverConfig := trustProvider.ServerConfig
 
 	// TODO: This should gracefully handle the case where more than one trust zone has been defined.
 	valuesMap := map[string]interface{}{
-		"global.spire.clusterName":              trustZones[0].KubernetesCluster,
-		"global.spire.trustDomain":              trustZones[0].TrustDomain,
+		"global.spire.clusterName":              g.trustZone.KubernetesCluster,
+		"global.spire.trustDomain":              g.trustZone.TrustDomain,
 		"global.spire.recommendations.create":   true,
 		"global.installAndUpgradeHooks.enabled": false,
 		"global.deleteHooks.enabled":            false,

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/fatih/color"
 
@@ -33,42 +34,52 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 		Long:  upCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			generator := helm.NewHelmValuesGenerator(u.source)
-			spireValues, err := generator.GenerateValues()
+			trustZones, err := u.source.ListTrustZones()
 			if err != nil {
 				return err
 			}
-			spireCRDsValues := map[string]interface{}{}
 
-			prov := helm.NewHelmSPIREProvider(spireValues, spireCRDsValues)
-
-			// create a spinner to display whilst installation is underway
-			s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-			s.Start()
-			statusCh, err := prov.Execute()
-			if err != nil {
-				s.Stop()
-				return fmt.Errorf("failed to start installation: %w", err)
-			}
-
-			for status := range statusCh {
-				s.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
-
-				if status.Done {
-					s.Stop()
-					if status.Error != nil {
-						fmt.Printf("❌ %s: %s\n", status.Stage, status.Message)
-						return fmt.Errorf("installation failed: %w", status.Error)
-					}
-					green := color.New(color.FgGreen).SprintFunc()
-					fmt.Printf("%s %s: %s\n", green("✅"), status.Stage, status.Message)
-					return nil
-				}
-			}
-
-			s.Stop()
-			return fmt.Errorf("unexpected end of status channel")
+			return install(trustZones)
 		},
 	}
 	return cmd
+}
+
+func install(trustZones []*trust_zone_proto.TrustZone) error {
+	for _, trustZone := range trustZones {
+		generator := helm.NewHelmValuesGenerator(trustZone)
+		spireValues, err := generator.GenerateValues()
+		if err != nil {
+			return err
+		}
+		spireCRDsValues := map[string]interface{}{}
+
+		prov := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+
+		// create a spinner to display whilst installation is underway
+		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
+		s.Start()
+		statusCh, err := prov.Execute()
+		if err != nil {
+			s.Stop()
+			return fmt.Errorf("failed to start installation: %w", err)
+		}
+
+		for status := range statusCh {
+			s.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
+
+			if status.Done {
+				s.Stop()
+				if status.Error != nil {
+					fmt.Printf("❌ %s: %s\n", status.Stage, status.Message)
+					return fmt.Errorf("installation failed: %w", status.Error)
+				}
+				green := color.New(color.FgGreen).SprintFunc()
+				fmt.Printf("%s %s: %s\n\n", green("✅"), status.Stage, status.Message)
+			}
+		}
+
+		s.Stop()
+	}
+	return nil
 }
