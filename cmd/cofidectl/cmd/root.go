@@ -26,6 +26,8 @@ func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootComm
 	}
 }
 
+var cfgFile string
+var kubeCfgFile string
 var rootCmdDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
 
 func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
@@ -41,8 +43,8 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
 
-	cmd.PersistentFlags().StringVar(&r.kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
-	cmd.PersistentFlags().StringVar(&r.cfgFile, "config", "", "config file (default is $HOME/.cofide.yaml)")
+	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
+	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cofide.yaml)")
 
 	upCmd := NewUpCommand(r.source)
 	tzCmd := trustzone.NewTrustZoneCommand(r.source)
