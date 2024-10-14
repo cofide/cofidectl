@@ -15,6 +15,7 @@ import (
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 )
 
@@ -53,10 +54,10 @@ config: #Config
 `
 
 type Config struct {
-	Plugins             []string                                      `yaml:"plugins,omitempty"`
-	TrustZones          map[string]*trustzone.TrustZone               `yaml:"trust_zones,omitempty"`
-	AttestationPolicies []*attestation_policy_proto.AttestationPolicy `yaml:"attestation_policy,omitempty"`
-	Federations         []*federation_proto.Federation                `yaml:"federations,omitempty"`
+	Plugins             []string                               `yaml:"plugins,omitempty"`
+	TrustZones          map[string]*trustzone.TrustZone        `yaml:"trust_zones,omitempty"`
+	AttestationPolicies []*attestationpolicy.AttestationPolicy `yaml:"attestation_policy,omitempty"`
+	Federations         []*federation_proto.Federation         `yaml:"federations,omitempty"`
 }
 
 type LocalDataSource struct {
@@ -144,8 +145,8 @@ func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
-	policy.Kind.String()
-	lds.config.AttestationPolicies = append(lds.config.AttestationPolicies, policy)
+	attestationPolicy := attestationpolicy.NewAttestationPolicy(policy)
+	lds.config.AttestationPolicies = append(lds.config.AttestationPolicies, attestationPolicy)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
 	}
@@ -192,7 +193,12 @@ func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, err
 }
 
 func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error) {
-	return lds.config.AttestationPolicies, nil
+	attestationPoliciesAsProtos := make([]*attestation_policy_proto.AttestationPolicy, 0, len(lds.config.AttestationPolicies))
+	for _, attestationPolicy := range lds.config.AttestationPolicies {
+		attestationPoliciesAsProtos = append(attestationPoliciesAsProtos, attestationPolicy.AttestationPolicyProto)
+	}
+
+	return attestationPoliciesAsProtos, nil
 }
 
 func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, error) {
