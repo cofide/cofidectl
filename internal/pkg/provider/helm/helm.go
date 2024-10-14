@@ -198,15 +198,16 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 	return client.Run(cr, values)
 }
 
-func newUpgrade(cfg *action.Configuration, chart string, version string) *action.Upgrade {
+func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
 	upgrade := action.NewUpgrade(cfg)
-	upgrade.Version = version
 	upgrade.Namespace = SPIRENamespace
+	upgrade.Version = version
+	upgrade.ReuseValues = true
 	return upgrade
 }
 
 func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
-	client := newUpgrade(h.cfg, SPIRECRDsChartName, h.SPIRECRDsVersion)
+	client := newUpgrade(h.cfg, h.SPIREVersion)
 	return upgradeChart(h.cfg, client, SPIREChartName, h.settings, h.spireValues)
 }
 
