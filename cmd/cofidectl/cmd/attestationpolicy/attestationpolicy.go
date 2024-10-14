@@ -62,9 +62,9 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 			for i, policy := range attestationPolicies {
 				data[i] = []string{
 					policy.Kind.String(),
-					policy.Options.Namespace,
-					policy.Options.PodKey,
-					policy.Options.PodValue,
+					policy.Namespace,
+					policy.PodKey,
+					policy.PodValue,
 				}
 			}
 
@@ -85,12 +85,14 @@ This command will add a new attestation policy to the Cofide configuration state
 `
 
 type Opts struct {
+	name                  string
 	kind                  string
 	trustZoneName         string
 	attestationPolicyOpts AttestationPolicyOpts
 }
 
 type AttestationPolicyOpts struct {
+	Name          string `yaml:"name,omitempty"`
 	FederatesWith string `yaml:"federatesWith,omitempty"`
 
 	// annotated
@@ -112,6 +114,8 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			str := stringy.New(args[0])
 			opts.kind = str.KebabCase().ToLower()
 			opts.trustZoneName = stringy.New(opts.trustZoneName).ToLower()
+			opts.name = str.KebabCase().ToLower()
+
 			if !validateOpts(opts) {
 				return errors.New("unset flags for annotation policy")
 			}
@@ -124,20 +128,29 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
-				Kind: kind,
-				Options: &attestation_policy_proto.AttestationPolicyOptions{
-					Namespace: opts.attestationPolicyOpts.Namespace,
-					PodKey:    opts.attestationPolicyOpts.PodKey,
-					PodValue:  opts.attestationPolicyOpts.PodValue,
-				},
+				Kind:      kind,
+				Name:      opts.name,
+				Namespace: opts.attestationPolicyOpts.Namespace,
+				PodKey:    opts.attestationPolicyOpts.PodKey,
+				PodValue:  opts.attestationPolicyOpts.PodValue,
+			}
+			err = c.source.AddAttestationPolicy(newAttestationPolicy)
+			if err != nil {
+				return err
 			}
 
-			return c.source.AddAttestationPolicy(newAttestationPolicy)
+			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
+			if trustZone != nil {
+				return c.source.BindAttestationPolicy(newAttestationPolicy, trustZone)
+			} else {
+				return err
+			}
 		},
 	}
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trustZoneName, "trust-zone", "", "Name of the trust zone to attach this attestation policy to")
+	f.StringVar(&opts.attestationPolicyOpts.Name, "name", "", "Name to use for the attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.Namespace, "namespace", "", "Namespace to use in Namespace attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.PodKey, "annotation-key", "", "Key of Pod annotation to use in Annotation attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.PodValue, "annotation-value", "", "Value of Pod annotation to use in Annotation attestation policy")
@@ -149,6 +162,11 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 }
 
 func validateOpts(opts Opts) bool {
+	if opts.name == "" {
+		slog.Error("flag \"name\" must be provided for an attestation policy")
+		return false
+	}
+
 	if opts.kind == "namespace" && opts.attestationPolicyOpts.Namespace == "" {
 		slog.Error("flag \"namespace\" must be provided for Namespace attestation policy kind")
 		return false

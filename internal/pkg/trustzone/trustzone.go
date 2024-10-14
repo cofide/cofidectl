@@ -1,19 +1,20 @@
 package trustzone
 
 import (
+	"fmt"
+	"log/slog"
+
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 
 	"gopkg.in/yaml.v3"
 )
 
 type TrustZone struct {
-	TrustZoneProto *trust_zone_proto.TrustZone  `yaml:"trustZone"`
-	TrustProvider  *trustprovider.TrustProvider `yaml:"trustProvider"`
-
-	AttestationPolicies []attestationpolicy.AttestationPolicy `yaml:"attestationPolicies"`
+	TrustZoneProto      *trust_zone_proto.TrustZone
+	TrustProvider       *trustprovider.TrustProvider
+	AttestationPolicies []string // keys for the policies which are defined in the config file
 }
 
 func NewTrustZone(trustZone *trust_zone_proto.TrustZone) *TrustZone {
@@ -44,6 +45,8 @@ func (tz *TrustZone) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
+	slog.Info("unmarshal", "tempMap", tempMap)
+
 	if tz.TrustZoneProto == nil {
 		tz.TrustZoneProto = &trust_zone_proto.TrustZone{}
 	}
@@ -52,9 +55,16 @@ func (tz *TrustZone) UnmarshalYAML(value *yaml.Node) error {
 	tz.TrustZoneProto.KubernetesCluster = tempMap["cluster"].(string)
 	tz.TrustZoneProto.KubernetesContext = tempMap["context"].(string)
 	tz.TrustZoneProto.TrustDomain = tempMap["trust_domain"].(string)
+	tz.TrustZoneProto.KubernetesContext = tempMap["context"].(string)
+
 	tz.TrustProvider = trustprovider.NewTrustProvider(tempMap["trust_providers"].(string))
 	tz.TrustZoneProto.TrustProvider = &trust_provider_proto.TrustProvider{Kind: tz.TrustProvider.Kind}
-	tz.TrustZoneProto.KubernetesContext = tempMap["context"].(string)
+
+	ap := tempMap["attestation_policy"].([]interface{})
+	tz.AttestationPolicies = make([]string, len(ap))
+	for i, v := range ap {
+		tz.AttestationPolicies[i] = fmt.Sprint(v)
+	}
 
 	return nil
 }

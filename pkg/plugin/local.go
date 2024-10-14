@@ -124,11 +124,23 @@ func (lds *LocalDataSource) GetPlugins() ([]string, error) {
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
-	lds.config.TrustZones[trustZone.TrustDomain] = trustzone.NewTrustZone(trustZone)
+	lds.config.TrustZones[trustZone.Name] = trustzone.NewTrustZone(trustZone)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
 	}
 	return nil
+}
+
+func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone, error) {
+	var trustZone *trust_zone_proto.TrustZone
+
+	if tz, ok := lds.config.TrustZones[id]; ok {
+		trustZone = tz.TrustZoneProto
+	} else {
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", id)
+	}
+
+	return trustZone, nil
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
@@ -136,6 +148,19 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 	lds.config.AttestationPolicies = append(lds.config.AttestationPolicies, policy)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
+	}
+	return nil
+}
+
+func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy, trustZone *trust_zone_proto.TrustZone) error {
+	localTrustZone, ok := lds.config.TrustZones[trustZone.Name]
+	if !ok {
+		return fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
+	}
+
+	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy.Name)
+	if err := lds.UpdateDataFile(); err != nil {
+		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
 	}
 	return nil
 }
