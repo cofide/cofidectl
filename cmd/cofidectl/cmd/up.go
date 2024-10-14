@@ -178,7 +178,6 @@ func applyPostInstallHelmConfig(trustZones []*trust_zone_proto.TrustZone) error 
 		prov := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
 
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Prefix = "Configuring CRs"
 		s.Start()
 
 		statusCh, err := prov.ExecuteUpgrade()
