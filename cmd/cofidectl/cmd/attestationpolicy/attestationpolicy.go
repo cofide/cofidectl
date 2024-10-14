@@ -112,7 +112,6 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			str := stringy.New(args[0])
 			opts.kind = str.KebabCase().ToLower()
 			opts.trustZoneName = stringy.New(opts.trustZoneName).ToLower()
-
 			if !validateOpts(opts) {
 				return errors.New("unset flags for annotation policy")
 			}
@@ -120,7 +119,6 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			kind, err := GetAttestationPolicyKind(opts.kind)
 			if err != nil {
 				return err
@@ -133,6 +131,7 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 					PodValue:  opts.attestationPolicyOpts.PodValue,
 				},
 			}
+
 			return c.source.AddAttestationPolicy(newAttestationPolicy)
 		},
 	}

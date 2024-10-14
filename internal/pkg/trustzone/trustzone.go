@@ -30,8 +30,8 @@ func (tz *TrustZone) MarshalYAML() (interface{}, error) {
 	yamlMap["trust_domain"] = tz.TrustZoneProto.TrustDomain
 	yamlMap["cluster"] = tz.TrustZoneProto.KubernetesCluster
 	yamlMap["context"] = tz.TrustZoneProto.KubernetesContext
-
 	yamlMap["trust_providers"] = tz.TrustProvider.Kind
+	yamlMap["attestation_policies"] = []string{}
 
 	return yamlMap, nil
 }

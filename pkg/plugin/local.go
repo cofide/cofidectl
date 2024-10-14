@@ -27,10 +27,11 @@ const schemaCue = `
 #TrustZone: {
 	name: string
 	trust_domain: string
+	attestation_policies: [...string]
 }
 
 #AttestationPolicy: {
-	trust_zone: string
+	kind: string
 	namespace: string
 	pod_annotation_key: string
 	pod_annotation_value: string
@@ -52,10 +53,10 @@ config: #Config
 `
 
 type Config struct {
-	Plugins           []string                                      `yaml:"plugins,omitempty"`
-	TrustZones        map[string]*trustzone.TrustZone               `yaml:"trust_zones,omitempty"`
-	AttestationPolicy []*attestation_policy_proto.AttestationPolicy `yaml:"attestation_policy,omitempty"`
-	Federations       []*federation_proto.Federation                `yaml:"federations,omitempty"`
+	Plugins             []string                                      `yaml:"plugins,omitempty"`
+	TrustZones          map[string]*trustzone.TrustZone               `yaml:"trust_zones,omitempty"`
+	AttestationPolicies []*attestation_policy_proto.AttestationPolicy `yaml:"attestation_policy,omitempty"`
+	Federations         []*federation_proto.Federation                `yaml:"federations,omitempty"`
 }
 
 type LocalDataSource struct {
@@ -131,7 +132,8 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
-	lds.config.AttestationPolicy = append(lds.config.AttestationPolicy, policy)
+	policy.Kind.String()
+	lds.config.AttestationPolicies = append(lds.config.AttestationPolicies, policy)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
 	}
@@ -165,7 +167,7 @@ func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, err
 }
 
 func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error) {
-	return lds.config.AttestationPolicy, nil
+	return lds.config.AttestationPolicies, nil
 }
 
 func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, error) {
