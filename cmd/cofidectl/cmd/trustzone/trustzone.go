@@ -14,6 +14,7 @@ import (
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"github.com/spiffe/go-spiffe/v2/spiffeid"
 )
 
 type TrustZoneCommand struct {
@@ -100,8 +101,12 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 		Short: "Add a new trust zone",
 		Long:  trustZoneAddCmdDesc,
 		Args:  cobra.ExactArgs(1),
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.name = args[0]
+			if err := validateOpts(opts); err != nil {
+				return err
+			}
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := c.getKubernetesContext(cmd)
@@ -177,4 +182,9 @@ func promptContext(contexts []string, currentContext string) string {
 
 func checkContext(contexts []string, context string) bool {
 	return slices.Contains(contexts, context)
+}
+
+func validateOpts(opts Opts) error {
+	_, err := spiffeid.TrustDomainFromString(opts.trust_domain)
+	return err
 }
