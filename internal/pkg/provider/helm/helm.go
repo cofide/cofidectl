@@ -44,8 +44,6 @@ type HelmSPIREProvider struct {
 	cfg              *action.Configuration
 	SPIREVersion     string
 	SPIRECRDsVersion string
-	spireClient      *action.Install
-	spireCRDsClient  *action.Install
 	spireValues      map[string]interface{}
 	spireCRDsValues  map[string]interface{}
 	trustZone        *trust_zone_proto.TrustZone
@@ -69,8 +67,6 @@ func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, sp
 	if err != nil {
 		log.Fatal(err)
 	}
-	prov.spireCRDsClient = newInstall(prov.cfg, SPIRECRDsChartName, prov.SPIRECRDsVersion)
-	prov.spireClient = newInstall(prov.cfg, SPIREChartName, prov.SPIREVersion)
 
 	return prov
 }
@@ -112,6 +108,33 @@ func (h *HelmSPIREProvider) install(statusCh chan provider.ProviderStatus) {
 	}()
 }
 
+func (h *HelmSPIREProvider) ExecuteUpgrade() (<-chan provider.ProviderStatus, error) {
+	statusCh := make(chan provider.ProviderStatus)
+
+	h.upgrade(statusCh)
+
+	return statusCh, nil
+}
+
+func (h *HelmSPIREProvider) upgrade(statusCh chan provider.ProviderStatus) {
+	go func() {
+		defer close(statusCh)
+
+		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for upgrade"}
+		time.Sleep(time.Duration(1) * time.Second)
+
+		statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Upgrading SPIRE chart on cluster %s", h.trustZone.KubernetesCluster)}
+		_, err := h.upgradeSPIRE()
+		if err != nil {
+			statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Failed to upgrade SPIRE chart on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			return
+		}
+
+		statusCh <- provider.ProviderStatus{Stage: "Upgraded", Message: fmt.Sprintf("Upgrade completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
+		time.Sleep(time.Duration(1) * time.Second)
+	}()
+}
+
 func DiscardLogger(format string, v ...any) {}
 
 func (h *HelmSPIREProvider) initActionConfig() (*action.Configuration, error) {
@@ -139,11 +162,13 @@ func newInstall(cfg *action.Configuration, chart string, version string) *action
 }
 
 func (h *HelmSPIREProvider) installSPIRE() (*release.Release, error) {
-	return installChart(h.cfg, h.spireClient, SPIREChartName, h.settings, h.spireValues)
+	client := newInstall(h.cfg, SPIREChartName, h.SPIREVersion)
+	return installChart(h.cfg, client, SPIREChartName, h.settings, h.spireValues)
 }
 
 func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
-	return installChart(h.cfg, h.spireCRDsClient, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
+	client := newInstall(h.cfg, SPIRECRDsChartName, h.SPIRECRDsVersion)
+	return installChart(h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
 }
 
 func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
@@ -171,6 +196,50 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 
 	log.Printf("Installing %v...", cr.Name())
 	return client.Run(cr, values)
+}
+
+func newUpgrade(cfg *action.Configuration, chart string, version string) *action.Upgrade {
+	upgrade := action.NewUpgrade(cfg)
+	upgrade.Version = version
+	upgrade.Namespace = SPIRENamespace
+	return upgrade
+}
+
+func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
+	client := newUpgrade(h.cfg, SPIRECRDsChartName, h.SPIRECRDsVersion)
+	return upgradeChart(h.cfg, client, SPIREChartName, h.settings, h.spireValues)
+}
+
+// func (h *HelmSPIREProvider) upgradeSPIRECRDs() (*release.Release, error) {
+// 	client := &action.Upgrade{}
+// 	return upgradeChart(h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
+// }
+
+func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
+	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
+	}
+
+	if !alreadyInstalled {
+		return nil, fmt.Errorf("%v not installed", chartName)
+	}
+
+	options, err := client.ChartPathOptions.LocateChart(
+		fmt.Sprintf("spire/%s", chartName),
+		settings,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	chart, err := loader.Load(options)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Upgrading %v...", chart.Name())
+	return client.Run(chartName, chart, values)
 }
 
 func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool, error) {

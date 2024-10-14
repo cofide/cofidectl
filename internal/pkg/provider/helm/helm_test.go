@@ -15,7 +15,5 @@ func TestHelmSPIREProvider(t *testing.T) {
 	p := NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
 	assert.Equal(t, p.SPIREVersion, "0.21.0")
 	assert.Equal(t, p.SPIRECRDsVersion, "0.4.0")
-	assert.NotNil(t, p.spireClient)
-	assert.NotNil(t, p.spireCRDsClient)
 	assert.Equal(t, trustZone.TrustDomain, p.trustZone.TrustDomain)
 }

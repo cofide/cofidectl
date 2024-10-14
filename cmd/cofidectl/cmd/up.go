@@ -124,7 +124,12 @@ func watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) error {
 	green := color.New(color.FgGreen).SprintFunc()
 	fmt.Printf("%s All pods are ready.\n", green("✅"))
 
-	return applyPostInstallHelmConfig()
+	err := applyPostInstallHelmConfig(trustZones)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func watchSPIREPod(kubeContext string) error {
@@ -165,15 +170,41 @@ func createPodWatcher(kubeContext string) (watch.Interface, error) {
 	return watcher, nil
 }
 
-func applyPostInstallHelmConfig() error {
-	s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-	s.Prefix = "Configuring CRs"
-	s.Start()
+func applyPostInstallHelmConfig(trustZones []*trust_zone_proto.TrustZone) error {
+	for _, trustZone := range trustZones {
+		spireValues := map[string]interface{}{}
+		spireCRDsValues := map[string]interface{}{}
 
-	s.Stop()
+		prov := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+
+		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
+		s.Prefix = "Configuring CRs"
+		s.Start()
+
+		statusCh, err := prov.ExecuteUpgrade()
+		if err != nil {
+			s.Stop()
+			return fmt.Errorf("failed to start upgrade: %w", err)
+		}
+
+		for status := range statusCh {
+			s.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
+
+			if status.Done {
+				s.Stop()
+				if status.Error != nil {
+					fmt.Printf("❌ %s: %s\n", status.Stage, status.Message)
+					return fmt.Errorf("upgrade failed: %w", status.Error)
+				}
+				green := color.New(color.FgGreen).SprintFunc()
+				fmt.Printf("%s %s: %s\n\n", green("✅"), status.Stage, status.Message)
+			}
+		}
+
+		s.Stop()
+	}
 
 	return nil
-
 }
 
 func isPodReady(pod *v1.Pod) bool {
