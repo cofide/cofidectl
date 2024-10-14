@@ -57,7 +57,6 @@ type Config struct {
 	Plugins             []string                               `yaml:"plugins,omitempty"`
 	TrustZones          map[string]*trustzone.TrustZone        `yaml:"trust_zones,omitempty"`
 	AttestationPolicies []*attestationpolicy.AttestationPolicy `yaml:"attestation_policy,omitempty"`
-	Federations         []*federation_proto.Federation         `yaml:"federations,omitempty"`
 }
 
 type LocalDataSource struct {
@@ -167,7 +166,12 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 }
 
 func (lds *LocalDataSource) AddFederation(federation *federation_proto.Federation) error {
-	lds.config.Federations = append(lds.config.Federations, federation)
+	localTrustZone, ok := lds.config.TrustZones[federation.Left.Name]
+	if !ok {
+		return fmt.Errorf("failed to find trust zone %s in local config", federation.Left.Name)
+	}
+
+	localTrustZone.Federations = append(localTrustZone.Federations, federation.Right.Name)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add federation to local config: %s", err)
 	}
@@ -202,5 +206,15 @@ func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_pro
 }
 
 func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, error) {
-	return lds.config.Federations, nil
+	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
+	federationsAsProto := make([]*federation_proto.Federation, 0)
+	for _, trustZone := range lds.config.TrustZones {
+		for _, federation := range trustZone.Federations {
+			rightTrustZone, err := lds.GetTrustZone(federation)
+			if err != nil {
+				federationsAsProto = append(federationsAsProto, &federation_proto.Federation{Left: trustZone.TrustZoneProto, Right: rightTrustZone})
+			}
+		}
+	}
+	return federationsAsProto, nil
 }

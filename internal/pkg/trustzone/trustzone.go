@@ -14,6 +14,7 @@ type TrustZone struct {
 	TrustZoneProto      *trust_zone_proto.TrustZone
 	TrustProvider       *trustprovider.TrustProvider
 	AttestationPolicies []string // keys for the policies which are defined in the config file
+	Federations         []string // keys for federated trust zones
 }
 
 func NewTrustZone(trustZone *trust_zone_proto.TrustZone) *TrustZone {
@@ -32,6 +33,7 @@ func (tz *TrustZone) MarshalYAML() (interface{}, error) {
 	yamlMap["context"] = tz.TrustZoneProto.KubernetesContext
 	yamlMap["trust_providers"] = tz.TrustProvider.Kind
 	yamlMap["attestation_policies"] = tz.AttestationPolicies
+	yamlMap["federations"] = tz.Federations
 
 	return yamlMap, nil
 }
@@ -61,6 +63,12 @@ func (tz *TrustZone) UnmarshalYAML(value *yaml.Node) error {
 	tz.AttestationPolicies = make([]string, len(ap))
 	for i, v := range ap {
 		tz.AttestationPolicies[i] = fmt.Sprint(v)
+	}
+
+	fed := tempMap["federations"].([]interface{})
+	tz.Federations = make([]string, len(fed))
+	for i, v := range fed {
+		tz.Federations[i] = fmt.Sprint(v)
 	}
 
 	return nil
