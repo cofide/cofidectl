@@ -211,10 +211,10 @@ func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
 	return upgradeChart(h.cfg, client, SPIREChartName, h.settings, h.spireValues)
 }
 
-// func (h *HelmSPIREProvider) upgradeSPIRECRDs() (*release.Release, error) {
-// 	client := &action.Upgrade{}
-// 	return upgradeChart(h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
-// }
+func (h *HelmSPIREProvider) upgradeSPIRECRDs() (*release.Release, error) {
+	client := &action.Upgrade{}
+	return upgradeChart(h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
+}
 
 func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
@@ -314,45 +314,6 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		spireServerValues,
 		spiffeOIDCDiscoveryProviderValues,
 		spiffeCSIDriverValues,
-	}
-
-	ctx := cuecontext.New()
-	combinedValuesCUE := ctx.CompileBytes([]byte{})
-
-	for _, valuesMap := range valuesMaps {
-		valuesCUE := ctx.CompileBytes([]byte{})
-
-		for path, value := range valuesMap {
-			valuesCUE = valuesCUE.FillPath(cue.ParsePath(path), value)
-		}
-
-		combinedValuesCUE = combinedValuesCUE.Unify(valuesCUE)
-	}
-
-	combinedValuesJSON, err := combinedValuesCUE.MarshalJSON()
-	if err != nil {
-		// TODO: Improve error messaging.
-		return nil, err
-	}
-
-	var values map[string]interface{}
-	err = json.Unmarshal([]byte(combinedValuesJSON), &values)
-	if err != nil {
-		// TODO: Improve error messaging.
-		return nil, err
-	}
-
-	return values, nil
-}
-
-func (g *HelmValuesGenerator) GeneratePostInstallValues() (map[string]interface{}, error) {
-	spireServerValues := map[string]interface{}{
-		`"spire-server"."controllerManager"."enabled"`:                                           true,
-		`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`: false,
-	}
-
-	valuesMaps := []map[string]interface{}{
-		spireServerValues,
 	}
 
 	ctx := cuecontext.New()

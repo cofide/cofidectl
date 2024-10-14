@@ -54,9 +54,9 @@ config: #Config
 `
 
 type Config struct {
-	Plugins             []string                               `yaml:"plugins,omitempty"`
-	TrustZones          map[string]*trustzone.TrustZone        `yaml:"trust_zones,omitempty"`
-	AttestationPolicies []*attestationpolicy.AttestationPolicy `yaml:"attestation_policy,omitempty"`
+	Plugins             []string                                        `yaml:"plugins,omitempty"`
+	TrustZones          map[string]*trustzone.TrustZone                 `yaml:"trust_zones,omitempty"`
+	AttestationPolicies map[string]*attestationpolicy.AttestationPolicy `yaml:"attestation_policy,omitempty"`
 }
 
 type LocalDataSource struct {
@@ -144,8 +144,7 @@ func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
-	attestationPolicy := attestationpolicy.NewAttestationPolicy(policy)
-	lds.config.AttestationPolicies = append(lds.config.AttestationPolicies, attestationPolicy)
+	lds.config.AttestationPolicies[policy.Name] = attestationpolicy.NewAttestationPolicy(policy)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
 	}
@@ -163,6 +162,17 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
 	}
 	return nil
+}
+
+func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error) {
+	var attestationPolicy *attestation_policy_proto.AttestationPolicy
+
+	if ap, ok := lds.config.AttestationPolicies[id]; ok {
+		attestationPolicy = ap.AttestationPolicyProto
+		return attestationPolicy, nil
+	} else {
+		return nil, fmt.Errorf("failed to find attestation policy %s in local config", id)
+	}
 }
 
 func (lds *LocalDataSource) AddFederation(federation *federation_proto.Federation) error {

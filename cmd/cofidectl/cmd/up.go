@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/fatih/color"
 	v1 "k8s.io/api/core/v1"
@@ -56,7 +58,14 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			err = watchAndConfigure(trustZones)
+			// post-install additionally requires federations and attestation policies config
+
+			attestationPolicies, err := u.source.ListAttestationPolicies()
+			if err != nil {
+				return err
+			}
+
+			err = watchAndConfigure(trustZones, attestationPolicies)
 			if err != nil {
 				return err
 			}
@@ -105,7 +114,7 @@ func installSPIREStack(trustZones []*trust_zone_proto.TrustZone) error {
 	return nil
 }
 
-func watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) error {
+func watchAndConfigure(trustZones []*trust_zone_proto.TrustZone, attestationPolicies []*attestation_policy_proto.AttestationPolicy) error {
 	// wait for SPIRE servers to be available before applying CRs
 	for _, trustZone := range trustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
@@ -124,7 +133,7 @@ func watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) error {
 	green := color.New(color.FgGreen).SprintFunc()
 	fmt.Printf("%s All pods are ready.\n", green("✅"))
 
-	err := applyPostInstallHelmConfig(trustZones)
+	err := applyPostInstallHelmConfig(trustZones, attestationPolicies)
 	if err != nil {
 		return err
 	}
@@ -170,9 +179,14 @@ func createPodWatcher(kubeContext string) (watch.Interface, error) {
 	return watcher, nil
 }
 
-func applyPostInstallHelmConfig(trustZones []*trust_zone_proto.TrustZone) error {
+func applyPostInstallHelmConfig(trustZones []*trust_zone_proto.TrustZone, attestationPolicies []*attestation_policy_proto.AttestationPolicy) error {
 	for _, trustZone := range trustZones {
-		spireValues := map[string]interface{}{}
+		generator := helm.NewHelmValuesGenerator(trustZone)
+		spireValues, err := generator.GenerateValues()
+		if err != nil {
+			return err
+		}
+
 		spireCRDsValues := map[string]interface{}{}
 
 		prov := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
