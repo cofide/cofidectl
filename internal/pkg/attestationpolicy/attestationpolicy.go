@@ -2,6 +2,7 @@ package attestationpolicy
 
 import (
 	"encoding/json"
+	"fmt"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	"gopkg.in/yaml.v3"
@@ -66,6 +67,13 @@ func (ap *AttestationPolicy) UnmarshalYAML(value *yaml.Node) error {
 		ap.AttestationPolicyProto = &attestation_policy_proto.AttestationPolicy{}
 	}
 
+	kind, err := GetAttestationPolicyKind(tempMap["kind"].(string))
+	if err != nil {
+		return err
+	}
+
+	ap.AttestationPolicyProto.Kind = kind
+
 	ap.AttestationPolicyProto.Options = &attestation_policy_proto.AttestationPolicyOptions{
 		Namespace: attestationPolicyOpts.Namespace,
 		PodKey:    attestationPolicyOpts.PodKey,
@@ -73,4 +81,16 @@ func (ap *AttestationPolicy) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	return nil
+}
+
+func GetAttestationPolicyKind(kind string) (attestation_policy_proto.AttestationPolicyKind, error) {
+	switch kind {
+	case "annotated", "ATTESTATION_POLICY_KIND_ANNOTATED":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
+	case "namespace", "ATTESTATION_POLICY_KIND_NAMESPACE":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
+	}
+
+	// TODO: Update error message.
+	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
 }
