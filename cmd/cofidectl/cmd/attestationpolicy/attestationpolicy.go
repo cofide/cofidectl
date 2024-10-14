@@ -111,7 +111,6 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			str := stringy.New(args[0])
 			opts.kind = str.KebabCase().ToLower()
-			opts.trustZoneName = stringy.New(opts.trustZoneName).ToLower()
 
 			if !validateOpts(opts) {
 				return errors.New("unset flags for annotation policy")
