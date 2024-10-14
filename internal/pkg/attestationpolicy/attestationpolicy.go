@@ -37,6 +37,7 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 func (ap *AttestationPolicy) MarshalYAML() (interface{}, error) {
 	yamlMap := make(map[string]interface{})
 
+	yamlMap["name"] = ap.AttestationPolicyProto.Name
 	yamlMap["kind"] = ap.AttestationPolicyProto.Kind.String()
 	yamlMap["options"] = map[string]interface{}{
 		"namespace": ap.AttestationPolicyProto.Namespace,
@@ -73,6 +74,7 @@ func (ap *AttestationPolicy) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	ap.AttestationPolicyProto.Kind = kind
+	ap.AttestationPolicyProto.Name = tempMap["name"].(string)
 
 	ap.AttestationPolicyProto.Namespace = attestationPolicyOpts.Namespace
 	ap.AttestationPolicyProto.PodKey = attestationPolicyOpts.PodKey
