@@ -53,7 +53,7 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			attestationPolicies, err := c.source.ListAttestationPolicy()
+			attestationPolicies, err := c.source.ListAttestationPolicies()
 			if err != nil {
 				return err
 			}

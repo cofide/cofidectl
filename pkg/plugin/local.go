@@ -164,7 +164,7 @@ func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, err
 	return trustZoneAsProtos, nil
 }
 
-func (lds *LocalDataSource) ListAttestationPolicy() ([]*attestation_policy_proto.AttestationPolicy, error) {
+func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error) {
 	return lds.config.AttestationPolicy, nil
 }
 

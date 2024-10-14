@@ -11,7 +11,7 @@ type DataSource interface {
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
 	AddTrustZone(*trust_zone_proto.TrustZone) error
 	AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) error
-	ListAttestationPolicy() ([]*attestation_policy_proto.AttestationPolicy, error)
+	ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error)
 	AddFederation(*federation_proto.Federation) error
 	ListFederation() ([]*federation_proto.Federation, error)
 }
