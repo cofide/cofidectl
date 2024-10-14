@@ -10,9 +10,8 @@ import (
 )
 
 type TrustZone struct {
-	TrustZoneProto *trust_zone_proto.TrustZone  `yaml:"trustZone"`
-	TrustProvider  *trustprovider.TrustProvider `yaml:"trustProvider"`
-
+	TrustZoneProto      *trust_zone_proto.TrustZone           `yaml:"trustZone"`
+	TrustProvider       *trustprovider.TrustProvider          `yaml:"trustProvider"`
 	AttestationPolicies []attestationpolicy.AttestationPolicy `yaml:"attestationPolicies"`
 }
 
