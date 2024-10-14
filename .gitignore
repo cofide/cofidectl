@@ -1,6 +1,5 @@
 # build
 cofidectl
-cofide.plan
 cofide.yaml
 
 # don't ignore pkgs named the same as binary!

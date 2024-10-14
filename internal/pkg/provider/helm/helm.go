@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"log/slog"
 	"os"
 	"time"
 
@@ -12,8 +11,8 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 
-	"github.com/cofide/cofidectl/internal/pkg/plan"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
+	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -76,35 +75,41 @@ func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, sp
 	return prov
 }
 
-// Execute installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
+// Execute creates a provider status channel and performs the Helm chart installations.
 func (h *HelmSPIREProvider) Execute() (<-chan provider.ProviderStatus, error) {
 	statusCh := make(chan provider.ProviderStatus)
 
+	h.install(statusCh)
+
+	return statusCh, nil
+}
+
+// install installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
+// and updates the status channel accordingly.
+func (h *HelmSPIREProvider) install(statusCh chan provider.ProviderStatus) {
 	go func() {
 		defer close(statusCh)
 
 		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
 		time.Sleep(time.Duration(1) * time.Second)
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing CRDs to cluster"}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing CRDs to cluster %s", h.trustZone.KubernetesCluster)}
 		_, err := h.installSPIRECRDs()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install CRDs", Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Installing SPIRE chart to cluster"}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing SPIRE chart to cluster %s", h.trustZone.KubernetesCluster)}
 		_, err = h.installSPIRE()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: "Failed to install chart", Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install SPIRE chart on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installed", Message: fmt.Sprintf("Installation completed for %s on %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Installed", Message: fmt.Sprintf("Installation completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
 		time.Sleep(time.Duration(1) * time.Second)
 	}()
-
-	return statusCh, nil
 }
 
 func DiscardLogger(format string, v ...any) {}
@@ -187,63 +192,85 @@ func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone) *HelmValuesGe
 }
 
 func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
-	ctx := cuecontext.New()
-	valuesCUE := ctx.CompileBytes([]byte{})
-
-	trustProvider := plan.NewTrustProvider(g.trustZone.TrustProvider.Kind)
-
+	trustProvider := trustprovider.NewTrustProvider(g.trustZone.TrustProvider.Kind)
 	agentConfig := trustProvider.AgentConfig
 	serverConfig := trustProvider.ServerConfig
 
-	// TODO: This should gracefully handle the case where more than one trust zone has been defined.
-	valuesMap := map[string]interface{}{
+	globalValues := map[string]interface{}{
 		"global.spire.clusterName":              g.trustZone.KubernetesCluster,
 		"global.spire.trustDomain":              g.trustZone.TrustDomain,
 		"global.spire.recommendations.create":   true,
 		"global.installAndUpgradeHooks.enabled": false,
 		"global.deleteHooks.enabled":            false,
-		`"spire-agent"."fullnameOverride"`:      "spire-agent", // NOTE: https://github.com/cue-lang/cue/issues/358
-		`"spire-agent"."logLevel"`:              "DEBUG",
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "nodeAttestor", agentConfig.NodeAttestor, "enabled"):                              agentConfig.NodeAttestorEnabled,
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "disableContainerSelectors"):   agentConfig.WorkloadAttestorConfig["disableContainerSelectors"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "enabled"):                     agentConfig.WorkloadAttestorConfig["enabled"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "skipKubeletVerification"):     agentConfig.WorkloadAttestorConfig["skipKubeletVerification"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "useNewContainerLocator"):      agentConfig.WorkloadAttestorConfig["useNewContainerLocator"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-agent", "workloadAttestors", agentConfig.WorkloadAttestor, "verboseContainerLocatorLogs"): agentConfig.WorkloadAttestorConfig["verboseContainerLocatorLogs"],
-		`"spire-agent"."server"."address"`:                                                       fmt.Sprintf("%s.%s", "spire-server", "spire"),
-		`"spire-server"."caKeyType"`:                                                             "rsa-2048",
-		`"spire-server"."controllerManager"."enabled"`:                                           true,
-		`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`: false, // TODO: Rethink this flow.
-		`"spire-server"."caTTL"`:                                                                 "12h",
-		`"spire-server"."fullnameOverride"`:                                                      "spire-server",
-		`"spire-server"."logLevel"`:                                                              "DEBUG",
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "audience"):                serverConfig.NodeAttestorConfig["audience"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "allowedPodLabelKeys"):     serverConfig.NodeAttestorConfig["allowedPodLabelKeys"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "allowedNodeLabelKeys"):    serverConfig.NodeAttestorConfig["allowedNodeLabelKeys"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "enabled"):                 serverConfig.NodeAttestorConfig["enabled"],
-		fmt.Sprintf(`"%s"."%s"."%s"."%s"`, "spire-server", "nodeAttestor", serverConfig.NodeAttestor, "serviceAccountAllowList"): serverConfig.NodeAttestorConfig["serviceAccountAllowList"],
+	}
+
+	spireAgentValues := map[string]interface{}{
+		`"spire-agent"."fullnameOverride"`: "spire-agent", // NOTE: https://github.com/cue-lang/cue/issues/358
+		`"spire-agent"."logLevel"`:         "DEBUG",
+		fmt.Sprintf(`"spire-agent"."nodeAttestor"."%s"."enabled"`, agentConfig.NodeAttestor):                              agentConfig.NodeAttestorEnabled,
+		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."disableContainerSelectors"`, agentConfig.WorkloadAttestor):   agentConfig.WorkloadAttestorConfig["disableContainerSelectors"],
+		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."enabled"`, agentConfig.WorkloadAttestor):                     agentConfig.WorkloadAttestorConfig["enabled"],
+		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."skipKubeletVerification"`, agentConfig.WorkloadAttestor):     agentConfig.WorkloadAttestorConfig["skipKubeletVerification"],
+		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."useNewContainerLocator"`, agentConfig.WorkloadAttestor):      agentConfig.WorkloadAttestorConfig["useNewContainerLocator"],
+		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."verboseContainerLocatorLogs"`, agentConfig.WorkloadAttestor): agentConfig.WorkloadAttestorConfig["verboseContainerLocatorLogs"],
+		`"spire-agent"."server"."address"`: "spire-server.spire",
+	}
+
+	spireServerValues := map[string]interface{}{
+		`"spire-server"."caKeyType"`:                                                                           "rsa-2048",
+		`"spire-server"."controllerManager"."enabled"`:                                                         true,
+		`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`:               false, // TODO: Rethink this flow.
+		`"spire-server"."caTTL"`:                                                                               "12h",
+		`"spire-server"."fullnameOverride"`:                                                                    "spire-server",
+		`"spire-server"."logLevel"`:                                                                            "DEBUG",
+		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."audience"`, serverConfig.NodeAttestor):                serverConfig.NodeAttestorConfig["audience"],
+		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."allowedPodLabelKeys"`, serverConfig.NodeAttestor):     serverConfig.NodeAttestorConfig["allowedPodLabelKeys"],
+		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."allowedNodeLabelKeys"`, serverConfig.NodeAttestor):    serverConfig.NodeAttestorConfig["allowedNodeLabelKeys"],
+		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."enabled"`, serverConfig.NodeAttestor):                 serverConfig.NodeAttestorConfig["enabled"],
+		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."serviceAccountAllowList"`, serverConfig.NodeAttestor): serverConfig.NodeAttestorConfig["serviceAccountAllowList"],
+	}
+
+	spiffeOIDCDiscoveryProviderValues := map[string]interface{}{
 		`"spiffe-oidc-discovery-provider"."enabled"`: false,
-		`"spiffe-csi-driver"."fullnameOverride"`:     "spiffe-csi-driver",
 	}
 
-	for path, value := range valuesMap {
-		valuesCUE = valuesCUE.FillPath(cue.ParsePath(path), value)
+	spiffeCSIDriverValues := map[string]interface{}{
+		`"spiffe-csi-driver"."fullnameOverride"`: "spiffe-csi-driver",
 	}
 
-	valuesJSON, err := valuesCUE.MarshalJSON()
+	valuesMaps := []map[string]interface{}{
+		globalValues,
+		spireAgentValues,
+		spireServerValues,
+		spiffeOIDCDiscoveryProviderValues,
+		spiffeCSIDriverValues,
+	}
+
+	ctx := cuecontext.New()
+	combinedValuesCUE := ctx.CompileBytes([]byte{})
+
+	for _, valuesMap := range valuesMaps {
+		valuesCUE := ctx.CompileBytes([]byte{})
+
+		for path, value := range valuesMap {
+			valuesCUE = valuesCUE.FillPath(cue.ParsePath(path), value)
+		}
+
+		combinedValuesCUE = combinedValuesCUE.Unify(valuesCUE)
+	}
+
+	combinedValuesJSON, err := combinedValuesCUE.MarshalJSON()
 	if err != nil {
-		slog.Error("marshal to json", "err", err)
+		// TODO: Improve error messaging.
 		return nil, err
 	}
 
 	var values map[string]interface{}
-
-	err = json.Unmarshal([]byte(valuesJSON), &values)
+	err = json.Unmarshal([]byte(combinedValuesJSON), &values)
 	if err != nil {
 		// TODO: Improve error messaging.
 		return nil, err
 	}
 
 	return values, nil
-
 }

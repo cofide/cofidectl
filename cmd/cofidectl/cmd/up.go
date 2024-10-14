@@ -46,6 +46,11 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
+			if len(trustZones) == 0 {
+				fmt.Println("no trust zones have been configured")
+				return nil
+			}
+
 			err = installSPIREStack(trustZones)
 			if err != nil {
 				return err
@@ -68,11 +73,11 @@ func installSPIREStack(trustZones []*trust_zone_proto.TrustZone) error {
 		if err != nil {
 			return err
 		}
-		spireCRDsValues := map[string]interface{}{}
 
+		spireCRDsValues := map[string]interface{}{}
 		prov := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
 
-		// create a spinner to display whilst installation is underway
+		// Create a spinner to display whilst installation is underway
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
 		s.Start()
 		statusCh, err := prov.Execute()

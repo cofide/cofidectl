@@ -124,12 +124,12 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
-	f.StringVar(&opts.kubernetes_cluster, "k8s-cluster", "", "Kubernetes cluster associated with this trust zone")
+	f.StringVar(&opts.kubernetes_cluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
 	f.StringVar(&opts.context, "context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 
 	cmd.MarkFlagRequired("trust-domain")
-	cmd.MarkFlagRequired("k8s-cluster")
+	cmd.MarkFlagRequired("kubernetes-cluster")
 	cmd.MarkFlagRequired("profile")
 
 	return cmd

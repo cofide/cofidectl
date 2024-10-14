@@ -16,14 +16,14 @@ func NewInitCommand(source cofidectl_plugin.DataSource) *InitCommand {
 }
 
 var initRootCmdDesc = `
-This command initialises a new Cofide planfile in the current working
+This command initialises a new Cofide config file in the current working
 directory
 `
 
 func (i *InitCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init [ARGS]",
-		Short: "Initialises the Cofide planfile",
+		Short: "Initialises the Cofide config file",
 		Long:  initRootCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
