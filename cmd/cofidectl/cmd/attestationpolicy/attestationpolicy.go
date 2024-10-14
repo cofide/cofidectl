@@ -2,16 +2,16 @@ package attestationpolicy
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
-	attestationpolicy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	"helm.sh/helm/v3/cmd/helm/require"
-
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/cmd/helm/require"
 )
 
 type AttestationPolicyCommand struct {
@@ -53,21 +53,23 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			trustZones, err := c.source.ListTrustZones()
+			attestationPolicies, err := c.source.ListAttestationPolicy()
 			if err != nil {
 				return err
 			}
 
-			data := make([][]string, len(trustZones))
-			for i, trustZone := range trustZones {
+			data := make([][]string, len(attestationPolicies))
+			for i, policy := range attestationPolicies {
 				data[i] = []string{
-					trustZone.Name,
-					trustZone.TrustDomain,
+					policy.Kind.String(),
+					policy.Options.Namespace,
+					policy.Options.PodKey,
+					policy.Options.PodValue,
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Domain"})
+			table.SetHeader([]string{"Kind", "Namespace", "Pod Key", "Pod Value"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -102,7 +104,7 @@ type AttestationPolicyOpts struct {
 func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
-		Use:   "add [NAME]",
+		Use:   "add [KIND]",
 		Short: "Add a new attestation policy",
 		Long:  attestationPolicyAddCmdDesc,
 		Args:  require.ExactArgs(1),
@@ -118,8 +120,14 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			newAttestationPolicy := &attestationpolicy_proto.AttestationPolicy{
-				Options: &attestationpolicy_proto.AttestionPolicyOptions{
+
+			kind, err := GetAttestationPolicyKind(opts.kind)
+			if err != nil {
+				return err
+			}
+			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
+				Kind: kind,
+				Options: &attestation_policy_proto.AttestationPolicyOptions{
 					Namespace: opts.attestationPolicyOpts.Namespace,
 					PodKey:    opts.attestationPolicyOpts.PodKey,
 					PodValue:  opts.attestationPolicyOpts.PodValue,
@@ -153,4 +161,16 @@ func validateOpts(opts Opts) bool {
 	}
 
 	return true
+}
+
+func GetAttestationPolicyKind(s string) (attestation_policy_proto.AttestationPolicyKind, error) {
+	switch s {
+	case "annotated":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
+	case "namespace":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
+	}
+
+	// TODO: Update error message.
+	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %s", s))
 }

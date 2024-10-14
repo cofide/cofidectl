@@ -1,4 +1,9 @@
-package plan
+package trustzone
+
+import (
+	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
+	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
+)
 
 type TrustZone struct {
 	// Name is the name of the TrustZone
@@ -10,7 +15,7 @@ type TrustZone struct {
 	// Context is the Kubernetes context of the Cluster
 	Context string `yaml:"context"`
 
-	TrustProvider *TrustProvider `yaml:"trustProvider"`
+	TrustProvider *trustprovider.TrustProvider `yaml:"trustProvider"`
 
-	AttestationPolicies []AttestationPolicy `yaml:"attestationPolicies"`
+	AttestationPolicies []attestationpolicy.AttestationPolicy `yaml:"attestationPolicies"`
 }

@@ -45,7 +45,6 @@ const schemaCue = `
 	trust_zones: [...#TrustZone]
 	attestation_policy: [...#AttestationPolicy]
 	federation: [...#Federation]
-
 }
 
 config: #Config
@@ -149,8 +148,6 @@ func (lds *LocalDataSource) UpdateDataFile() error {
 		return fmt.Errorf("error marshalling config: %v", err)
 	}
 	os.WriteFile(lds.filePath, data, 0644)
-
-	slog.Info("Successfully added new trust zone", "trust_zone", lds.filePath)
 
 	return nil
 }

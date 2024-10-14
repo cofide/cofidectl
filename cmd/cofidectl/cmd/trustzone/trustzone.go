@@ -5,10 +5,12 @@ import (
 	"os"
 	"slices"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/manifoldco/promptui"
 
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
@@ -25,7 +27,7 @@ func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
 	}
 }
 
-var trustZoneDesc = `
+var trustZoneRootCmdDesc = `
 This command consists of multiple sub-commands to administer Cofide trust zones.
 `
 
@@ -33,7 +35,7 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trust-zone add|list [ARGS]",
 		Short: "add, list trust zones",
-		Long:  trustZoneDesc,
+		Long:  trustZoneRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
@@ -43,7 +45,7 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	return cmd
 }
 
-var trustZoneListDesc = `
+var trustZoneListCmdDesc = `
 This command will list trust zones in the Cofide configuration state.
 `
 
@@ -51,7 +53,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [ARGS]",
 		Short: "List trust-zones",
-		Long:  trustZoneListDesc,
+		Long:  trustZoneListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			trustZones, err := c.source.ListTrustZones()
@@ -80,16 +82,16 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
-var trustZoneAddDesc = `
+var trustZoneAddCmdDesc = `
 This command will add a new trust zone to the Cofide configuration state.
 `
 
 type Opts struct {
-	name         string
-	trust_domain string
-	cluster      string
-	context      string
-	profile      string
+	name               string
+	trust_domain       string
+	kubernetes_cluster string
+	context            string
+	profile            string
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
@@ -97,7 +99,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add [NAME]",
 		Short: "Add a new trust zone",
-		Long:  trustZoneAddDesc,
+		Long:  trustZoneAddCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		PreRun: func(cmd *cobra.Command, args []string) {
 			str := stringy.New(args[0])
@@ -108,11 +110,18 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			trustProvider, err := trustprovider.GetTrustProvider(opts.profile)
+			if err != nil {
+				return err
+			}
+
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:              opts.name,
 				TrustDomain:       opts.trust_domain,
-				KubernetesCluster: opts.cluster,
+				KubernetesCluster: opts.kubernetes_cluster,
 				KubernetesContext: opts.context,
+				TrustProvider:     trustProvider,
 			}
 			return c.source.AddTrustZone(newTrustZone)
 		},
@@ -120,12 +129,12 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
-	f.StringVar(&opts.cluster, "cluster", "", "Kubernetes cluster to use for this trust zone")
+	f.StringVar(&opts.kubernetes_cluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
 	f.StringVar(&opts.context, "context", "", "Kubernetes context to use for this trust zone")
-	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. k8s, istio)")
+	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 
 	cmd.MarkFlagRequired("trust-domain")
-	cmd.MarkFlagRequired("cluster")
+	cmd.MarkFlagRequired("kubernetes-cluster")
 	cmd.MarkFlagRequired("profile")
 
 	return cmd
@@ -141,14 +150,16 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
 
 	kubeRepo := kubeutil.NewKubeRepository(client)
 	contexts, err := kubeRepo.GetContexts()
-	kubeContext, _ := cmd.Flags().GetString("context")
+	cobra.CheckErr(err)
 
+	kubeContext, _ := cmd.Flags().GetString("context")
 	if kubeContext != "" {
 		if checkContext(contexts, kubeContext) {
 			return nil
 		}
 		fmt.Printf("could not find kubectl context '%s'", kubeContext)
 	}
+
 	kubeContext = promptContext(contexts, client.CmdConfig.CurrentContext)
 	cmd.Flags().Set("context", kubeContext)
 	return nil

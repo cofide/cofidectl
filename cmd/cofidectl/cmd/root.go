@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var longDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
-
 type RootCommand struct {
 	source      cofidectl_plugin.DataSource
 	cfgFile     string
@@ -28,11 +26,13 @@ func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootComm
 	}
 }
 
+var rootCmdDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
+
 func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:          "cofidectl",
 		Short:        "Cofide CLI",
-		Long:         longDesc,
+		Long:         rootCmdDesc,
 		SilenceUsage: true,
 	}
 
@@ -44,6 +44,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	cmd.PersistentFlags().StringVar(&r.kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 	cmd.PersistentFlags().StringVar(&r.cfgFile, "config", "", "config file (default is $HOME/.cofide.yaml)")
 
+	upCmd := NewUpCommand(r.source)
 	tzCmd := trustzone.NewTrustZoneCommand(r.source)
 	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
 	fedCmd := federation.NewFederationCommand(r.source)
@@ -52,7 +53,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		tzCmd.GetRootCommand(),
 		apCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
-		newUpCmd(),
+		upCmd.UpCmd(),
 	)
 
 	return cmd, nil
