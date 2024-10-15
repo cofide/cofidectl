@@ -32,10 +32,11 @@ const schemaCue = `
 }
 
 #AttestationPolicy: {
+	name: string
 	kind: string
 	namespace: string
-	pod_annotation_key: string
-	pod_annotation_value: string
+	pod_key: string
+	pod_value: string
 }
 
 #Federation: {
@@ -46,7 +47,7 @@ const schemaCue = `
 #Config: {
 	plugins: [...#Plugins]
 	trust_zones: [...#TrustZone]
-	attestation_policy: [...#AttestationPolicy]
+	attestation_policies: [...#AttestationPolicy]
 	federation: [...#Federation]
 }
 
@@ -56,7 +57,7 @@ config: #Config
 type Config struct {
 	Plugins             []string                                        `yaml:"plugins,omitempty"`
 	TrustZones          map[string]*trustzone.TrustZone                 `yaml:"trust_zones,omitempty"`
-	AttestationPolicies map[string]*attestationpolicy.AttestationPolicy `yaml:"attestation_policy,omitempty"`
+	AttestationPolicies map[string]*attestationpolicy.AttestationPolicy `yaml:"attestation_policies,omitempty"`
 }
 
 type LocalDataSource struct {
@@ -67,7 +68,9 @@ type LocalDataSource struct {
 
 func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
 	trustZones := make(map[string]*trustzone.TrustZone)
-	cfg := &Config{TrustZones: trustZones}
+	attestationPolicies := make(map[string]*attestationpolicy.AttestationPolicy)
+
+	cfg := &Config{TrustZones: trustZones, AttestationPolicies: attestationPolicies}
 	lds := &LocalDataSource{
 		filePath: filePath,
 		config:   cfg,
@@ -75,6 +78,7 @@ func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
 	if err := lds.loadState(); err != nil {
 		return nil, err
 	}
+
 	return lds, nil
 }
 
