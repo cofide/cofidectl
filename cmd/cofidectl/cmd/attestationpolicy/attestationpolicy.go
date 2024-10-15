@@ -26,13 +26,13 @@ func NewAttestationPolicyCommand(source cofidectl_plugin.DataSource) *Attestatio
 }
 
 var attestationPolicyRootCmdDesc = `
-This command consists of multiple sub-commands to administer Cofide attestation policy.
+This command consists of multiple sub-commands to administer Cofide attestation policies.
 `
 
 func (c *AttestationPolicyCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "attestation-policy add|list [ARGS]",
-		Short: "add, list attestation policy",
+		Short: "Add, list attestation policies",
 		Long:  attestationPolicyRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -44,13 +44,13 @@ func (c *AttestationPolicyCommand) GetRootCommand() *cobra.Command {
 }
 
 var attestationPolicyListCmdDesc = `
-This command will list trust zones in the Cofide configuration state.
+This command will list attestation policies in the Cofide configuration state.
 `
 
 func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [ARGS]",
-		Short: "List attestation-policy",
+		Short: "List attestation policies",
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

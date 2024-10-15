@@ -18,6 +18,6 @@ type DataSource interface {
 	ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error)
 
 	AddFederation(*federation_proto.Federation) error
-	ListFederation() ([]*federation_proto.Federation, error)
-	ListFederationByTrustZone(string) ([]*federation_proto.Federation, error)
+	ListFederations() ([]*federation_proto.Federation, error)
+	ListFederationsByTrustZone(string) ([]*federation_proto.Federation, error)
 }

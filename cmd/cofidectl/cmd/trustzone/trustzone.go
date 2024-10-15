@@ -34,7 +34,7 @@ This command consists of multiple sub-commands to administer Cofide trust zones.
 func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trust-zone add|list [ARGS]",
-		Short: "add, list trust zones",
+		Short: "Add, list trust zones",
 		Long:  trustZoneRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}

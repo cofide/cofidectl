@@ -30,7 +30,7 @@ This command consists of multiple sub-commands to administer Cofide trust zone f
 func (c *FederationCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "federation add|list [ARGS]",
-		Short: "add, list federation",
+		Short: "Add, list federations",
 		Long:  federationRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -52,7 +52,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 		Long:  federationListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			federations, err := c.source.ListFederation()
+			federations, err := c.source.ListFederations()
 			if err != nil {
 				return err
 			}
