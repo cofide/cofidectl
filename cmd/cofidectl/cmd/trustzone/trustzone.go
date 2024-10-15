@@ -12,7 +12,6 @@ import (
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
-	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -102,8 +101,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 		Long:  trustZoneAddCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		PreRun: func(cmd *cobra.Command, args []string) {
-			str := stringy.New(args[0])
-			opts.name = str.KebabCase().ToLower()
+			opts.name = args[0]
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			err := c.getKubernetesContext(cmd)
