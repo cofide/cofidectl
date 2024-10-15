@@ -1,6 +1,7 @@
 package trustzone
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -154,7 +155,7 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
 		if checkContext(contexts, kubeContext) {
 			return nil
 		}
-		fmt.Printf("could not find kubectl context '%s'", kubeContext)
+		return errors.New(fmt.Sprintf("could not find kubectl context '%s'", kubeContext))
 	}
 
 	kubeContext = promptContext(contexts, client.CmdConfig.CurrentContext)
