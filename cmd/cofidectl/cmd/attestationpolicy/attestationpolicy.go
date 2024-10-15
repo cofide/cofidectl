@@ -85,7 +85,6 @@ This command will add a new attestation policy to the Cofide configuration state
 `
 
 type Opts struct {
-	name                  string
 	kind                  string
 	trustZoneName         string
 	attestationPolicyOpts AttestationPolicyOpts
@@ -114,7 +113,7 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			str := stringy.New(args[0])
 			opts.kind = str.KebabCase().ToLower()
 			opts.trustZoneName = stringy.New(opts.trustZoneName).ToLower()
-			opts.name = str.KebabCase().ToLower()
+			opts.attestationPolicyOpts.Name = stringy.New(opts.attestationPolicyOpts.Name).KebabCase().ToLower()
 
 			if !validateOpts(opts) {
 				return errors.New("unset flags for annotation policy")
@@ -127,9 +126,10 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
 				Kind:      kind,
-				Name:      opts.name,
+				Name:      opts.attestationPolicyOpts.Name,
 				Namespace: opts.attestationPolicyOpts.Namespace,
 				PodKey:    opts.attestationPolicyOpts.PodKey,
 				PodValue:  opts.attestationPolicyOpts.PodValue,
@@ -162,7 +162,7 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 }
 
 func validateOpts(opts Opts) bool {
-	if opts.name == "" {
+	if opts.attestationPolicyOpts.Name == "" {
 		slog.Error("flag \"name\" must be provided for an attestation policy")
 		return false
 	}
