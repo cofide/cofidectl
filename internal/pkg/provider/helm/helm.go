@@ -86,10 +86,10 @@ func (h *HelmSPIREProvider) installChart(statusCh chan provider.ProviderStatus) 
 
 		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing CRDs to cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing SPIRE CRDs to cluster %s", h.trustZone.KubernetesCluster)}
 		_, err := h.installSPIRECRDs()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install SPIRE CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
@@ -163,10 +163,10 @@ func (h *HelmSPIREProvider) uninstall(statusCh chan provider.ProviderStatus) {
 	go func() {
 		defer close(statusCh)
 
-		statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Uninstalling CRDs from cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Uninstalling SPIRE CRDs from cluster %s", h.trustZone.KubernetesCluster)}
 		_, err := h.uninstallSPIRECRDs()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Failed to uninstall CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Failed to uninstall SPIRE CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
