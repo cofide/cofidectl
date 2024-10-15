@@ -2,10 +2,17 @@ package trustzone
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
+	"slices"
 
+	"github.com/manifoldco/promptui"
+
+	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+
+	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -20,44 +27,34 @@ func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
 	}
 }
 
-var trustZoneDesc = `
+var trustZoneRootCmdDesc = `
 This command consists of multiple sub-commands to administer Cofide trust zones.
 `
 
-func (c *TrustZoneCommand) ListRootCommand() *cobra.Command {
+func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "trust-zone list",
-		Short: "list trust-zones",
-		Long:  trustZoneDesc,
-		Args:  cobra.ExactArgs(0),
-		PreRun: func(cmd *cobra.Command, args []string) {
-			// TODO: potentially good place to init the grpc client (lazily)
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			trustZones, err := c.source.ListTrustZones()
-			if err != nil {
-				return fmt.Errorf("failed to list trust zones")
-			}
-			slog.Info("retrieved trust zones", "trust_zones", trustZones)
-			return nil
-		},
+		Use:   "trust-zone add|list [ARGS]",
+		Short: "add, list trust zones",
+		Long:  trustZoneRootCmdDesc,
+		Args:  cobra.NoArgs,
 	}
 
-	cmd.AddCommand(c.ListCommand())
+	cmd.AddCommand(c.GetListCommand())
+	cmd.AddCommand(c.GetAddCommand())
 
 	return cmd
 }
 
-var trustZoneListDesc = `
+var trustZoneListCmdDesc = `
 This command will list trust zones in the Cofide configuration state.
 `
 
-func (c *TrustZoneCommand) ListCommand() *cobra.Command {
+func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list [NAME]",
-		Short: "List trust zones",
-		Long:  trustZoneListDesc,
-		Args:  cobra.ExactArgs(0),
+		Use:   "list [ARGS]",
+		Short: "List trust-zones",
+		Long:  trustZoneListCmdDesc,
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			trustZones, err := c.source.ListTrustZones()
 			if err != nil {
@@ -69,11 +66,12 @@ func (c *TrustZoneCommand) ListCommand() *cobra.Command {
 				data[i] = []string{
 					trustZone.Name,
 					trustZone.TrustDomain,
+					trustZone.KubernetesCluster,
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Domain"})
+			table.SetHeader([]string{"Name", "Trust Domain", "Cluster"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -82,4 +80,103 @@ func (c *TrustZoneCommand) ListCommand() *cobra.Command {
 	}
 
 	return cmd
+}
+
+var trustZoneAddCmdDesc = `
+This command will add a new trust zone to the Cofide configuration state.
+`
+
+type Opts struct {
+	name               string
+	trust_domain       string
+	kubernetes_cluster string
+	context            string
+	profile            string
+}
+
+func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
+	opts := Opts{}
+	cmd := &cobra.Command{
+		Use:   "add [NAME]",
+		Short: "Add a new trust zone",
+		Long:  trustZoneAddCmdDesc,
+		Args:  cobra.ExactArgs(1),
+		PreRun: func(cmd *cobra.Command, args []string) {
+			str := stringy.New(args[0])
+			opts.name = str.KebabCase().ToLower()
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			err := c.getKubernetesContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			newTrustZone := &trust_zone_proto.TrustZone{
+				Name:              opts.name,
+				TrustDomain:       opts.trust_domain,
+				KubernetesCluster: opts.kubernetes_cluster,
+				KubernetesContext: opts.context,
+				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: opts.profile},
+			}
+			return c.source.AddTrustZone(newTrustZone)
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
+	f.StringVar(&opts.kubernetes_cluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
+	f.StringVar(&opts.context, "context", "", "Kubernetes context to use for this trust zone")
+	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
+
+	cmd.MarkFlagRequired("trust-domain")
+	cmd.MarkFlagRequired("kubernetes-cluster")
+
+	return cmd
+}
+
+func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
+	kubeConfig, err := cmd.Flags().GetString("kube-config")
+	if err != nil {
+		return err
+	}
+	client, err := kubeutil.NewKubeClient(kubeConfig)
+	cobra.CheckErr(err)
+
+	kubeRepo := kubeutil.NewKubeRepository(client)
+	contexts, err := kubeRepo.GetContexts()
+	cobra.CheckErr(err)
+
+	kubeContext, _ := cmd.Flags().GetString("context")
+	if kubeContext != "" {
+		if checkContext(contexts, kubeContext) {
+			return nil
+		}
+		fmt.Printf("could not find kubectl context '%s'", kubeContext)
+	}
+
+	kubeContext = promptContext(contexts, client.CmdConfig.CurrentContext)
+	cmd.Flags().Set("context", kubeContext)
+	return nil
+}
+
+func promptContext(contexts []string, currentContext string) string {
+	curPos := 0
+	if currentContext != "" {
+		curPos = slices.Index(contexts, currentContext)
+	}
+
+	prompt := promptui.Select{
+		Label:     "Select kubectl context to use",
+		Items:     contexts,
+		CursorPos: curPos,
+	}
+
+	_, result, err := prompt.Run()
+	cobra.CheckErr(err)
+
+	return result
+}
+
+func checkContext(contexts []string, context string) bool {
+	return slices.Contains(contexts, context)
 }

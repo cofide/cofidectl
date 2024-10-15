@@ -1,4 +1,4 @@
-package plan
+package attestationpolicy
 
 type AttestationPolicy struct {
 	Kind AttestationPolicyKind

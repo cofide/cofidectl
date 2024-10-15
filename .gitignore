@@ -1,6 +1,6 @@
 # build
 cofidectl
-cofide.plan
+cofide.yaml
 
 # don't ignore pkgs named the same as binary!
 !cofidectl/
@@ -11,3 +11,4 @@ cofide.plan
 
 # Plugins
 cofidectl-connect-plugin
+
