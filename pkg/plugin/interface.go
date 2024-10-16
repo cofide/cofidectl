@@ -8,6 +8,7 @@ import (
 
 // DataSource is the interface plugins have to implement.
 type DataSource interface {
+	Init() error
 	GetTrustZone(string) (*trust_zone_proto.TrustZone, error)
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
 	AddTrustZone(*trust_zone_proto.TrustZone) error

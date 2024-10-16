@@ -36,8 +36,6 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		SilenceUsage: true,
 	}
 
-	//cobra.OnInitialize(initConfig)
-
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
 

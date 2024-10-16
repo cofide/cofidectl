@@ -3,7 +3,6 @@ package plugin
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 
 	"cuelang.org/go/cue"
@@ -66,6 +65,14 @@ type LocalDataSource struct {
 	cueContext *cue.Context
 }
 
+func (lds *LocalDataSource) Init() error {
+	if err := lds.loadState(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
 	trustZones := make(map[string]*trustzone.TrustZone)
 	attestationPolicies := make(map[string]*attestationpolicy.AttestationPolicy)
@@ -74,9 +81,6 @@ func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
 	lds := &LocalDataSource{
 		filePath: filePath,
 		config:   cfg,
-	}
-	if err := lds.loadState(); err != nil {
-		return nil, err
 	}
 
 	return lds, nil
@@ -91,7 +95,7 @@ func (lds *LocalDataSource) loadState() error {
 	// check to see if the configuration file exists
 	if _, err := os.Stat(lds.filePath); errors.Is(err, os.ErrNotExist) {
 		// no existing configuration here
-		slog.Info("initialising Cofide configuration", "config_file", cfgFile)
+		fmt.Printf("initialising the local config file: %v\n", cfgFile)
 		return lds.UpdateDataFile()
 	}
 	// load YAML config file from disk
@@ -128,6 +132,10 @@ func (lds *LocalDataSource) GetPlugins() ([]string, error) {
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
+	if !lds.DataFileExists() {
+		err := "the config file doesn't exist. Please run cofidectl init"
+		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
+	}
 	lds.config.TrustZones[trustZone.Name] = trustzone.NewTrustZone(trustZone)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
@@ -200,6 +208,14 @@ func (lds *LocalDataSource) UpdateDataFile() error {
 	os.WriteFile(lds.filePath, data, 0644)
 
 	return nil
+}
+
+func (lds *LocalDataSource) DataFileExists() bool {
+	if _, err := os.Stat(lds.filePath); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+
+	return true
 }
 
 func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
