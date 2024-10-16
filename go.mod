@@ -10,6 +10,7 @@ require (
 	github.com/hashicorp/go-plugin v1.6.1
 	github.com/manifoldco/promptui v0.9.0
 	github.com/spf13/cobra v1.8.1
+	github.com/spiffe/go-spiffe/v2 v2.4.0
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.67.1
 	gopkg.in/yaml.v3 v3.0.1

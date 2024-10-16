@@ -2,6 +2,7 @@ package attestationpolicy
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -178,4 +179,16 @@ func validateOpts(opts Opts) bool {
 	}
 
 	return true
+}
+
+func GetAttestationPolicyKind(s string) (attestation_policy_proto.AttestationPolicyKind, error) {
+	switch s {
+	case "annotated":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
+	case "namespace":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
+	}
+
+	// TODO: Update error message.
+	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %s", s))
 }

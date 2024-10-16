@@ -17,6 +17,9 @@ type RootCommand struct {
 	args   []string
 }
 
+var cfgFile string
+var kubeCfgFile string
+
 func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootCommand {
 	return &RootCommand{
 		source: source,
@@ -24,8 +27,6 @@ func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootComm
 	}
 }
 
-var cfgFile string
-var kubeCfgFile string
 var rootCmdDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
 
 func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {

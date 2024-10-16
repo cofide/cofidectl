@@ -44,6 +44,8 @@ type HelmSPIREProvider struct {
 	cfg              *action.Configuration
 	SPIREVersion     string
 	SPIRECRDsVersion string
+	spireClient      *action.Install
+	spireCRDsClient  *action.Install
 	spireValues      map[string]interface{}
 	spireCRDsValues  map[string]interface{}
 	trustZone        *trust_zone_proto.TrustZone
@@ -67,6 +69,8 @@ func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, sp
 	if err != nil {
 		log.Fatal(err)
 	}
+	prov.spireCRDsClient = newInstall(prov.cfg, SPIRECRDsChartName, prov.SPIRECRDsVersion)
+	prov.spireClient = newInstall(prov.cfg, SPIREChartName, prov.SPIREVersion)
 
 	return prov
 }
