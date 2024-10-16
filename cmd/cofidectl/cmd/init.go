@@ -35,7 +35,7 @@ func (i *InitCommand) GetRootCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.enableConnect {
-				fmt.Println("Get in touch to find out more! 😊")
+				fmt.Println("👀 get in touch with us at hello@cofide.io to find out more")
 			}
 			return nil
 		},
