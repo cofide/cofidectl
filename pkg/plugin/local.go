@@ -131,10 +131,6 @@ func (lds *LocalDataSource) GetPlugins() ([]string, error) {
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
-	if !lds.DataFileExists() {
-		err := "the config file doesn't exist. Please run cofidectl init"
-		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
-	}
 	lds.config.TrustZones[trustZone.Name] = trustzone.NewTrustZone(trustZone)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
