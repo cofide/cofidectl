@@ -158,16 +158,12 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.attestationPolicyOpts.FederatesWith, "federates-with", "", "Defines a trust domain to federate identity with")
 
 	cmd.MarkFlagRequired("trust-zone")
+	cmd.MarkFlagRequired("name")
 
 	return cmd
 }
 
 func validateOpts(opts Opts) bool {
-	if opts.attestationPolicyOpts.Name == "" {
-		slog.Error("flag \"name\" must be provided for an attestation policy")
-		return false
-	}
-
 	if opts.kind == "namespace" && opts.attestationPolicyOpts.Namespace == "" {
 		slog.Error("flag \"namespace\" must be provided for Namespace attestation policy kind")
 		return false

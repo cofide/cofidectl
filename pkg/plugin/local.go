@@ -128,6 +128,9 @@ func (lds *LocalDataSource) GetPlugins() ([]string, error) {
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
+	if _, ok := lds.config.TrustZones[trustZone.Name]; ok {
+		return fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
+	}
 	lds.config.TrustZones[trustZone.Name] = trustzone.NewTrustZone(trustZone)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
@@ -148,6 +151,9 @@ func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
+	if _, ok := lds.config.AttestationPolicies[policy.Name]; ok {
+		return fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
+	}
 	lds.config.AttestationPolicies[policy.Name] = attestationpolicy.NewAttestationPolicy(policy)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
@@ -159,6 +165,10 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 	localTrustZone, ok := lds.config.TrustZones[trustZone.Name]
 	if !ok {
 		return fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
+	}
+
+	if _, ok := lds.config.AttestationPolicies[policy.Name]; !ok {
+		return fmt.Errorf("attestation policy %s does not exist in local config", policy.Name)
 	}
 
 	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy.Name)
@@ -180,12 +190,17 @@ func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy
 }
 
 func (lds *LocalDataSource) AddFederation(federation *federation_proto.Federation) error {
-	localTrustZone, ok := lds.config.TrustZones[federation.Left.Name]
+	leftTrustZone, ok := lds.config.TrustZones[federation.Left.Name]
 	if !ok {
 		return fmt.Errorf("failed to find trust zone %s in local config", federation.Left.Name)
 	}
 
-	localTrustZone.Federations = append(localTrustZone.Federations, federation.Right.Name)
+	_, ok = lds.config.TrustZones[federation.Right.Name]
+	if !ok {
+		return fmt.Errorf("failed to find trust zone %s in local config", federation.Right.Name)
+	}
+
+	leftTrustZone.Federations = append(leftTrustZone.Federations, federation.Right.Name)
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add federation to local config: %s", err)
 	}
