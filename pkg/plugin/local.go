@@ -183,12 +183,17 @@ func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy
 }
 
 func (lds *LocalDataSource) AddFederation(federation *federation_proto.Federation) error {
-	localTrustZone, ok := lds.config.TrustZones[federation.Left.Name]
+	leftTrustZone, ok := lds.config.TrustZones[federation.Left.Name]
 	if !ok {
 		return fmt.Errorf("failed to find trust zone %s in local config", federation.Left.Name)
 	}
 
-	localTrustZone.Federations = append(localTrustZone.Federations, federation.Right.Name)
+	_, ok = lds.config.TrustZones[federation.Right.Name]
+	if !ok {
+		return fmt.Errorf("failed to find trust zone %s in local config", federation.Right.Name)
+	}
+
+	leftTrustZone.Federations = append(leftTrustZone.Federations, federation.Right.Name)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add federation to local config: %s", err)
 	}
