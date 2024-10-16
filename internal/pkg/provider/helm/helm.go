@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
@@ -91,7 +90,6 @@ func (h *HelmSPIREProvider) install(statusCh chan provider.ProviderStatus) {
 		defer close(statusCh)
 
 		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
-		time.Sleep(time.Duration(1) * time.Second)
 
 		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing CRDs to cluster %s", h.trustZone.KubernetesCluster)}
 		_, err := h.installSPIRECRDs()
@@ -108,7 +106,6 @@ func (h *HelmSPIREProvider) install(statusCh chan provider.ProviderStatus) {
 		}
 
 		statusCh <- provider.ProviderStatus{Stage: "Installed", Message: fmt.Sprintf("Installation completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
-		time.Sleep(time.Duration(1) * time.Second)
 	}()
 }
 
@@ -125,7 +122,6 @@ func (h *HelmSPIREProvider) upgrade(statusCh chan provider.ProviderStatus) {
 		defer close(statusCh)
 
 		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for upgrade"}
-		time.Sleep(time.Duration(1) * time.Second)
 
 		statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Upgrading SPIRE chart on cluster %s", h.trustZone.KubernetesCluster)}
 		_, err := h.upgradeSPIRE()
@@ -135,7 +131,6 @@ func (h *HelmSPIREProvider) upgrade(statusCh chan provider.ProviderStatus) {
 		}
 
 		statusCh <- provider.ProviderStatus{Stage: "Upgraded", Message: fmt.Sprintf("Upgrade completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
-		time.Sleep(time.Duration(1) * time.Second)
 	}()
 }
 
