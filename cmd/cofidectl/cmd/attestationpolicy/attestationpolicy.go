@@ -140,10 +140,10 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			}
 
 			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
-			if trustZone != nil {
-				return c.source.BindAttestationPolicy(newAttestationPolicy, trustZone)
-			} else {
+			if err != nil {
 				return err
+			} else {
+				return c.source.BindAttestationPolicy(newAttestationPolicy, trustZone)
 			}
 		},
 	}
