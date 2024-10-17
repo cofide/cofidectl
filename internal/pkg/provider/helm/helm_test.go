@@ -4,11 +4,13 @@ import (
 	"testing"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHelmSPIREProvider(t *testing.T) {
-	trustZone := &trust_zone_proto.TrustZone{TrustDomain: "foo.bar"}
+	trustZoneProto := &trust_zone_proto.TrustZone{TrustDomain: "foo.bar"}
+	trustZone := trustzone.NewTrustZone(trustZoneProto)
 	spireValues := map[string]interface{}{}
 	spireCRDsValues := map[string]interface{}{}
 
@@ -17,5 +19,5 @@ func TestHelmSPIREProvider(t *testing.T) {
 	assert.Equal(t, p.SPIRECRDsVersion, "0.4.0")
 	assert.NotNil(t, p.spireClient)
 	assert.NotNil(t, p.spireCRDsClient)
-	assert.Equal(t, trustZone.TrustDomain, p.trustZone.TrustDomain)
+	assert.Equal(t, trustZone.TrustZoneProto.TrustDomain, p.trustZone.TrustZoneProto.TrustDomain)
 }

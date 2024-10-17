@@ -8,10 +8,12 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 
+	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
+	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -47,12 +49,12 @@ type HelmSPIREProvider struct {
 	spireCRDsClient  *action.Install
 	spireValues      map[string]interface{}
 	spireCRDsValues  map[string]interface{}
-	trustZone        *trust_zone_proto.TrustZone
+	trustZone        *trustzone.TrustZone
 }
 
-func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, spireCRDsValues map[string]interface{}) *HelmSPIREProvider {
+func NewHelmSPIREProvider(trustZone *trustzone.TrustZone, spireValues, spireCRDsValues map[string]interface{}) *HelmSPIREProvider {
 	settings := cli.New()
-	settings.KubeContext = trustZone.KubernetesContext
+	settings.KubeContext = trustZone.TrustZoneProto.KubernetesContext
 
 	prov := &HelmSPIREProvider{
 		settings:         settings,
@@ -78,59 +80,79 @@ func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, sp
 func (h *HelmSPIREProvider) Execute() (<-chan provider.ProviderStatus, error) {
 	statusCh := make(chan provider.ProviderStatus)
 
-	h.install(statusCh)
+	h.installChart(statusCh)
 
 	return statusCh, nil
 }
 
 // install installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
 // and updates the status channel accordingly.
-func (h *HelmSPIREProvider) install(statusCh chan provider.ProviderStatus) {
+func (h *HelmSPIREProvider) installChart(statusCh chan provider.ProviderStatus) {
 	go func() {
 		defer close(statusCh)
 
 		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing CRDs to cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing CRDs to cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster)}
 		_, err := h.installSPIRECRDs()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install CRDs on cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing SPIRE chart to cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing SPIRE chart to cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster)}
 		_, err = h.installSPIRE()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install SPIRE chart on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install SPIRE chart on cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installed", Message: fmt.Sprintf("Installation completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Installed", Message: fmt.Sprintf("Installation completed for %s on cluster %s", h.trustZone.TrustZoneProto.TrustDomain, h.trustZone.TrustZoneProto.KubernetesCluster), Done: true}
 	}()
 }
 
-func (h *HelmSPIREProvider) ExecuteUpgrade() (<-chan provider.ProviderStatus, error) {
+func (h *HelmSPIREProvider) ExecuteUpgrade(postInstall bool) (<-chan provider.ProviderStatus, error) {
 	statusCh := make(chan provider.ProviderStatus)
 
-	h.upgrade(statusCh)
+	// differentiate between a post-installation upgrade (ie configuration) and a full upgrade
+	if postInstall {
+		h.postInstallUpgrade(statusCh)
+	} else {
+		h.upgradeChart(statusCh)
+	}
 
 	return statusCh, nil
 }
 
-func (h *HelmSPIREProvider) upgrade(statusCh chan provider.ProviderStatus) {
+func (h *HelmSPIREProvider) postInstallUpgrade(statusCh chan provider.ProviderStatus) {
+	go func() {
+		defer close(statusCh)
+
+		statusCh <- provider.ProviderStatus{Stage: "Configuring", Message: fmt.Sprintf("Applying post-installation configuration to cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster)}
+		_, err := h.upgradeSPIRE()
+		if err != nil {
+			statusCh <- provider.ProviderStatus{Stage: "Configuring", Message: fmt.Sprintf("Failed to apply post-installation configuration to cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster), Done: true, Error: err}
+			return
+		}
+
+		statusCh <- provider.ProviderStatus{Stage: "Configured", Message: fmt.Sprintf("Post-installation configuration completed for cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster), Done: true}
+	}()
+}
+
+func (h *HelmSPIREProvider) upgradeChart(statusCh chan provider.ProviderStatus) {
 	go func() {
 		defer close(statusCh)
 
 		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for upgrade"}
 
-		statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Upgrading SPIRE chart on cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Upgrading SPIRE chart on cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster)}
 		_, err := h.upgradeSPIRE()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Failed to upgrade SPIRE chart on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Failed to upgrade SPIRE chart on cluster %s", h.trustZone.TrustZoneProto.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Upgraded", Message: fmt.Sprintf("Upgrade completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Upgraded", Message: fmt.Sprintf("Upgrade completed for %s on cluster %s", h.trustZone.TrustZoneProto.TrustDomain, h.trustZone.TrustZoneProto.KubernetesCluster), Done: true}
 	}()
 }
 
@@ -253,11 +275,17 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 }
 
 type HelmValuesGenerator struct {
-	trustZone *trust_zone_proto.TrustZone
+	trustZone           *trustzone.TrustZone
+	attestationPolicies []*attestationpolicy.AttestationPolicy
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone) *HelmValuesGenerator {
+func NewHelmValuesGenerator(trustZone *trustzone.TrustZone) *HelmValuesGenerator {
 	return &HelmValuesGenerator{trustZone: trustZone}
+}
+
+func (g *HelmValuesGenerator) WithAttestationPolicies(policies []*attestationpolicy.AttestationPolicy) *HelmValuesGenerator {
+	g.attestationPolicies = policies
+	return g
 }
 
 func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
@@ -266,8 +294,8 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	serverConfig := trustProvider.ServerConfig
 
 	globalValues := map[string]interface{}{
-		"global.spire.clusterName":              g.trustZone.KubernetesCluster,
-		"global.spire.trustDomain":              g.trustZone.TrustDomain,
+		"global.spire.clusterName":              g.trustZone.TrustZoneProto.KubernetesCluster,
+		"global.spire.trustDomain":              g.trustZone.TrustZoneProto.TrustDomain,
 		"global.spire.recommendations.create":   true,
 		"global.installAndUpgradeHooks.enabled": false,
 		"global.deleteHooks.enabled":            false,
@@ -286,17 +314,26 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	}
 
 	spireServerValues := map[string]interface{}{
-		`"spire-server"."caKeyType"`:                                                                           "rsa-2048",
-		`"spire-server"."controllerManager"."enabled"`:                                                         true,
-		`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`:               false, // TODO: Rethink this flow.
-		`"spire-server"."caTTL"`:                                                                               "12h",
-		`"spire-server"."fullnameOverride"`:                                                                    "spire-server",
-		`"spire-server"."logLevel"`:                                                                            "DEBUG",
+		`"spire-server"."caKeyType"`:                   "rsa-2048",
+		`"spire-server"."controllerManager"."enabled"`: true,
+		`"spire-server"."caTTL"`:                       "12h",
+		`"spire-server"."fullnameOverride"`:            "spire-server",
+		`"spire-server"."logLevel"`:                    "DEBUG",
 		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."audience"`, serverConfig.NodeAttestor):                serverConfig.NodeAttestorConfig["audience"],
 		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."allowedPodLabelKeys"`, serverConfig.NodeAttestor):     serverConfig.NodeAttestorConfig["allowedPodLabelKeys"],
 		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."allowedNodeLabelKeys"`, serverConfig.NodeAttestor):    serverConfig.NodeAttestorConfig["allowedNodeLabelKeys"],
 		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."enabled"`, serverConfig.NodeAttestor):                 serverConfig.NodeAttestorConfig["enabled"],
 		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."serviceAccountAllowList"`, serverConfig.NodeAttestor): serverConfig.NodeAttestorConfig["serviceAccountAllowList"],
+	}
+
+	if len(g.attestationPolicies) > 0 {
+		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = false
+		for _, ap := range g.attestationPolicies {
+			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."%s"`, ap.AttestationPolicyProto.Name)] = ap.GetHelmConfig()
+		}
+	} else {
+		// defaults to true
+		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = true
 	}
 
 	spiffeOIDCDiscoveryProviderValues := map[string]interface{}{
@@ -342,4 +379,23 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	}
 
 	return values, nil
+}
+
+func (g *HelmValuesGenerator) GetClusterSPIFFEIDs() map[string]interface{} {
+	clusterSPIFFEIDs := map[string]interface{}{}
+
+	for _, ap := range g.attestationPolicies {
+		var clusterSPIFFEIDPolicyName string
+		switch ap.AttestationPolicyProto.Kind {
+		case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE:
+			clusterSPIFFEIDPolicyName = fmt.Sprintf("%s-%s", string(ap.AttestationPolicyProto.Kind), ap.AttestationPolicyProto.Namespace)
+		case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED:
+			clusterSPIFFEIDPolicyName = fmt.Sprintf("%s-%s-%s", string(ap.AttestationPolicyProto.Kind), ap.AttestationPolicyProto.PodKey, ap.AttestationPolicyProto.PodValue)
+		}
+		clusterSPIFFEIDs[clusterSPIFFEIDPolicyName] = ap.GetHelmConfig()
+	}
+
+	clusterSPIFFEIDs["default"] = map[string]interface{}{"enabled": false}
+
+	return clusterSPIFFEIDs
 }

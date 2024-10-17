@@ -20,15 +20,6 @@ const (
 	Unspecified = "unspecified"
 )
 
-type AttestationPolicyOpts struct {
-	// Annotated
-	PodKey   string
-	PodValue string
-
-	// Namespace
-	Namespace string
-}
-
 func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.AttestationPolicy) *AttestationPolicy {
 	return &AttestationPolicy{
 		AttestationPolicyProto: attestationPolicy,
@@ -74,6 +65,32 @@ func (ap *AttestationPolicy) UnmarshalYAML(value *yaml.Node) error {
 	ap.AttestationPolicyProto.PodValue = tempMap["pod_value"].(string)
 
 	return nil
+}
+
+func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
+	var clusterSPIFFEID = make(map[string]interface{})
+	switch ap.AttestationPolicyProto.Kind {
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED:
+		clusterSPIFFEID["podSelector"] = map[string]interface{}{
+			"matchLabels": map[string]interface{}{
+				ap.AttestationPolicyProto.PodKey: ap.AttestationPolicyProto.PodValue,
+			},
+		}
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE:
+		clusterSPIFFEID["namespaceSelector"] = map[string]interface{}{
+			"matchExpressions": []map[string]interface{}{
+				{
+					"key":      "kubernetes.io/metadata.name",
+					"operator": "In",
+					"values":   []string{ap.AttestationPolicyProto.Namespace},
+				},
+			},
+		}
+	default:
+		clusterSPIFFEID["enabled"] = "false"
+	}
+
+	return clusterSPIFFEID
 }
 
 func GetAttestationPolicyKind(kind string) (attestation_policy_proto.AttestationPolicyKind, error) {
