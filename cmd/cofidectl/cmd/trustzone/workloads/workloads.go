@@ -22,7 +22,7 @@ func NewWorkloadsCommand(source cofidectl_plugin.DataSource) *WorkloadsCommand {
 }
 
 var workloadsRootCmdDesc = `
-This command consists of multiple sub-commands to interact with Cofide trust zone workloads.
+This command consists of multiple sub-commands to interact with workloads.
 `
 
 var kubeCfgFile string
@@ -46,7 +46,7 @@ func (c *WorkloadsCommand) GetRootCommand() *cobra.Command {
 }
 
 var workloadsListCmdDesc = `
-This command will list the workloads in a trust zone.
+This command will list all of the registered workloads in every trust zone.
 `
 
 type Opts struct {
@@ -108,7 +108,7 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trust_zone, "trust-zone", "", "Trust domain to use for this trust zone")
+	f.StringVar(&opts.trust_zone, "trust-zone", "", "list the registered workloads in a specific trust zone")
 
 	return cmd
 }
