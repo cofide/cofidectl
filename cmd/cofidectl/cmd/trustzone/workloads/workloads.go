@@ -1,6 +1,7 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -81,6 +82,10 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 				}
 			}
 
+			if len(trustZones) == 0 {
+				return fmt.Errorf("no trust zones have been configured")
+			}
+
 			data := make([][]string, 0, len(trustZones))
 
 			for _, trustZone := range trustZones {
@@ -143,6 +148,10 @@ func (w *WorkloadsCommand) GetDiscoverCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
+			}
+
+			if len(trustZones) == 0 {
+				return fmt.Errorf("no trust zones have been configured")
 			}
 
 			data := make([][]string, 0, len(trustZones))
