@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone/workloads"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
@@ -48,19 +49,36 @@ var workloadsListCmdDesc = `
 This command will list the workloads in a trust zone.
 `
 
+type Opts struct {
+	trust_zone string
+}
+
 func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
+	opts := Opts{}
 	cmd := &cobra.Command{
 		Use:   "list [ARGS]",
 		Short: "list workloads",
 		Long:  workloadsListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			trustZones, err := w.source.ListTrustZones()
-			if err != nil {
-				return err
+			var err error
+			var trustZones []*trust_zone_proto.TrustZone
+
+			if opts.trust_zone != "" {
+				trustZone, err := w.source.GetTrustZone(opts.trust_zone)
+				if err != nil {
+					return err
+				}
+
+				trustZones = append(trustZones, trustZone)
+			} else {
+				trustZones, err = w.source.ListTrustZones()
+				if err != nil {
+					return err
+				}
 			}
 
-			data := make([][]string, 0, 2)
+			data := make([][]string, 0, len(trustZones))
 
 			for _, trustZone := range trustZones {
 				registeredWorkloads, err := workloads.GetRegisteredWorkloads(kubeCfgFile, trustZone.KubernetesContext)
@@ -88,6 +106,9 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 			return nil
 		},
 	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.trust_zone, "trust-zone", "", "Trust domain to use for this trust zone")
 
 	return cmd
 }
