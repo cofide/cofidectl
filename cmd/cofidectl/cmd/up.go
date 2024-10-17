@@ -65,7 +65,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			// post-install additionally requires federations and attestation policies config
+			// post-install additionally requires attestation policy config
 			attestationPoliciesProtos, err := u.source.ListAttestationPolicies()
 			if err != nil {
 				return err
