@@ -20,6 +20,13 @@ type RegisteredWorkload struct {
 	Type      string
 }
 
+type UnregisteredWorkload struct {
+	Name      string
+	Namespace string
+	Status    string
+	Type      string
+}
+
 func GetRegisteredWorkloads(kubeCfgFile string, kubeContext string) ([]RegisteredWorkload, error) {
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
 	if err != nil {
@@ -54,6 +61,55 @@ func GetRegisteredWorkloads(kubeCfgFile string, kubeContext string) ([]Registere
 	}
 
 	return registeredWorkloads, nil
+}
+
+func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string) ([]UnregisteredWorkload, error) {
+	// Includes the initial Kubernetes namespaces.
+	ignoredNamespaces := map[string]int{
+		"kube-node-lease":    1,
+		"kube-public":        2,
+		"kube-system":        3,
+		"local-path-storage": 4,
+		"spire":              5,
+	}
+
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
+	if err != nil {
+		return nil, err
+	}
+
+	registrationEntries, err := getRegistrationEntries(context.Background(), client)
+	if err != nil {
+		return nil, err
+	}
+
+	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	unregisteredWorkloads := []UnregisteredWorkload{}
+
+	for _, pod := range pods.Items {
+		_, ok := ignoredNamespaces[pod.Namespace]
+		if ok {
+			continue
+		}
+
+		_, ok = registrationEntries[string(pod.UID)]
+		if !ok {
+			unregisteredWorkload := &UnregisteredWorkload{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+				Status:    string(pod.Status.Phase),
+				Type:      "Pod",
+			}
+
+			unregisteredWorkloads = append(unregisteredWorkloads, *unregisteredWorkload)
+		}
+	}
+
+	return unregisteredWorkloads, nil
 }
 
 func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) (map[string]string, error) {
