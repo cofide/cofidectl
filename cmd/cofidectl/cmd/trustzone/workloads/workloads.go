@@ -98,7 +98,7 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Zone", "Type", "Status", "SPIFFE ID"})
+			table.SetHeader([]string{"Name", "Trust Zone", "Type", "Status", "Workload ID"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
