@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -153,6 +154,15 @@ func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPo
 
 		trustZone.TrustZoneProto.BundleEndpointUrl = clusterIP
 
+		// obtain the bundle
+		bundle, err := getBundle(trustZone.TrustZoneProto.KubernetesContext)
+		if err != nil {
+			s.Stop()
+			return fmt.Errorf("error obtaining bundle in context %s: %v", trustZone.TrustZoneProto.KubernetesContext, err)
+		}
+
+		trustZone.BootstrapBundle = bundle
+
 		s.Stop()
 	}
 
@@ -163,6 +173,7 @@ func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPo
 	for _, trustZone := range trustZones {
 		for _, federation := range trustZone.Federations {
 			federation.BundleEndpointURL = trustZones[federation.ToTrustDomain].TrustZoneProto.BundleEndpointUrl
+			federation.BootstrapBundle = trustZones[federation.ToTrustDomain].BootstrapBundle
 		}
 	}
 
@@ -189,7 +200,7 @@ func watchSPIREPodAndService(kubeContext string) (string, error) {
 
 	podReady := false
 	serviceReady := false
-	var clusterIP string
+	var serviceIP string
 
 	timeout := time.After(5 * time.Minute)
 
@@ -213,7 +224,8 @@ func watchSPIREPodAndService(kubeContext string) (string, error) {
 				service := event.Object.(*v1.Service)
 				if isServiceReady(service) {
 					serviceReady = true
-					clusterIP = service.Spec.ClusterIP
+					serviceIP, _ = getServiceExternalIP(service)
+
 				}
 			}
 		case <-timeout:
@@ -221,9 +233,45 @@ func watchSPIREPodAndService(kubeContext string) (string, error) {
 		}
 
 		if podReady && serviceReady {
-			return clusterIP, nil
+			return serviceIP, nil
 		}
 	}
+}
+
+func getBundle(kubeContext string) (string, error) {
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
+	if err != nil {
+		return "", err
+	}
+
+	stdin := &bytes.Buffer{}
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	err = kubeutil.RunCommand(
+		context.TODO(),
+		client.Clientset,
+		client.RestConfig,
+		"spire-server-0",
+		"spire", // TODO use a const
+		"spire-server",
+		[]string{"/opt/spire/bin/spire-server", "bundle", "show", "-format", "spiffe"},
+		stdin,
+		stdout,
+		stderr,
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	bundle := stdout.String()
+
+	stdin.Reset()
+	stdout.Reset()
+	stderr.Reset()
+
+	return bundle, nil
 }
 
 func createPodWatcher(kubeContext string) (watch.Interface, error) {
@@ -327,4 +375,25 @@ func isPodReady(pod *v1.Pod) bool {
 
 func isServiceReady(service *v1.Service) bool {
 	return service.Spec.ClusterIP != ""
+}
+
+func getServiceExternalIP(service *v1.Service) (string, error) {
+	serviceLoadBalancerIngress := service.Status.LoadBalancer.Ingress
+	if len(serviceLoadBalancerIngress) != 1 {
+		return "", fmt.Errorf("failed to retrieve the service ingress information")
+	}
+
+	// Usually set on AWS load balancers
+	ingressHostName := serviceLoadBalancerIngress[0].Hostname
+	if ingressHostName != "" {
+		return ingressHostName, nil
+	}
+
+	// Usually set on GCE/OpenStack load balancers
+	ingressIP := serviceLoadBalancerIngress[0].IP
+	if ingressIP != "" {
+		return ingressIP, nil
+	}
+
+	return "", fmt.Errorf("failed to retrieve the service ingress information")
 }

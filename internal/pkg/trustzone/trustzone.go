@@ -17,6 +17,7 @@ type TrustZone struct {
 	TrustProvider       *trustprovider.TrustProvider
 	AttestationPolicies map[string]*attestationpolicy.AttestationPolicy
 	Federations         map[string]*federation.Federation
+	BootstrapBundle     string
 }
 
 func NewTrustZone(trustZone *trust_zone_proto.TrustZone) *TrustZone {

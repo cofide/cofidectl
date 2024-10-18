@@ -320,6 +320,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 
 	spireServerValues := map[string]interface{}{
 		`"spire-server"."caKeyType"`:                   "rsa-2048",
+		`"spire-server"."service"."type"`:              "LoadBalancer",
 		`"spire-server"."controllerManager"."enabled"`: true,
 		`"spire-server"."caTTL"`:                       "12h",
 		`"spire-server"."fullnameOverride"`:            "spire-server",
