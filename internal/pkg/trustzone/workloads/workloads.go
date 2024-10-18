@@ -20,8 +20,8 @@ type RegisteredWorkload struct {
 	Type      string
 }
 
-func GetRegisteredWorkloads(kubeCfgFile string, kubeContext string) ([]RegisteredWorkload, error) {
-	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
+func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]RegisteredWorkload, error) {
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, kubeContext)
 	if err != nil {
 		return nil, err
 	}

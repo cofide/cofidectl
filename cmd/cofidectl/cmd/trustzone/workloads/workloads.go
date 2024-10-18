@@ -54,7 +54,11 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 		Long:  workloadsListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var err error
+			kubeConfig, err := cmd.Flags().GetString("kube-config")
+			if err != nil {
+				return fmt.Errorf("failed to retrieve the kubeconfig file location")
+			}
+
 			var trustZones []*trust_zone_proto.TrustZone
 
 			if opts.trust_zone != "" {
@@ -71,36 +75,14 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 				}
 			}
 
-			data := make([][]string, 0, len(trustZones))
+			if len(trustZones) == 0 {
+				return fmt.Errorf("no trust zones have been configured")
+			}
 
-			kubeCfgFile, err := cmd.Flags().GetString("kube-config")
+			err = renderRegisteredWorkloads(kubeConfig, trustZones)
 			if err != nil {
-				return fmt.Errorf("failed to retrieve the kubeconfig file location")
+				return err
 			}
-
-			for _, trustZone := range trustZones {
-				registeredWorkloads, err := workloads.GetRegisteredWorkloads(kubeCfgFile, trustZone.KubernetesContext)
-				if err != nil {
-					return err
-				}
-
-				for _, workload := range registeredWorkloads {
-					data = append(data, []string{
-						workload.Name,
-						trustZone.Name,
-						workload.Type,
-						workload.Status,
-						workload.Namespace,
-						workload.SPIFFEID,
-					})
-				}
-			}
-
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Zone", "Type", "Status", "Namespace", "Workload ID"})
-			table.SetBorder(false)
-			table.AppendBulk(data)
-			table.Render()
 
 			return nil
 		},
@@ -110,4 +92,34 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 	f.StringVar(&opts.trust_zone, "trust-zone", "", "list the registered workloads in a specific trust zone")
 
 	return cmd
+}
+
+func renderRegisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
+	data := make([][]string, 0, len(trustZones))
+
+	for _, trustZone := range trustZones {
+		registeredWorkloads, err := workloads.GetRegisteredWorkloads(kubeConfig, trustZone.KubernetesContext)
+		if err != nil {
+			return err
+		}
+
+		for _, workload := range registeredWorkloads {
+			data = append(data, []string{
+				workload.Name,
+				trustZone.Name,
+				workload.Type,
+				workload.Status,
+				workload.Namespace,
+				workload.SPIFFEID,
+			})
+		}
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Trust Zone", "Type", "Status", "Namespace", "Workload ID"})
+	table.SetBorder(false)
+	table.AppendBulk(data)
+	table.Render()
+
+	return nil
 }
