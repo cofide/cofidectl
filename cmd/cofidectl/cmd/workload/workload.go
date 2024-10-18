@@ -1,22 +1,22 @@
-package workloads
+package workload
 
 import (
 	"fmt"
 	"os"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	"github.com/cofide/cofidectl/internal/pkg/trustzone/workloads"
+	"github.com/cofide/cofidectl/internal/pkg/workload"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
-type WorkloadsCommand struct {
+type WorkloadCommand struct {
 	source cofidectl_plugin.DataSource
 }
 
-func NewWorkloadsCommand(source cofidectl_plugin.DataSource) *WorkloadsCommand {
-	return &WorkloadsCommand{
+func NewWorkloadCommand(source cofidectl_plugin.DataSource) *WorkloadCommand {
+	return &WorkloadCommand{
 		source: source,
 	}
 }
@@ -25,9 +25,9 @@ var workloadsRootCmdDesc = `
 This command consists of multiple sub-commands to interact with workloads.
 `
 
-func (c *WorkloadsCommand) GetRootCommand() *cobra.Command {
+func (c *WorkloadCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "workloads list [ARGS]",
+		Use:   "workload list [ARGS]",
 		Short: "List trust zone workloads",
 		Long:  workloadsRootCmdDesc,
 		Args:  cobra.NoArgs,
@@ -38,7 +38,7 @@ func (c *WorkloadsCommand) GetRootCommand() *cobra.Command {
 	return cmd
 }
 
-var workloadsListCmdDesc = `
+var workloadListCmdDesc = `
 This command will list all of the registered workloads.
 `
 
@@ -46,12 +46,12 @@ type Opts struct {
 	trust_zone string
 }
 
-func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
+func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
 		Use:   "list [ARGS]",
 		Short: "List workloads",
-		Long:  workloadsListCmdDesc,
+		Long:  workloadListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
@@ -99,7 +99,7 @@ func renderRegisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workloads.GetRegisteredWorkloads(kubeConfig, trustZone.KubernetesContext)
+		registeredWorkloads, err := workload.GetRegisteredWorkloads(kubeConfig, trustZone.KubernetesContext)
 		if err != nil {
 			return err
 		}

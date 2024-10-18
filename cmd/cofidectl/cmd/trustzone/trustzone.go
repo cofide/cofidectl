@@ -9,7 +9,6 @@ import (
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/workloads"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
@@ -39,12 +38,9 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 
-	workloadsCmd := workloads.NewWorkloadsCommand(c.source)
-
 	cmd.AddCommand(
 		c.GetListCommand(),
 		c.GetAddCommand(),
-		workloadsCmd.GetRootCommand(),
 	)
 
 	return cmd
