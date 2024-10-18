@@ -1,8 +1,8 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
-	"path"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone/workloads"
@@ -25,8 +25,6 @@ var workloadsRootCmdDesc = `
 This command consists of multiple sub-commands to interact with workloads.
 `
 
-var kubeCfgFile string
-
 func (c *WorkloadsCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workloads list [ARGS]",
@@ -34,11 +32,6 @@ func (c *WorkloadsCommand) GetRootCommand() *cobra.Command {
 		Long:  workloadsRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
-
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-
-	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 
 	cmd.AddCommand(c.GetListCommand())
 
@@ -79,6 +72,11 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 			}
 
 			data := make([][]string, 0, len(trustZones))
+
+			kubeCfgFile, err := cmd.Flags().GetString("kube-config")
+			if err != nil {
+				return fmt.Errorf("failed to retrieve the kubeconfig file location")
+			}
 
 			for _, trustZone := range trustZones {
 				registeredWorkloads, err := workloads.GetRegisteredWorkloads(kubeCfgFile, trustZone.KubernetesContext)
