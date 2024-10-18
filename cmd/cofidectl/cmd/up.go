@@ -8,6 +8,7 @@ import (
 	"github.com/briandowns/spinner"
 
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
+	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/fatih/color"
@@ -54,9 +55,9 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			}
 
 			// convert to structs
-			trustZones := make([]*trustzone.TrustZone, 0, len(trustZoneProtos))
+			trustZones := make(map[string]*trustzone.TrustZone, len(trustZoneProtos))
 			for _, trustZoneProto := range trustZoneProtos {
-				trustZones = append(trustZones, trustzone.NewTrustZone(trustZoneProto))
+				trustZones[trustZoneProto.TrustDomain] = trustzone.NewTrustZone(trustZoneProto)
 
 			}
 
@@ -75,10 +76,21 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			attestationPolicies := make([]*attestationpolicy.AttestationPolicy, 0, len(attestationPoliciesProtos))
 			for _, attestationPolicyProto := range attestationPoliciesProtos {
 				attestationPolicies = append(attestationPolicies, attestationpolicy.NewAttestationPolicy(attestationPolicyProto))
-
 			}
 
-			err = watchAndConfigure(trustZones, attestationPolicies)
+			// post-install additionally requires federation config
+			federationProtos, err := u.source.ListFederation()
+			if err != nil {
+				return err
+			}
+
+			// convert to structs
+			federations := make([]*federation.Federation, 0, len(federationProtos))
+			for _, federationProto := range federationProtos {
+				federations = append(federations, federation.NewFederation(federationProto))
+			}
+
+			err = watchAndConfigure(trustZones, attestationPolicies, federations)
 			if err != nil {
 				return err
 			}
@@ -88,7 +100,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 	return cmd
 }
 
-func installSPIREStack(trustZones []*trustzone.TrustZone) error {
+func installSPIREStack(trustZones map[string]*trustzone.TrustZone) error {
 	for _, trustZone := range trustZones {
 		generator := helm.NewHelmValuesGenerator(trustZone)
 		spireValues, err := generator.GenerateValues()
@@ -127,26 +139,33 @@ func installSPIREStack(trustZones []*trustzone.TrustZone) error {
 	return nil
 }
 
-func watchAndConfigure(trustZones []*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy) error {
-	// wait for SPIRE servers to be available before applying CRs
+func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy, federations []*federation.Federation) error {
+	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Prefix = fmt.Sprintf("Waiting for pod in %s: ", trustZone.TrustZoneProto.KubernetesCluster)
+		s.Prefix = fmt.Sprintf("Waiting for pod and service in %s: ", trustZone.TrustZoneProto.KubernetesCluster)
 		s.Start()
 
-		err := watchSPIREPod(trustZone.TrustZoneProto.KubernetesContext)
+		clusterIP, err := watchSPIREPodAndService(trustZone.TrustZoneProto.KubernetesContext)
 		if err != nil {
 			s.Stop()
 			return fmt.Errorf("error in context %s: %v", trustZone.TrustZoneProto.KubernetesContext, err)
 		}
 
+		trustZone.TrustZoneProto.BundleEndpointUrl = clusterIP
+
 		s.Stop()
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()
-	fmt.Printf("%s All pods are ready.\n\n", green("✅"))
+	fmt.Printf("%s All pods and services are ready.\n\n", green("✅"))
 
-	err := applyPostInstallHelmConfig(trustZones, attestationPolicies)
+	// update the federations with verified bundle endpoints
+	for _, federation := range federations {
+		federation.BundleEndpointURL = trustZones[federation.ToTrustDomain].TrustZoneProto.BundleEndpointUrl
+	}
+
+	err := applyPostInstallHelmConfig(trustZones, attestationPolicies, federations)
 	if err != nil {
 		return err
 	}
@@ -154,22 +173,56 @@ func watchAndConfigure(trustZones []*trustzone.TrustZone, attestationPolicies []
 	return nil
 }
 
-func watchSPIREPod(kubeContext string) error {
-	watcher, err := createPodWatcher(kubeContext)
+func watchSPIREPodAndService(kubeContext string) (string, error) {
+	podWatcher, err := createPodWatcher(kubeContext)
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer watcher.Stop()
+	defer podWatcher.Stop()
 
-	for event := range watcher.ResultChan() {
-		if pod, ok := event.Object.(*v1.Pod); ok {
-			if isPodReady(pod) {
-				return nil
+	serviceWatcher, err := createServiceWatcher(kubeContext)
+	if err != nil {
+		return "", err
+	}
+	defer serviceWatcher.Stop()
+
+	podReady := false
+	serviceReady := false
+	var clusterIP string
+
+	timeout := time.After(5 * time.Minute)
+
+	for {
+		select {
+		case event, ok := <-podWatcher.ResultChan():
+			if !ok {
+				return "", fmt.Errorf("pod watcher channel closed")
 			}
+			if event.Type == watch.Added || event.Type == watch.Modified {
+				pod := event.Object.(*v1.Pod)
+				if isPodReady(pod) {
+					podReady = true
+				}
+			}
+		case event, ok := <-serviceWatcher.ResultChan():
+			if !ok {
+				return "", fmt.Errorf("service watcher channel closed")
+			}
+			if event.Type == watch.Added || event.Type == watch.Modified {
+				service := event.Object.(*v1.Service)
+				if isServiceReady(service) {
+					serviceReady = true
+					clusterIP = service.Spec.ClusterIP
+				}
+			}
+		case <-timeout:
+			return "", fmt.Errorf("timeout waiting for pod and service to be ready")
+		}
+
+		if podReady && serviceReady {
+			return clusterIP, nil
 		}
 	}
-
-	return fmt.Errorf("watcher closed unexpectedly for cluster: %s", kubeContext)
 }
 
 func createPodWatcher(kubeContext string) (watch.Interface, error) {
@@ -192,12 +245,36 @@ func createPodWatcher(kubeContext string) (watch.Interface, error) {
 	return watcher, nil
 }
 
-func applyPostInstallHelmConfig(trustZones []*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy) error {
+func createServiceWatcher(kubeContext string) (watch.Interface, error) {
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
+	if err != nil {
+		return nil, err
+	}
+	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
+		timeout := int64(120)
+		return client.Clientset.CoreV1().Services("spire").Watch(context.Background(), metav1.ListOptions{
+			TimeoutSeconds: &timeout,
+		})
+	}
+
+	watcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service watcher for context %s: %v", kubeContext, err)
+	}
+
+	return watcher, nil
+}
+
+func applyPostInstallHelmConfig(trustZones map[string]*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy, federations []*federation.Federation) error {
 	for _, trustZone := range trustZones {
 		generator := helm.NewHelmValuesGenerator(trustZone)
 
 		if len(attestationPolicies) > 0 {
 			generator = generator.WithAttestationPolicies(attestationPolicies)
+		}
+
+		if len(federations) > 0 {
+			generator = generator.WithFederations(federations)
 		}
 
 		spireValues, err := generator.GenerateValues()
@@ -245,4 +322,8 @@ func isPodReady(pod *v1.Pod) bool {
 		}
 	}
 	return false
+}
+
+func isServiceReady(service *v1.Service) bool {
+	return service.Spec.ClusterIP != ""
 }

@@ -228,8 +228,9 @@ func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, er
 		for _, federation := range trustZone.Federations {
 			rightTrustZone, err := lds.GetTrustZone(federation)
 			if err != nil {
-				federationsAsProto = append(federationsAsProto, &federation_proto.Federation{Left: trustZone.TrustZoneProto, Right: rightTrustZone})
+				return nil, err
 			}
+			federationsAsProto = append(federationsAsProto, &federation_proto.Federation{Left: trustZone.TrustZoneProto, Right: rightTrustZone})
 		}
 	}
 	return federationsAsProto, nil

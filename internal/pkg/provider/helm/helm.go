@@ -11,6 +11,7 @@ import (
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
+	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -277,6 +278,7 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 type HelmValuesGenerator struct {
 	trustZone           *trustzone.TrustZone
 	attestationPolicies []*attestationpolicy.AttestationPolicy
+	federations         []*federation.Federation
 }
 
 func NewHelmValuesGenerator(trustZone *trustzone.TrustZone) *HelmValuesGenerator {
@@ -285,6 +287,11 @@ func NewHelmValuesGenerator(trustZone *trustzone.TrustZone) *HelmValuesGenerator
 
 func (g *HelmValuesGenerator) WithAttestationPolicies(policies []*attestationpolicy.AttestationPolicy) *HelmValuesGenerator {
 	g.attestationPolicies = policies
+	return g
+}
+
+func (g *HelmValuesGenerator) WithFederations(federations []*federation.Federation) *HelmValuesGenerator {
+	g.federations = federations
 	return g
 }
 
@@ -326,6 +333,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."serviceAccountAllowList"`, serverConfig.NodeAttestor): serverConfig.NodeAttestorConfig["serviceAccountAllowList"],
 	}
 
+	// add attestation policies as ClusterSPIFFEIDs to be reconcilced by spire-controller-manager
 	if len(g.attestationPolicies) > 0 {
 		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = false
 		for _, ap := range g.attestationPolicies {
@@ -334,6 +342,13 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	} else {
 		// defaults to true
 		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = true
+	}
+
+	// add federations as clusterFederatedTrustDomains to be reconcilced by spire-controller-manager
+	if len(g.federations) > 0 {
+		for _, fed := range g.federations {
+			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.ToTrustDomain)] = fed.GetHelmConfig()
+		}
 	}
 
 	spiffeOIDCDiscoveryProviderValues := map[string]interface{}{
