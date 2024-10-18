@@ -3,6 +3,8 @@ package workloads
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
@@ -20,6 +22,43 @@ type RegisteredWorkload struct {
 	Type      string
 }
 
+type ParentID struct {
+	Path        string `json:"path"`
+	TrustDomain string `json:"trust_domain"`
+}
+
+type Selector struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+type SPIFFEID struct {
+	Path        string `json:"path"`
+	TrustDomain string `json:"trust_domain"`
+}
+
+type RegistrationEntry struct {
+	Admin          bool       `json:"admin"`
+	CreatedAt      string     `json:"created_at"`
+	DNSNames       []string   `json:"dns_names"`
+	Downstream     bool       `json:"downstream"`
+	ExpiresAt      string     `json:"expires_at"`
+	FederatesWith  []string   `json:"federates_with"`
+	Hint           string     `json:"hint"`
+	ID             string     `json:"id"`
+	JWTSVIDTTL     int        `json:"jwt_svid_ttl"`
+	ParentID       ParentID   `json:"parent_id"`
+	RevisionNumber string     `json:"revision_number"`
+	Selectors      []Selector `json:"selectors"`
+	SPIFFEID       SPIFFEID   `json:"spiffe_id"`
+	StoreSVID      bool       `json:"store_svid"`
+	X509SVIDTTL    int        `json:"x509_svid_ttl"`
+}
+
+type RegistrationEntries struct {
+	Entries []RegistrationEntry
+}
+
 func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]RegisteredWorkload, error) {
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, kubeContext)
 	if err != nil {
@@ -31,6 +70,30 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 		return nil, err
 	}
 
+	registrationEntriesMap := make(map[string]string)
+
+	for _, registrationEntry := range registrationEntries {
+		var podUID string
+
+		selectors := registrationEntry.Selectors
+		if len(selectors) == 0 {
+			continue
+		}
+
+		for _, selector := range selectors {
+			if selector.Type == "k8s" {
+				podUID = strings.TrimPrefix(selector.Value, "pod-uid:")
+			}
+		}
+
+		if podUID == "" {
+			continue
+		}
+
+		spiffeID := fmt.Sprintf("spiffe://%s%s", registrationEntry.SPIFFEID.TrustDomain, registrationEntry.SPIFFEID.Path)
+		registrationEntriesMap[podUID] = spiffeID
+	}
+
 	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -39,7 +102,7 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 	registeredWorkloads := []RegisteredWorkload{}
 
 	for _, pod := range pods.Items {
-		spiffeID, ok := registrationEntries[string(pod.UID)]
+		spiffeID, ok := registrationEntriesMap[string(pod.UID)]
 		if ok {
 			registeredWorkload := &RegisteredWorkload{
 				Name:      pod.Name,
@@ -56,9 +119,9 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 	return registeredWorkloads, nil
 }
 
-func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) (map[string]string, error) {
+func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) ([]RegistrationEntry, error) {
 	podExecOpts := &v1.PodExecOptions{
-		Command:   []string{"/opt/spire/bin/spire-server", "entry", "show"},
+		Command:   []string{"/opt/spire/bin/spire-server", "entry", "show", "-output", "json"},
 		Container: "spire-server",
 		Stdin:     true,
 		Stdout:    true,
@@ -92,25 +155,13 @@ func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) (map[s
 		return nil, err
 	}
 
-	registrationEntries := make(map[string]string)
-	stdoutLines := strings.Split(stdout.String(), "\n")
-
-	for i := 0; i < len(stdoutLines); i++ {
-		var podUID, spiffeID string
-
-		if strings.HasPrefix(stdoutLines[i], "SPIFFE ID") {
-			spiffeID = strings.TrimPrefix(stdoutLines[i], "SPIFFE ID        : ")
-
-			for !strings.HasPrefix(stdoutLines[i], "Selector") && i < len(stdoutLines)-1 {
-				i += 1
-			}
-
-			if strings.HasPrefix(stdoutLines[i], "Selector") {
-				podUID = strings.Split(stdoutLines[i], ":")[3]
-				registrationEntries[podUID] = spiffeID
-			}
-		}
+	parsedRegistrationEntries := &RegistrationEntries{}
+	err = json.Unmarshal(stdout.Bytes(), parsedRegistrationEntries)
+	if err != nil {
+		return nil, err
 	}
+
+	registrationEntries := parsedRegistrationEntries.Entries
 
 	return registrationEntries, nil
 }
