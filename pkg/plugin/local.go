@@ -17,6 +17,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/config"
+	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 )
 
@@ -158,7 +159,7 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 		return fmt.Errorf("attestation policy %s does not exist in local config", policy.Name)
 	}
 
-	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy.Name)
+	localTrustZone.AttestationPolicies[policy.Name] = &attestationpolicy.AttestationPolicy{}
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
 	}
@@ -176,18 +177,18 @@ func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy
 	}
 }
 
-func (lds *LocalDataSource) AddFederation(federation *federation_proto.Federation) error {
-	leftTrustZone, ok := lds.config.TrustZones[federation.Left.Name]
+func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) error {
+	leftTrustZone, ok := lds.config.TrustZones[federationProto.Left.Name]
 	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", federation.Left.Name)
+		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.Left.Name)
 	}
 
-	_, ok = lds.config.TrustZones[federation.Right.Name]
+	_, ok = lds.config.TrustZones[federationProto.Right.Name]
 	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", federation.Right.Name)
+		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.Right.Name)
 	}
 
-	leftTrustZone.Federations = append(leftTrustZone.Federations, federation.Right.Name)
+	leftTrustZone.Federations[federationProto.Right.Name] = &federation.Federation{}
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add federation to local config: %s", err)
 	}
@@ -225,13 +226,27 @@ func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, er
 	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
 	federationsAsProto := make([]*federation_proto.Federation, 0)
 	for _, trustZone := range lds.config.TrustZones {
-		for _, federation := range trustZone.Federations {
-			rightTrustZone, err := lds.GetTrustZone(federation)
+		for id, _ := range trustZone.Federations {
+			rightTrustZone, err := lds.GetTrustZone(id)
 			if err != nil {
 				return nil, err
 			}
 			federationsAsProto = append(federationsAsProto, &federation_proto.Federation{Left: trustZone.TrustZoneProto, Right: rightTrustZone})
 		}
 	}
+	return federationsAsProto, nil
+}
+
+func (lds *LocalDataSource) ListFederationByTrustZone(id string) ([]*federation_proto.Federation, error) {
+	federationsAsProto := make([]*federation_proto.Federation, 0)
+	trustZone := lds.config.TrustZones[id]
+	for id, _ := range trustZone.Federations {
+		rightTrustZone, err := lds.GetTrustZone(id)
+		if err != nil {
+			return nil, err
+		}
+		federationsAsProto = append(federationsAsProto, &federation_proto.Federation{Left: trustZone.TrustZoneProto, Right: rightTrustZone})
+	}
+
 	return federationsAsProto, nil
 }

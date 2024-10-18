@@ -19,4 +19,5 @@ type DataSource interface {
 
 	AddFederation(*federation_proto.Federation) error
 	ListFederation() ([]*federation_proto.Federation, error)
+	ListFederationByTrustZone(string) ([]*federation_proto.Federation, error)
 }

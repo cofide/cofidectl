@@ -13,7 +13,6 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
-	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -278,7 +277,7 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 type HelmValuesGenerator struct {
 	trustZone           *trustzone.TrustZone
 	attestationPolicies []*attestationpolicy.AttestationPolicy
-	federations         []*federation.Federation
+	federations         map[string]*federation.Federation
 }
 
 func NewHelmValuesGenerator(trustZone *trustzone.TrustZone) *HelmValuesGenerator {
@@ -290,15 +289,14 @@ func (g *HelmValuesGenerator) WithAttestationPolicies(policies []*attestationpol
 	return g
 }
 
-func (g *HelmValuesGenerator) WithFederations(federations []*federation.Federation) *HelmValuesGenerator {
+func (g *HelmValuesGenerator) WithFederations(federations map[string]*federation.Federation) *HelmValuesGenerator {
 	g.federations = federations
 	return g
 }
 
 func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
-	trustProvider := trustprovider.NewTrustProvider(g.trustZone.TrustProvider.Kind)
-	agentConfig := trustProvider.AgentConfig
-	serverConfig := trustProvider.ServerConfig
+	agentConfig := g.trustZone.TrustProvider.AgentConfig
+	serverConfig := g.trustZone.TrustProvider.ServerConfig
 
 	globalValues := map[string]interface{}{
 		"global.spire.clusterName":              g.trustZone.TrustZoneProto.KubernetesCluster,

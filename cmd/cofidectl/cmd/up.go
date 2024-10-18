@@ -44,6 +44,9 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 		Long:  upCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			//configProvider := local.YAMLConfigProvider{DataSource: u.source}
+			//config, err := configProvider.GetConfig()
+
 			trustZoneProtos, err := u.source.ListTrustZones()
 			if err != nil {
 				return err
@@ -57,8 +60,15 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			// convert to structs
 			trustZones := make(map[string]*trustzone.TrustZone, len(trustZoneProtos))
 			for _, trustZoneProto := range trustZoneProtos {
-				trustZones[trustZoneProto.TrustDomain] = trustzone.NewTrustZone(trustZoneProto)
-
+				federationProtos, _ := u.source.ListFederationByTrustZone(trustZoneProto.Name)
+				// convert to structs
+				federations := make(map[string]*federation.Federation, len(federationProtos))
+				for _, federationProto := range federationProtos {
+					federations[federationProto.Right.Name] = federation.NewFederation(federationProto)
+				}
+				trustZoneStruct := trustzone.NewTrustZone(trustZoneProto)
+				trustZoneStruct.Federations = federations
+				trustZones[trustZoneProto.TrustDomain] = trustZoneStruct
 			}
 
 			err = installSPIREStack(trustZones)
@@ -78,19 +88,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				attestationPolicies = append(attestationPolicies, attestationpolicy.NewAttestationPolicy(attestationPolicyProto))
 			}
 
-			// post-install additionally requires federation config
-			federationProtos, err := u.source.ListFederation()
-			if err != nil {
-				return err
-			}
-
-			// convert to structs
-			federations := make([]*federation.Federation, 0, len(federationProtos))
-			for _, federationProto := range federationProtos {
-				federations = append(federations, federation.NewFederation(federationProto))
-			}
-
-			err = watchAndConfigure(trustZones, attestationPolicies, federations)
+			err = watchAndConfigure(trustZones, attestationPolicies)
 			if err != nil {
 				return err
 			}
@@ -139,7 +137,7 @@ func installSPIREStack(trustZones map[string]*trustzone.TrustZone) error {
 	return nil
 }
 
-func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy, federations []*federation.Federation) error {
+func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
@@ -160,12 +158,14 @@ func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPo
 	green := color.New(color.FgGreen).SprintFunc()
 	fmt.Printf("%s All pods and services are ready.\n\n", green("✅"))
 
-	// update the federations with verified bundle endpoints
-	for _, federation := range federations {
-		federation.BundleEndpointURL = trustZones[federation.ToTrustDomain].TrustZoneProto.BundleEndpointUrl
+	// now update the federations with the discovered endpoint URL
+	for _, trustZone := range trustZones {
+		for _, federation := range trustZone.Federations {
+			federation.BundleEndpointURL = trustZones[federation.ToTrustDomain].TrustZoneProto.BundleEndpointUrl
+		}
 	}
 
-	err := applyPostInstallHelmConfig(trustZones, attestationPolicies, federations)
+	err := applyPostInstallHelmConfig(trustZones, attestationPolicies)
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ func createServiceWatcher(kubeContext string) (watch.Interface, error) {
 	return watcher, nil
 }
 
-func applyPostInstallHelmConfig(trustZones map[string]*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy, federations []*federation.Federation) error {
+func applyPostInstallHelmConfig(trustZones map[string]*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy) error {
 	for _, trustZone := range trustZones {
 		generator := helm.NewHelmValuesGenerator(trustZone)
 
@@ -273,8 +273,8 @@ func applyPostInstallHelmConfig(trustZones map[string]*trustzone.TrustZone, atte
 			generator = generator.WithAttestationPolicies(attestationPolicies)
 		}
 
-		if len(federations) > 0 {
-			generator = generator.WithFederations(federations)
+		if len(trustZone.Federations) > 0 {
+			generator = generator.WithFederations(trustZone.Federations)
 		}
 
 		spireValues, err := generator.GenerateValues()

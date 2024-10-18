@@ -5,6 +5,8 @@ import (
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
+	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 
 	"gopkg.in/yaml.v3"
@@ -13,8 +15,8 @@ import (
 type TrustZone struct {
 	TrustZoneProto      *trust_zone_proto.TrustZone
 	TrustProvider       *trustprovider.TrustProvider
-	AttestationPolicies []string // keys for the policies which are defined in the config file
-	Federations         []string // keys for federated trust zones
+	AttestationPolicies map[string]*attestationpolicy.AttestationPolicy
+	Federations         map[string]*federation.Federation
 }
 
 func NewTrustZone(trustZone *trust_zone_proto.TrustZone) *TrustZone {
@@ -60,15 +62,15 @@ func (tz *TrustZone) UnmarshalYAML(value *yaml.Node) error {
 	tz.TrustZoneProto.TrustProvider = &trust_provider_proto.TrustProvider{Kind: tz.TrustProvider.Kind}
 
 	ap := tempMap["attestation_policies"].([]interface{})
-	tz.AttestationPolicies = make([]string, len(ap))
-	for i, v := range ap {
-		tz.AttestationPolicies[i] = fmt.Sprint(v)
+	tz.AttestationPolicies = make(map[string]*attestationpolicy.AttestationPolicy, len(ap))
+	for _, v := range ap {
+		tz.AttestationPolicies[fmt.Sprint(v)] = &attestationpolicy.AttestationPolicy{}
 	}
 
 	fed := tempMap["federations"].([]interface{})
-	tz.Federations = make([]string, len(fed))
-	for i, v := range fed {
-		tz.Federations[i] = fmt.Sprint(v)
+	tz.Federations = make(map[string]*federation.Federation, len(fed))
+	for _, v := range fed {
+		tz.Federations[fmt.Sprint(v)] = &federation.Federation{}
 	}
 
 	return nil
