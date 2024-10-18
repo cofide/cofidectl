@@ -22,28 +22,23 @@ type RegisteredWorkload struct {
 	Type      string
 }
 
-type ParentID struct {
-	Path        string `json:"path"`
-	TrustDomain string `json:"trust_domain"`
-}
-
-type Selector struct {
+type selector struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
-type SPIFFEID struct {
+type spiffeID struct {
 	Path        string `json:"path"`
 	TrustDomain string `json:"trust_domain"`
 }
 
-type RegistrationEntry struct {
-	Selectors []Selector `json:"selectors"`
-	SPIFFEID  SPIFFEID   `json:"spiffe_id"`
+type registrationEntry struct {
+	Selectors []selector `json:"selectors"`
+	SPIFFEID  spiffeID   `json:"spiffe_id"`
 }
 
-type RegistrationEntries struct {
-	Entries []RegistrationEntry
+type registrationEntries struct {
+	Entries []registrationEntry
 }
 
 func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]RegisteredWorkload, error) {
@@ -106,7 +101,7 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 	return registeredWorkloads, nil
 }
 
-func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) ([]RegistrationEntry, error) {
+func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) ([]registrationEntry, error) {
 	podExecOpts := &v1.PodExecOptions{
 		Command:   []string{"/opt/spire/bin/spire-server", "entry", "show", "-output", "json"},
 		Container: "spire-server",
@@ -142,7 +137,7 @@ func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) ([]Reg
 		return nil, err
 	}
 
-	parsedRegistrationEntries := &RegistrationEntries{}
+	parsedRegistrationEntries := &registrationEntries{}
 	err = json.Unmarshal(stdout.Bytes(), parsedRegistrationEntries)
 	if err != nil {
 		return nil, err
