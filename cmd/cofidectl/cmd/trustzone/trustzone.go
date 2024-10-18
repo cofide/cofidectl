@@ -1,9 +1,12 @@
 package trustzone
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 
 	"github.com/manifoldco/promptui"
 
@@ -11,6 +14,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	"github.com/cofide/cofidectl/internal/pkg/spire"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -39,8 +43,11 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 
-	cmd.AddCommand(c.GetListCommand())
-	cmd.AddCommand(c.GetAddCommand())
+	cmd.AddCommand(
+		c.GetListCommand(),
+		c.GetAddCommand(),
+		c.GetStatusCommand(),
+	)
 
 	return cmd
 }
@@ -135,6 +142,130 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	cmd.MarkFlagRequired("kubernetes-cluster")
 
 	return cmd
+}
+
+var trustZoneStatusCmdDesc = `
+This command will display the status of trust zones in the Cofide configuration state.
+`
+
+func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "status [NAME]",
+		Short: "Display trust zone status",
+		Long:  trustZoneStatusCmdDesc,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			kubeConfig, err := cmd.Flags().GetString("kube-config")
+			if err != nil {
+				return fmt.Errorf("failed to retrieve the kubeconfig file location")
+			}
+			return c.status(cmd.Context(), kubeConfig, args[0])
+		},
+	}
+
+	return cmd
+}
+
+func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string) error {
+	// FIXME: Use c.source.GetTrustZone(tzName) when available
+	trustZone, err := c.getTrustZone(tzName)
+	if err != nil {
+		return err
+	}
+
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, trustZone.KubernetesContext)
+	if err != nil {
+		return err
+	}
+
+	server, err := spire.GetServerStatus(ctx, client)
+	if err != nil {
+		return err
+	}
+
+	agents, err := spire.GetAgentStatus(ctx, client)
+	if err != nil {
+		return err
+	}
+
+	err = renderStatus(server, agents)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *TrustZoneCommand) getTrustZone(name string) (*trust_zone_proto.TrustZone, error) {
+	trustZones, err := c.source.ListTrustZones()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, trustZone := range trustZones {
+		if trustZone.Name == name {
+			return trustZone, nil
+		}
+	}
+	return nil, errors.New("not found")
+}
+
+func renderStatus(server spire.ServerStatus, agents spire.AgentStatus) error {
+	serverData := make([][]string, 0)
+	for _, container := range server.Containers {
+		serverData = append(serverData, []string{
+			container.Name,
+			strconv.FormatBool(container.Ready),
+		})
+	}
+
+	scmData := make([][]string, 0)
+	for _, scm := range server.SCMs {
+		scmData = append(scmData, []string{
+			scm.Name,
+			strconv.FormatBool(scm.Ready),
+		})
+	}
+
+	agentData := make([][]string, 0)
+	for _, agent := range agents.Agents {
+		agentData = append(agentData, []string{
+			agent.Name,
+			agent.Status,
+			agent.Id,
+			agent.AttestationType,
+			agent.ExpirationTime.String(),
+			strconv.FormatBool(agent.CanReattest),
+		})
+	}
+
+	fmt.Printf("SPIRE Servers (%d/%d ready)\n", server.ReadyReplicas, server.Replicas)
+	fmt.Println()
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Pod", "Ready"})
+	table.SetBorder(false)
+	table.AppendBulk(serverData)
+	table.Render()
+
+	fmt.Println()
+	fmt.Printf("SPIRE Controller Managers (%d/%d ready)\n", server.ReadyReplicas, server.Replicas)
+	fmt.Println()
+	table = tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Pod", "Ready"})
+	table.SetBorder(false)
+	table.AppendBulk(scmData)
+	table.Render()
+
+	fmt.Println()
+	fmt.Printf("SPIRE Agents (%d/%d ready)\n", agents.Ready, agents.Expected)
+	fmt.Println()
+	table = tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Pod", "Status", "SPIFFE ID", "Attestation type", "Expiration time", "Can re-attest"})
+	table.SetBorder(false)
+	table.AppendBulk(agentData)
+	table.Render()
+
+	return nil
 }
 
 func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
