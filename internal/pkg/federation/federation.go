@@ -15,7 +15,7 @@ type Federation struct {
 func NewFederation(federation *federation_proto.Federation) *Federation {
 	return &Federation{
 		FromTrustDomain:   federation.Left.TrustDomain,
-		ToTrustDomain:     federation.Left.TrustDomain,
+		ToTrustDomain:     federation.Right.TrustDomain,
 		BundleEndpointURL: federation.Right.BundleEndpointUrl,
 	}
 }

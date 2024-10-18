@@ -69,6 +69,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				trustZoneStruct := trustzone.NewTrustZone(trustZoneProto)
 				trustZoneStruct.Federations = federations
 				trustZones[trustZoneProto.TrustDomain] = trustZoneStruct
+
 			}
 
 			err = installSPIREStack(trustZones)
