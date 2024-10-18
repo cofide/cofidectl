@@ -54,11 +54,7 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 		Long:  workloadsListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			kubeConfig, err := cmd.Flags().GetString("kube-config")
-			if err != nil {
-				return fmt.Errorf("failed to retrieve the kubeconfig file location")
-			}
-
+			var err error
 			var trustZones []*trust_zone_proto.TrustZone
 
 			if opts.trust_zone != "" {
@@ -77,6 +73,11 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 
 			if len(trustZones) == 0 {
 				return fmt.Errorf("no trust zones have been configured")
+			}
+
+			kubeConfig, err := cmd.Flags().GetString("kube-config")
+			if err != nil {
+				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
 			err = renderRegisteredWorkloads(kubeConfig, trustZones)
