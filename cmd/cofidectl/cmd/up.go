@@ -225,7 +225,6 @@ func watchSPIREPodAndService(kubeContext string) (string, error) {
 				if isServiceReady(service) {
 					serviceReady = true
 					serviceIP, _ = getServiceExternalIP(service)
-
 				}
 			}
 		case <-timeout:

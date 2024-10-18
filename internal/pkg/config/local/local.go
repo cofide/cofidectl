@@ -10,7 +10,8 @@ type YAMLConfigProvider struct {
 }
 
 func (ycp *YAMLConfigProvider) GetConfig() (*config.Config, error) {
-	return nil, nil
+	config := &config.Config{}
+	return config, nil
 }
 
 func (ycp *YAMLConfigProvider) GetPlugins() ([]string, error) {
