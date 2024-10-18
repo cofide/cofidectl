@@ -16,6 +16,7 @@ import (
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
+	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 )
 
@@ -54,15 +55,9 @@ const schemaCue = `
 config: #Config
 `
 
-type Config struct {
-	Plugins             []string                                        `yaml:"plugins,omitempty"`
-	TrustZones          map[string]*trustzone.TrustZone                 `yaml:"trust_zones,omitempty"`
-	AttestationPolicies map[string]*attestationpolicy.AttestationPolicy `yaml:"attestation_policies,omitempty"`
-}
-
 type LocalDataSource struct {
 	filePath   string
-	config     *Config
+	config     *config.Config
 	cueContext *cue.Context
 }
 
@@ -70,7 +65,7 @@ func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
 	trustZones := make(map[string]*trustzone.TrustZone)
 	attestationPolicies := make(map[string]*attestationpolicy.AttestationPolicy)
 
-	cfg := &Config{TrustZones: trustZones, AttestationPolicies: attestationPolicies}
+	cfg := &config.Config{TrustZones: trustZones, AttestationPolicies: attestationPolicies}
 	lds := &LocalDataSource{
 		filePath: filePath,
 		config:   cfg,
@@ -117,14 +112,6 @@ func (lds *LocalDataSource) loadState() error {
 	}
 
 	return nil
-}
-
-func (lds *LocalDataSource) GetConfig() (*Config, error) {
-	return lds.config, nil
-}
-
-func (lds *LocalDataSource) GetPlugins() ([]string, error) {
-	return lds.config.Plugins, nil
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
