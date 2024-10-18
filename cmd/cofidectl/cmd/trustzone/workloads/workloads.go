@@ -28,7 +28,7 @@ This command consists of multiple sub-commands to interact with workloads.
 func (c *WorkloadsCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workloads list [ARGS]",
-		Short: "list trust zone workloads",
+		Short: "List trust zone workloads",
 		Long:  workloadsRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -39,7 +39,7 @@ func (c *WorkloadsCommand) GetRootCommand() *cobra.Command {
 }
 
 var workloadsListCmdDesc = `
-This command will list all of the registered workloads in every trust zone.
+This command will list all of the registered workloads.
 `
 
 type Opts struct {
@@ -50,7 +50,7 @@ func (w *WorkloadsCommand) GetListCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
 		Use:   "list [ARGS]",
-		Short: "list workloads",
+		Short: "List workloads",
 		Long:  workloadsListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
