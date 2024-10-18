@@ -21,7 +21,7 @@ func NewWorkloadCommand(source cofidectl_plugin.DataSource) *WorkloadCommand {
 	}
 }
 
-var workloadsRootCmdDesc = `
+var workloadRootCmdDesc = `
 This command consists of multiple sub-commands to interact with workloads.
 `
 
@@ -29,7 +29,7 @@ func (c *WorkloadCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workload list [ARGS]",
 		Short: "List trust zone workloads",
-		Long:  workloadsRootCmdDesc,
+		Long:  workloadRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
