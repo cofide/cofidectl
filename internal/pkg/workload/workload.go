@@ -38,21 +38,8 @@ type SPIFFEID struct {
 }
 
 type RegistrationEntry struct {
-	Admin          bool       `json:"admin"`
-	CreatedAt      string     `json:"created_at"`
-	DNSNames       []string   `json:"dns_names"`
-	Downstream     bool       `json:"downstream"`
-	ExpiresAt      string     `json:"expires_at"`
-	FederatesWith  []string   `json:"federates_with"`
-	Hint           string     `json:"hint"`
-	ID             string     `json:"id"`
-	JWTSVIDTTL     int        `json:"jwt_svid_ttl"`
-	ParentID       ParentID   `json:"parent_id"`
-	RevisionNumber string     `json:"revision_number"`
-	Selectors      []Selector `json:"selectors"`
-	SPIFFEID       SPIFFEID   `json:"spiffe_id"`
-	StoreSVID      bool       `json:"store_svid"`
-	X509SVIDTTL    int        `json:"x509_svid_ttl"`
+	Selectors []Selector `json:"selectors"`
+	SPIFFEID  SPIFFEID   `json:"spiffe_id"`
 }
 
 type RegistrationEntries struct {

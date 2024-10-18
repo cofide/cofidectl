@@ -43,7 +43,7 @@ This command will list all of the registered workloads.
 `
 
 type Opts struct {
-	trust_zone string
+	trustZone string
 }
 
 func (w *WorkloadCommand) GetListCommand() *cobra.Command {
@@ -57,8 +57,8 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 			var err error
 			var trustZones []*trust_zone_proto.TrustZone
 
-			if opts.trust_zone != "" {
-				trustZone, err := w.source.GetTrustZone(opts.trust_zone)
+			if opts.trustZone != "" {
+				trustZone, err := w.source.GetTrustZone(opts.trustZone)
 				if err != nil {
 					return err
 				}
@@ -90,7 +90,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trust_zone, "trust-zone", "", "list the registered workloads in a specific trust zone")
+	f.StringVar(&opts.trustZone, "trust-zone", "", "list the registered workloads in a specific trust zone")
 
 	return cmd
 }
