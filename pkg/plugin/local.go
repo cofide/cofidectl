@@ -126,13 +126,13 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 }
 
 func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone, error) {
-	for _, trustZone := range lds.Config.TrustZones {
-		if trustZone.TrustZoneProto.Name == id {
-			return trustZone.TrustZoneProto, nil
-		}
+	var trustZone *trustzone.TrustZone
+	var ok bool
+	if trustZone, ok = lds.Config.TrustZones[id]; !ok {
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", id)
 	}
 
-	return nil, fmt.Errorf("failed to find trust zone %s in local config", id)
+	return trustZone.TrustZoneProto, nil
 
 }
 

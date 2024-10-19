@@ -60,14 +60,14 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			data := make([][]string, len(federations))
 			for i, federation := range federations {
 				data[i] = []string{
-					fmt.Sprintf("%s (%s)", federation.Left, federation.Left),
-					fmt.Sprintf("%s (%s)", federation.Right, federation.Right),
+					fmt.Sprintf("%s", federation.Left),
+					fmt.Sprintf("%s", federation.Right),
 					"Healthy", //TODO
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Trust Zone (domain)", "Trust Zone (domain)", "Status"})
+			table.SetHeader([]string{"Trust Zone", "Trust Zone", "Status"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
