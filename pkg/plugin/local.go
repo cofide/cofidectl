@@ -158,7 +158,6 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 	}
 
 	localTrustZone.TrustZoneProto.AttestationPolicies = append(localTrustZone.TrustZoneProto.AttestationPolicies, policy)
-	//localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, &attestationpolicy.AttestationPolicy{AttestationPolicyProto: policy})
 	if err := lds.UpdateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
 	}

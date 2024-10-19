@@ -34,49 +34,6 @@ func (ap *AttestationPolicy) unmarshalFromYAML(data []byte) error {
 	return protoyaml.Unmarshal(data, ap.AttestationPolicyProto)
 }
 
-/*
-func (ap *AttestationPolicy) MarshalYAML() (interface{}, error) {
-	yamlMap := make(map[string]interface{})
-
-	kind, err := GetAttestationPolicyKindString(ap.AttestationPolicyProto.Kind.String())
-	if err != nil {
-		return nil, err
-	}
-
-	yamlMap["name"] = ap.AttestationPolicyProto.Name
-	yamlMap["kind"] = kind
-	yamlMap["namespace"] = ap.AttestationPolicyProto.Namespace
-	yamlMap["pod_key"] = ap.AttestationPolicyProto.PodKey
-	yamlMap["pod_value"] = ap.AttestationPolicyProto.PodValue
-
-	return yamlMap, nil
-}
-
-func (ap *AttestationPolicy) UnmarshalYAML(value *yaml.Node) error {
-	tempMap := make(map[string]interface{})
-	if err := value.Decode(&tempMap); err != nil {
-		return err
-	}
-
-	if ap.AttestationPolicyProto == nil {
-		ap.AttestationPolicyProto = &attestation_policy_proto.AttestationPolicy{}
-	}
-
-	kind, err := GetAttestationPolicyKind(tempMap["kind"].(string))
-	if err != nil {
-		return err
-	}
-
-	ap.AttestationPolicyProto.Name = tempMap["name"].(string)
-	ap.AttestationPolicyProto.Kind = kind
-	ap.AttestationPolicyProto.Namespace = tempMap["namespace"].(string)
-	ap.AttestationPolicyProto.PodKey = tempMap["pod_key"].(string)
-	ap.AttestationPolicyProto.PodValue = tempMap["pod_value"].(string)
-
-	return nil
-}
-*/
-
 func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
 	var clusterSPIFFEID = make(map[string]interface{})
 	switch ap.AttestationPolicyProto.Kind {

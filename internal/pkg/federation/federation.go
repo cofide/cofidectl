@@ -8,22 +8,12 @@ import (
 
 type Federation struct {
 	destTrustZone *trustzone.TrustZone
-	/*
-		FederationProto   *federation_proto.Federation
-		BundleEndpointURL string
-		BootstrapBundle   string
-	*/
 }
 
 func NewFederation(trustZone *trustzone.TrustZone) *Federation {
 	return &Federation{
 		destTrustZone: trustZone,
 	}
-	/*
-		return &Federation{
-			FederationProto: federationProto,
-		}
-	*/
 }
 
 func (fed *Federation) GetHelmConfig() map[string]interface{} {
