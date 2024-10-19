@@ -8,10 +8,9 @@ import (
 
 	"github.com/briandowns/spinner"
 
-	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
-	"github.com/cofide/cofidectl/internal/pkg/federation"
+	"github.com/cofide/cofidectl/internal/pkg/config"
+	"github.com/cofide/cofidectl/internal/pkg/config/local"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
-	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/fatih/color"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,52 +44,63 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 		Long:  upCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//configProvider := local.YAMLConfigProvider{DataSource: u.source}
-			//config, err := configProvider.GetConfig()
+			ds, _ := u.source.(*cofidectl_plugin.LocalDataSource)
+			configProvider := local.YAMLConfigProvider{DataSource: ds}
+			config, err := configProvider.GetConfig()
 
-			trustZoneProtos, err := u.source.ListTrustZones()
 			if err != nil {
 				return err
 			}
 
-			if len(trustZoneProtos) == 0 {
-				fmt.Println("no trust zones have been configured")
-				return nil
-			}
+			/*
 
-			// convert to structs
-			trustZones := make(map[string]*trustzone.TrustZone, len(trustZoneProtos))
-			for _, trustZoneProto := range trustZoneProtos {
-				federationProtos, _ := u.source.ListFederationByTrustZone(trustZoneProto.Name)
-				// convert to structs
-				federations := make(map[string]*federation.Federation, len(federationProtos))
-				for _, federationProto := range federationProtos {
-					federations[federationProto.Right.Name] = federation.NewFederation(federationProto)
+				trustZoneProtos, err := u.source.ListTrustZones()
+				if err != nil {
+					return err
 				}
-				trustZoneStruct := trustzone.NewTrustZone(trustZoneProto)
-				trustZoneStruct.Federations = federations
-				trustZones[trustZoneProto.TrustDomain] = trustZoneStruct
 
-			}
+				if len(trustZoneProtos) == 0 {
+					fmt.Println("no trust zones have been configured")
+					return nil
+				}
 
-			err = installSPIREStack(trustZones)
+				// convert to structs
+				trustZones := make(map[string]*trustzone.TrustZone, len(trustZoneProtos))
+				for _, trustZoneProto := range trustZoneProtos {
+					federationProtos, _ := u.source.ListFederationByTrustZone(trustZoneProto.Name)
+					// convert to structs
+					federations := make(map[string]*federation.Federation, len(federationProtos))
+					for _, federationProto := range federationProtos {
+						federations[federationProto.Right.Name] = federation.NewFederation(federationProto)
+					}
+					trustZoneStruct := trustzone.NewTrustZone(trustZoneProto)
+					trustZoneStruct.Federations = federations
+					trustZones[trustZoneProto.TrustDomain] = trustZoneStruct
+
+				}
+
+			*/
+
+			err = installSPIREStack(config)
 			if err != nil {
 				return err
 			}
 
-			// post-install additionally requires attestation policy config
-			attestationPoliciesProtos, err := u.source.ListAttestationPolicies()
-			if err != nil {
-				return err
-			}
+			/*
+				// post-install additionally requires attestation policy config
+				attestationPoliciesProtos, err := u.source.ListAttestationPolicies()
+				if err != nil {
+					return err
+				}
 
-			// convert to structs
-			attestationPolicies := make([]*attestationpolicy.AttestationPolicy, 0, len(attestationPoliciesProtos))
-			for _, attestationPolicyProto := range attestationPoliciesProtos {
-				attestationPolicies = append(attestationPolicies, attestationpolicy.NewAttestationPolicy(attestationPolicyProto))
-			}
+				// convert to structs
+				attestationPolicies := make([]*attestationpolicy.AttestationPolicy, 0, len(attestationPoliciesProtos))
+				for _, attestationPolicyProto := range attestationPoliciesProtos {
+					attestationPolicies = append(attestationPolicies, attestationpolicy.NewAttestationPolicy(attestationPolicyProto))
+				}
+			*/
 
-			err = watchAndConfigure(trustZones, attestationPolicies)
+			err = watchAndConfigure(config)
 			if err != nil {
 				return err
 			}
@@ -100,9 +110,9 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 	return cmd
 }
 
-func installSPIREStack(trustZones map[string]*trustzone.TrustZone) error {
-	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone)
+func installSPIREStack(config *config.Config) error {
+	for _, trustZone := range config.TrustZones {
+		generator := helm.NewHelmValuesGenerator(trustZone, config)
 		spireValues, err := generator.GenerateValues()
 		if err != nil {
 			return err
@@ -139,9 +149,9 @@ func installSPIREStack(trustZones map[string]*trustzone.TrustZone) error {
 	return nil
 }
 
-func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy) error {
+func watchAndConfigure(config *config.Config) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
-	for _, trustZone := range trustZones {
+	for _, trustZone := range config.TrustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
 		s.Prefix = fmt.Sprintf("Waiting for pod and service in %s: ", trustZone.TrustZoneProto.KubernetesCluster)
 		s.Start()
@@ -161,7 +171,7 @@ func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPo
 			return fmt.Errorf("error obtaining bundle in context %s: %v", trustZone.TrustZoneProto.KubernetesContext, err)
 		}
 
-		trustZone.BootstrapBundle = bundle
+		trustZone.TrustZoneProto.Bundle = bundle
 
 		s.Stop()
 	}
@@ -169,15 +179,7 @@ func watchAndConfigure(trustZones map[string]*trustzone.TrustZone, attestationPo
 	green := color.New(color.FgGreen).SprintFunc()
 	fmt.Printf("%s All pods and services are ready.\n\n", green("✅"))
 
-	// now update the federations with the discovered endpoint URL
-	for _, trustZone := range trustZones {
-		for _, federation := range trustZone.Federations {
-			federation.BundleEndpointURL = trustZones[federation.ToTrustDomain].TrustZoneProto.BundleEndpointUrl
-			federation.BootstrapBundle = trustZones[federation.ToTrustDomain].BootstrapBundle
-		}
-	}
-
-	err := applyPostInstallHelmConfig(trustZones, attestationPolicies)
+	err := applyPostInstallHelmConfig(config)
 	if err != nil {
 		return err
 	}
@@ -313,17 +315,9 @@ func createServiceWatcher(kubeContext string) (watch.Interface, error) {
 	return watcher, nil
 }
 
-func applyPostInstallHelmConfig(trustZones map[string]*trustzone.TrustZone, attestationPolicies []*attestationpolicy.AttestationPolicy) error {
-	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone)
-
-		if len(attestationPolicies) > 0 {
-			generator = generator.WithAttestationPolicies(attestationPolicies)
-		}
-
-		if len(trustZone.Federations) > 0 {
-			generator = generator.WithFederations(trustZone.Federations)
-		}
+func applyPostInstallHelmConfig(config *config.Config) error {
+	for _, trustZone := range config.TrustZones {
+		generator := helm.NewHelmValuesGenerator(trustZone, config)
 
 		spireValues, err := generator.GenerateValues()
 		if err != nil {

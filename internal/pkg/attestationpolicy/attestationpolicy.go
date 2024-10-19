@@ -3,8 +3,8 @@ package attestationpolicy
 import (
 	"fmt"
 
+	"buf.build/go/protoyaml"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	"gopkg.in/yaml.v3"
 )
 
 type AttestationPolicy struct {
@@ -26,6 +26,15 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 	}
 }
 
+func (ap *AttestationPolicy) marshalToYAML() ([]byte, error) {
+	return protoyaml.Marshal(ap.AttestationPolicyProto)
+}
+
+func (ap *AttestationPolicy) unmarshalFromYAML(data []byte) error {
+	return protoyaml.Unmarshal(data, ap.AttestationPolicyProto)
+}
+
+/*
 func (ap *AttestationPolicy) MarshalYAML() (interface{}, error) {
 	yamlMap := make(map[string]interface{})
 
@@ -66,6 +75,7 @@ func (ap *AttestationPolicy) UnmarshalYAML(value *yaml.Node) error {
 
 	return nil
 }
+*/
 
 func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
 	var clusterSPIFFEID = make(map[string]interface{})

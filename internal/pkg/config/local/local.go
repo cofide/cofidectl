@@ -6,12 +6,12 @@ import (
 )
 
 type YAMLConfigProvider struct {
-	DataSource plugin.DataSource
+	DataSource *plugin.LocalDataSource
 }
 
 func (ycp *YAMLConfigProvider) GetConfig() (*config.Config, error) {
-	config := &config.Config{}
-	return config, nil
+	return ycp.DataSource.Config, nil
+
 }
 
 func (ycp *YAMLConfigProvider) GetPlugins() ([]string, error) {
