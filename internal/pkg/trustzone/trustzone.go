@@ -24,6 +24,6 @@ func (tz *TrustZone) unmarshalFromYAML(data []byte) error {
 	return protoyaml.Unmarshal(data, tz.TrustZoneProto)
 }
 
-func (tz *TrustZone) GetTrustProviderProto() (*trustprovider.TrustProvider, error) {
+func (tz *TrustZone) GetTrustProvider() (*trustprovider.TrustProvider, error) {
 	return trustprovider.NewTrustProvider(tz.TrustZoneProto.TrustProvider.Kind), nil
 }

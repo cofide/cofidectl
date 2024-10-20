@@ -11,7 +11,6 @@ type YAMLConfigProvider struct {
 
 func (ycp *YAMLConfigProvider) GetConfig() (*config.Config, error) {
 	return ycp.DataSource.Config, nil
-
 }
 
 func (ycp *YAMLConfigProvider) GetPlugins() ([]string, error) {

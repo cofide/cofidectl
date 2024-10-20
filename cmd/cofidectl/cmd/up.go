@@ -52,53 +52,10 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			/*
-
-				trustZoneProtos, err := u.source.ListTrustZones()
-				if err != nil {
-					return err
-				}
-
-				if len(trustZoneProtos) == 0 {
-					fmt.Println("no trust zones have been configured")
-					return nil
-				}
-
-				// convert to structs
-				trustZones := make(map[string]*trustzone.TrustZone, len(trustZoneProtos))
-				for _, trustZoneProto := range trustZoneProtos {
-					federationProtos, _ := u.source.ListFederationByTrustZone(trustZoneProto.Name)
-					// convert to structs
-					federations := make(map[string]*federation.Federation, len(federationProtos))
-					for _, federationProto := range federationProtos {
-						federations[federationProto.Right.Name] = federation.NewFederation(federationProto)
-					}
-					trustZoneStruct := trustzone.NewTrustZone(trustZoneProto)
-					trustZoneStruct.Federations = federations
-					trustZones[trustZoneProto.TrustDomain] = trustZoneStruct
-
-				}
-
-			*/
-
 			err = installSPIREStack(config)
 			if err != nil {
 				return err
 			}
-
-			/*
-				// post-install additionally requires attestation policy config
-				attestationPoliciesProtos, err := u.source.ListAttestationPolicies()
-				if err != nil {
-					return err
-				}
-
-				// convert to structs
-				attestationPolicies := make([]*attestationpolicy.AttestationPolicy, 0, len(attestationPoliciesProtos))
-				for _, attestationPolicyProto := range attestationPoliciesProtos {
-					attestationPolicies = append(attestationPolicies, attestationpolicy.NewAttestationPolicy(attestationPolicyProto))
-				}
-			*/
 
 			err = watchAndConfigure(config)
 			if err != nil {
@@ -111,7 +68,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 }
 
 func installSPIREStack(config *config.Config) error {
-	for _, trustZone := range config.TrustZones {
+	for _, trustZone := range config.TrustZones.TrustZones {
 		generator := helm.NewHelmValuesGenerator(trustZone, config)
 		spireValues, err := generator.GenerateValues()
 		if err != nil {
@@ -151,27 +108,27 @@ func installSPIREStack(config *config.Config) error {
 
 func watchAndConfigure(config *config.Config) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
-	for _, trustZone := range config.TrustZones {
+	for _, trustZone := range config.TrustZones.TrustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Prefix = fmt.Sprintf("Waiting for pod and service in %s: ", trustZone.TrustZoneProto.KubernetesCluster)
+		s.Prefix = fmt.Sprintf("Waiting for pod and service in %s: ", trustZone.KubernetesCluster)
 		s.Start()
 
-		clusterIP, err := watchSPIREPodAndService(trustZone.TrustZoneProto.KubernetesContext)
+		clusterIP, err := watchSPIREPodAndService(trustZone.KubernetesContext)
 		if err != nil {
 			s.Stop()
-			return fmt.Errorf("error in context %s: %v", trustZone.TrustZoneProto.KubernetesContext, err)
+			return fmt.Errorf("error in context %s: %v", trustZone.KubernetesContext, err)
 		}
 
-		trustZone.TrustZoneProto.BundleEndpointUrl = clusterIP
+		trustZone.BundleEndpointUrl = clusterIP
 
 		// obtain the bundle
-		bundle, err := getBundle(trustZone.TrustZoneProto.KubernetesContext)
+		bundle, err := getBundle(trustZone.KubernetesContext)
 		if err != nil {
 			s.Stop()
-			return fmt.Errorf("error obtaining bundle in context %s: %v", trustZone.TrustZoneProto.KubernetesContext, err)
+			return fmt.Errorf("error obtaining bundle in context %s: %v", trustZone.KubernetesContext, err)
 		}
 
-		trustZone.TrustZoneProto.Bundle = bundle
+		trustZone.Bundle = bundle
 
 		s.Stop()
 	}
@@ -316,7 +273,7 @@ func createServiceWatcher(kubeContext string) (watch.Interface, error) {
 }
 
 func applyPostInstallHelmConfig(config *config.Config) error {
-	for _, trustZone := range config.TrustZones {
+	for _, trustZone := range config.TrustZones.TrustZones {
 		generator := helm.NewHelmValuesGenerator(trustZone, config)
 
 		spireValues, err := generator.GenerateValues()

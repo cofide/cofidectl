@@ -3,14 +3,14 @@ package federation
 import (
 	"fmt"
 
-	"github.com/cofide/cofidectl/internal/pkg/trustzone"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 )
 
 type Federation struct {
-	destTrustZone *trustzone.TrustZone
+	destTrustZone *trust_zone_proto.TrustZone
 }
 
-func NewFederation(trustZone *trustzone.TrustZone) *Federation {
+func NewFederation(trustZone *trust_zone_proto.TrustZone) *Federation {
 	return &Federation{
 		destTrustZone: trustZone,
 	}
@@ -18,13 +18,13 @@ func NewFederation(trustZone *trustzone.TrustZone) *Federation {
 
 func (fed *Federation) GetHelmConfig() map[string]interface{} {
 	clusterFederatedTrustDomain := map[string]interface{}{
-		"bundleEndpointURL": fmt.Sprintf("https://%s:8443", fed.destTrustZone.TrustZoneProto.BundleEndpointUrl),
+		"bundleEndpointURL": fmt.Sprintf("https://%s:8443", fed.destTrustZone.BundleEndpointUrl),
 		"bundleEndpointProfile": map[string]interface{}{
 			"type":             "https_spiffe",
-			"endpointSPIFFEID": fmt.Sprintf("spiffe://%s/spire/server", fed.destTrustZone.TrustZoneProto.TrustDomain),
+			"endpointSPIFFEID": fmt.Sprintf("spiffe://%s/spire/server", fed.destTrustZone.TrustDomain),
 		},
-		"trustDomain":       fed.destTrustZone.TrustZoneProto.TrustDomain,
-		"trustDomainBundle": fed.destTrustZone.TrustZoneProto.Bundle,
+		"trustDomain":       fed.destTrustZone.TrustDomain,
+		"trustDomainBundle": fed.destTrustZone.Bundle,
 	}
 
 	return clusterFederatedTrustDomain
