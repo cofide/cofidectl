@@ -7,6 +7,7 @@ import (
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/attestationpolicy"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/federation"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/workload"
 
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
@@ -47,12 +48,14 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	tzCmd := trustzone.NewTrustZoneCommand(r.source)
 	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
 	fedCmd := federation.NewFederationCommand(r.source)
+	wlCmd := workload.NewWorkloadCommand(r.source)
 
 	cmd.AddCommand(
 		initCmd.GetRootCommand(),
 		tzCmd.GetRootCommand(),
 		apCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
+		wlCmd.GetRootCommand(),
 		upCmd.UpCmd(),
 	)
 

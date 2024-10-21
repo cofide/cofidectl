@@ -9,7 +9,6 @@ import (
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/workloads"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
@@ -33,18 +32,15 @@ This command consists of multiple sub-commands to administer Cofide trust zones.
 
 func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "trust-zone add|list|workloads [ARGS]",
-		Short: "add, list or interact with trust zones",
+		Use:   "trust-zone add|list [ARGS]",
+		Short: "Add, list or interact with trust zones",
 		Long:  trustZoneRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
-	workloadsCmd := workloads.NewWorkloadsCommand(c.source)
-
 	cmd.AddCommand(
 		c.GetListCommand(),
 		c.GetAddCommand(),
-		workloadsCmd.GetRootCommand(),
 	)
 
 	return cmd
@@ -103,7 +99,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
 		Use:   "add [NAME]",
-		Short: "add a new trust zone",
+		Short: "Add a new trust zone",
 		Long:  trustZoneAddCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		PreRun: func(cmd *cobra.Command, args []string) {
