@@ -161,35 +161,15 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 				return fmt.Errorf("no trust zones have been configured")
 			}
 
-			data := make([][]string, 0, len(trustZones))
-
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			for _, trustZone := range trustZones {
-				registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.KubernetesContext)
-				if err != nil {
-					return err
-				}
-
-				for _, workload := range registeredWorkloads {
-					data = append(data, []string{
-						workload.Name,
-						trustZone.Name,
-						workload.Type,
-						workload.Status,
-						workload.Namespace,
-					})
-				}
+			err = renderUnregisteredWorkloads(kubeConfig, trustZones)
+			if err != nil {
+				return err
 			}
-
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Zone", "Type", "Status", "Namespace"})
-			table.SetBorder(false)
-			table.AppendBulk(data)
-			table.Render()
 
 			return nil
 		},
@@ -199,4 +179,33 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 	f.StringVar(&opts.trustZone, "trust-zone", "", "list the registered workloads in a specific trust zone")
 
 	return cmd
+}
+
+func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
+	data := make([][]string, 0, len(trustZones))
+
+	for _, trustZone := range trustZones {
+		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.KubernetesContext)
+		if err != nil {
+			return err
+		}
+
+		for _, workload := range registeredWorkloads {
+			data = append(data, []string{
+				workload.Name,
+				trustZone.Name,
+				workload.Type,
+				workload.Status,
+				workload.Namespace,
+			})
+		}
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Trust Zone", "Type", "Status", "Namespace"})
+	table.SetBorder(false)
+	table.AppendBulk(data)
+	table.Render()
+
+	return nil
 }
