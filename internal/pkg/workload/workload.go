@@ -65,34 +65,7 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 		return nil, err
 	}
 
-	registrationEntriesMap := make(map[string]string)
-
-	for _, registrationEntry := range registrationEntries {
-		var podUID string
-
-		spiffeID := fmt.Sprintf("spiffe://%s%s", registrationEntry.SPIFFEID.TrustDomain, registrationEntry.SPIFFEID.Path)
-
-		selectors := registrationEntry.Selectors
-		if len(selectors) == 0 {
-			continue
-		}
-
-		for _, selector := range selectors {
-			if selector.Type == k8sSelectorType {
-				if !strings.HasPrefix(selector.Value, k8sPodUIDSelectorPrefix) {
-					slog.Warn(fmt.Sprintf("failed to find the k8s:pod-uid selector value for workload with workload id: %s", spiffeID))
-					continue
-				}
-				podUID = strings.TrimPrefix(selector.Value, k8sPodUIDSelectorPrefix)
-			}
-		}
-
-		if podUID == "" {
-			continue
-		}
-
-		registrationEntriesMap[podUID] = spiffeID
-	}
+	registrationEntriesMap := generateRegistrationEntriesMap(registrationEntries)
 
 	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -139,6 +112,38 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string) ([]Unregis
 		return nil, err
 	}
 
+	registrationEntriesMap := generateRegistrationEntriesMap(registrationEntries)
+
+	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	unregisteredWorkloads := []UnregisteredWorkload{}
+
+	for _, pod := range pods.Items {
+		_, ok := ignoredNamespaces[pod.Namespace]
+		if ok {
+			continue
+		}
+
+		_, ok = registrationEntriesMap[string(pod.UID)]
+		if !ok {
+			unregisteredWorkload := &UnregisteredWorkload{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+				Status:    string(pod.Status.Phase),
+				Type:      "Pod",
+			}
+
+			unregisteredWorkloads = append(unregisteredWorkloads, *unregisteredWorkload)
+		}
+	}
+
+	return unregisteredWorkloads, nil
+}
+
+func generateRegistrationEntriesMap(registrationEntries []registrationEntry) map[string]string {
 	registrationEntriesMap := make(map[string]string)
 
 	for _, registrationEntry := range registrationEntries {
@@ -168,33 +173,7 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string) ([]Unregis
 		registrationEntriesMap[podUID] = spiffeID
 	}
 
-	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	unregisteredWorkloads := []UnregisteredWorkload{}
-
-	for _, pod := range pods.Items {
-		_, ok := ignoredNamespaces[pod.Namespace]
-		if ok {
-			continue
-		}
-
-		_, ok = registrationEntriesMap[string(pod.UID)]
-		if !ok {
-			unregisteredWorkload := &UnregisteredWorkload{
-				Name:      pod.Name,
-				Namespace: pod.Namespace,
-				Status:    string(pod.Status.Phase),
-				Type:      "Pod",
-			}
-
-			unregisteredWorkloads = append(unregisteredWorkloads, *unregisteredWorkload)
-		}
-	}
-
-	return unregisteredWorkloads, nil
+	return registrationEntriesMap
 }
 
 func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) ([]registrationEntry, error) {
