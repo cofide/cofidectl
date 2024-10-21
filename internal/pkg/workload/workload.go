@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
@@ -12,6 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/kubectl/pkg/scheme"
+)
+
+const (
+	k8sSelectorType         = "k8s"
+	k8sPodUIDSelectorPrefix = "pod-uid:"
 )
 
 type RegisteredWorkload struct {
@@ -57,14 +63,20 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 	for _, registrationEntry := range registrationEntries {
 		var podUID string
 
+		spiffeID := fmt.Sprintf("spiffe://%s%s", registrationEntry.SPIFFEID.TrustDomain, registrationEntry.SPIFFEID.Path)
+
 		selectors := registrationEntry.Selectors
 		if len(selectors) == 0 {
 			continue
 		}
 
 		for _, selector := range selectors {
-			if selector.Type == "k8s" {
-				podUID = strings.TrimPrefix(selector.Value, "pod-uid:")
+			if selector.Type == k8sSelectorType {
+				if !strings.HasPrefix(selector.Value, k8sPodUIDSelectorPrefix) {
+					slog.Warn(fmt.Sprintf("failed to find the k8s:pod-uid selector value for workload with workload id: %s", spiffeID))
+					continue
+				}
+				podUID = strings.TrimPrefix(selector.Value, k8sPodUIDSelectorPrefix)
 			}
 		}
 
@@ -72,7 +84,6 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 			continue
 		}
 
-		spiffeID := fmt.Sprintf("spiffe://%s%s", registrationEntry.SPIFFEID.TrustDomain, registrationEntry.SPIFFEID.Path)
 		registrationEntriesMap[podUID] = spiffeID
 	}
 
