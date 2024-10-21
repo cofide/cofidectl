@@ -52,6 +52,10 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
+			if len(config.TrustZones.TrustZones) == 0 {
+				return fmt.Errorf("no trust zones have been configured")
+			}
+
 			err = installSPIREStack(config)
 			if err != nil {
 				return err

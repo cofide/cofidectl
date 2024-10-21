@@ -2,11 +2,11 @@ package local
 
 import (
 	"github.com/cofide/cofidectl/internal/pkg/config"
-	"github.com/cofide/cofidectl/pkg/plugin"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 )
 
 type YAMLConfigProvider struct {
-	DataSource *plugin.LocalDataSource
+	DataSource *cofidectl_plugin.LocalDataSource
 }
 
 func (ycp *YAMLConfigProvider) GetConfig() (*config.Config, error) {
