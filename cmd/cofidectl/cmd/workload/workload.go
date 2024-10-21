@@ -129,7 +129,7 @@ func renderRegisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto
 }
 
 var workloadDiscoverCmdDesc = `
-This command will discover all of the unregistered workloads in every trust zone.
+This command will discover all of the unregistered workloads.
 `
 
 func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
