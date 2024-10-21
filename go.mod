@@ -3,6 +3,7 @@ module github.com/cofide/cofidectl
 go 1.22.6
 
 require (
+	buf.build/go/protoyaml v0.2.0
 	cuelang.org/go v0.10.0
 	github.com/cofide/cofide-api-sdk v0.0.0-unpublished
 	github.com/gobeam/stringy v0.0.7
@@ -17,7 +18,16 @@ require (
 	helm.sh/helm/v3 v3.16.1
 )
 
-require github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
+require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240717164558-a6c49f84cc0f.2 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
+	github.com/bufbuild/protovalidate-go v0.6.3 // indirect
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
+	github.com/google/cel-go v0.21.0 // indirect
+	github.com/stoewer/go-strcase v1.3.0 // indirect
+	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 // indirect
+)
 
 replace github.com/cofide/cofide-connect v0.0.0-unpublished => ../cofide-connect
 
@@ -151,7 +161,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/api v0.31.0
 	k8s.io/apiextensions-apiserver v0.31.0 // indirect
-	k8s.io/apimachinery v0.31.0 // indirect
+	k8s.io/apimachinery v0.31.0
 	k8s.io/apiserver v0.31.0 // indirect
 	k8s.io/cli-runtime v0.31.0 // indirect
 	k8s.io/client-go v0.31.0

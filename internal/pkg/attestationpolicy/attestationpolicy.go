@@ -1,22 +1,89 @@
 package attestationpolicy
 
+import (
+	"fmt"
+
+	"buf.build/go/protoyaml"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+)
+
 type AttestationPolicy struct {
-	Kind AttestationPolicyKind
-	Opts *AttestationPolicyOpts
+	AttestationPolicyProto *attestation_policy_proto.AttestationPolicy `yaml:"attestationPolicy"`
 }
 
 type AttestationPolicyKind string
 
 const (
-	Annotated = "annotated"
-	Namespace = "namespace"
+	Annotated   = "annotated"
+	Cluster     = "cluster"
+	Namespace   = "namespace"
+	Unspecified = "unspecified"
 )
 
-type AttestationPolicyOpts struct {
-	// Annotated
-	PodKey   string
-	PodValue string
+func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.AttestationPolicy) *AttestationPolicy {
+	return &AttestationPolicy{
+		AttestationPolicyProto: attestationPolicy,
+	}
+}
 
-	// Namespace
-	Namespace string
+func (ap *AttestationPolicy) marshalToYAML() ([]byte, error) {
+	return protoyaml.Marshal(ap.AttestationPolicyProto)
+}
+
+func (ap *AttestationPolicy) unmarshalFromYAML(data []byte) error {
+	return protoyaml.Unmarshal(data, ap.AttestationPolicyProto)
+}
+
+func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
+	var clusterSPIFFEID = make(map[string]interface{})
+	switch ap.AttestationPolicyProto.Kind {
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED:
+		clusterSPIFFEID["podSelector"] = map[string]interface{}{
+			"matchLabels": map[string]interface{}{
+				ap.AttestationPolicyProto.PodKey: ap.AttestationPolicyProto.PodValue,
+			},
+		}
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE:
+		clusterSPIFFEID["namespaceSelector"] = map[string]interface{}{
+			"matchExpressions": []map[string]interface{}{
+				{
+					"key":      "kubernetes.io/metadata.name",
+					"operator": "In",
+					"values":   []string{ap.AttestationPolicyProto.Namespace},
+				},
+			},
+		}
+	default:
+		clusterSPIFFEID["enabled"] = "false"
+	}
+
+	return clusterSPIFFEID
+}
+
+func GetAttestationPolicyKind(kind string) (attestation_policy_proto.AttestationPolicyKind, error) {
+	switch kind {
+	case "annotated", "ATTESTATION_POLICY_KIND_ANNOTATED":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
+	case "cluster", "ATTESTATION_POLICY_KIND_CLUSTER":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_CLUSTER, nil
+	case "namespace", "ATTESTATION_POLICY_KIND_NAMESPACE":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
+	}
+
+	// TODO: Update error message.
+	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
+}
+
+func GetAttestationPolicyKindString(kind string) (string, error) {
+	switch kind {
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED.String():
+		return Annotated, nil
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_CLUSTER.String():
+		return Cluster, nil
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE.String():
+		return Namespace, nil
+	}
+
+	// TODO: Update error message.
+	return Unspecified, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
 }

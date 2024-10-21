@@ -8,14 +8,14 @@ import (
 )
 
 func TestHelmSPIREProvider(t *testing.T) {
-	trustZone := &trust_zone_proto.TrustZone{TrustDomain: "foo.bar"}
+	trustZoneProto := &trust_zone_proto.TrustZone{TrustDomain: "foo.bar"}
 	spireValues := map[string]interface{}{}
 	spireCRDsValues := map[string]interface{}{}
 
-	p := NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+	p := NewHelmSPIREProvider(trustZoneProto, spireValues, spireCRDsValues)
 	assert.Equal(t, p.SPIREVersion, "0.21.0")
 	assert.Equal(t, p.SPIRECRDsVersion, "0.4.0")
 	assert.NotNil(t, p.spireClient)
 	assert.NotNil(t, p.spireCRDsClient)
-	assert.Equal(t, trustZone.TrustDomain, p.trustZone.TrustDomain)
+	assert.Equal(t, trustZoneProto.TrustDomain, p.trustZone.TrustDomain)
 }
