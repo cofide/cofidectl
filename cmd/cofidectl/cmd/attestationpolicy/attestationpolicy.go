@@ -117,7 +117,7 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			opts.attestationPolicyOpts.Name = stringy.New(opts.attestationPolicyOpts.Name).KebabCase().ToLower()
 
 			if !validateOpts(opts) {
-				return errors.New("unset flags for annotation policy")
+				return errors.New("unset flags for attestation policy")
 			}
 
 			return nil
