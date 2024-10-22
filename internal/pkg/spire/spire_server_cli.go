@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
-	"cuelang.org/go/pkg/strconv"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 )
 
 const (
@@ -48,22 +49,12 @@ type agentListJson struct {
 }
 
 type agentJson struct {
-	AttestationType string         `json:"attestation_type"`
-	ExpirationTime  string         `json:"x509svid_expires_at"`
-	Serial          string         `json:"x509svid_serial_number"`
-	CanReattest     bool           `json:"can_reattest"`
-	Id              spiffeIDJson   `json:"id"`
-	Selectors       []selectorJson `json:"selectors"`
-}
-
-type spiffeIDJson struct {
-	Path        string `json:"path"`
-	TrustDomain string `json:"trust_domain"`
-}
-
-type selectorJson struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
+	AttestationType string            `json:"attestation_type"`
+	ExpirationTime  string            `json:"x509svid_expires_at"`
+	Serial          string            `json:"x509svid_serial_number"`
+	CanReattest     bool              `json:"can_reattest"`
+	Id              *types.SPIFFEID   `json:"id"`
+	Selectors       []*types.Selector `json:"selectors"`
 }
 
 // parseAgentList parses the output of `spire-server agent list -output json` and returns a slice of `Agent`.
