@@ -67,7 +67,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Trust Zone", "Trust Zone", "Status"})
+			table.SetHeader([]string{"Source Trust Zone", "Destination Trust Zone", "Status"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
