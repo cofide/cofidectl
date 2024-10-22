@@ -2,7 +2,6 @@ package trustzone
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -169,8 +168,7 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 }
 
 func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string) error {
-	// FIXME: Use c.source.GetTrustZone(tzName) when available
-	trustZone, err := c.getTrustZone(tzName)
+	trustZone, err := c.source.GetTrustZone(tzName)
 	if err != nil {
 		return err
 	}
@@ -192,20 +190,6 @@ func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string
 	}
 
 	return renderStatus(server, agents)
-}
-
-func (c *TrustZoneCommand) getTrustZone(name string) (*trust_zone_proto.TrustZone, error) {
-	trustZones, err := c.source.ListTrustZones()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, trustZone := range trustZones {
-		if trustZone.Name == name {
-			return trustZone, nil
-		}
-	}
-	return nil, errors.New("not found")
 }
 
 func renderStatus(server *spire.ServerStatus, agents *spire.AgentStatus) error {
