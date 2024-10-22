@@ -46,6 +46,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cofide.yaml)")
 
 	upCmd := NewUpCommand(r.source)
+	downCmd := NewDownCommand(r.source)
 	tzCmd := trustzone.NewTrustZoneCommand(r.source)
 	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
 	fedCmd := federation.NewFederationCommand(r.source)
@@ -55,6 +56,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		apCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
 		upCmd.UpCmd(),
+		downCmd.DownCmd(),
 	)
 
 	return cmd, nil

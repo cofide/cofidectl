@@ -149,6 +149,39 @@ func (h *HelmSPIREProvider) upgradeChart(statusCh chan provider.ProviderStatus) 
 	}()
 }
 
+func (h *HelmSPIREProvider) ExecuteUninstall() (<-chan provider.ProviderStatus, error) {
+	statusCh := make(chan provider.ProviderStatus)
+
+	h.uninstall(statusCh)
+
+	return statusCh, nil
+}
+
+// uninstall uninstalls the Cofide-enabled SPIRE stack from the selected Kubernetes context
+// and updates the status channel accordingly.
+func (h *HelmSPIREProvider) uninstall(statusCh chan provider.ProviderStatus) {
+	go func() {
+		defer close(statusCh)
+
+		statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Uninstalling CRDs from cluster %s", h.trustZone.KubernetesCluster)}
+		_, err := h.uninstallSPIRECRDs()
+		if err != nil {
+			statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Failed to uninstall CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			return
+		}
+
+		statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Uninstalling SPIRE chart from cluster %s", h.trustZone.KubernetesCluster)}
+		_, err = h.uninstallSPIRE()
+		if err != nil {
+			statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Failed to uninstall SPIRE chart on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			return
+		}
+
+		statusCh <- provider.ProviderStatus{Stage: "Uninstalled", Message: fmt.Sprintf("Uninstallation completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
+		time.Sleep(time.Duration(1) * time.Second)
+	}()
+}
+
 func DiscardLogger(format string, v ...any) {}
 
 func (h *HelmSPIREProvider) initActionConfig() (*action.Configuration, error) {
@@ -191,7 +224,7 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
 	}
 	if alreadyInstalled {
-		log.Printf("%v already installed", chartName)
+		fmt.Printf("%v already installed", chartName)
 		return nil, nil
 	}
 
@@ -208,7 +241,7 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 		log.Fatal(err)
 	}
 
-	log.Printf("Installing %v...", cr.Name())
+	fmt.Printf("Installing %v...", cr.Name())
 	return client.Run(cr, values)
 }
 
@@ -253,8 +286,37 @@ func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName s
 		log.Fatal(err)
 	}
 
-	log.Printf("Upgrading %v...", chart.Name())
+	fmt.Printf("Upgrading %v...", chart.Name())
 	return client.Run(chartName, chart, values)
+}
+
+func newUninstall(cfg *action.Configuration) *action.Uninstall {
+	uninstall := action.NewUninstall(cfg)
+	return uninstall
+}
+
+func (h *HelmSPIREProvider) uninstallSPIRE() (*release.UninstallReleaseResponse, error) {
+	client := newUninstall(h.cfg)
+	return uninstallChart(h.cfg, client, SPIREChartName)
+}
+
+func (h *HelmSPIREProvider) uninstallSPIRECRDs() (*release.UninstallReleaseResponse, error) {
+	client := newUninstall(h.cfg)
+	return uninstallChart(h.cfg, client, SPIRECRDsChartName)
+}
+
+func uninstallChart(cfg *action.Configuration, client *action.Uninstall, chartName string) (*release.UninstallReleaseResponse, error) {
+	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
+	}
+
+	if !alreadyInstalled {
+		return nil, fmt.Errorf("%v not installed", chartName)
+	}
+
+	fmt.Printf("Uninstalling %v...", chartName)
+	return client.Run(chartName)
 }
 
 func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool, error) {
