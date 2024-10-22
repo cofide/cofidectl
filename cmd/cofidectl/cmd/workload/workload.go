@@ -143,7 +143,7 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 
 	// Wait for debug container to be ready
 	for {
-		pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx), podName, metav1.GetOptions{})
+		pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			return fmt.Errorf("error getting pod status: %v", err)
 		}
