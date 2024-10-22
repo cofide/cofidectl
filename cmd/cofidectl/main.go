@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(0)
 
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
@@ -24,31 +25,31 @@ func main() {
 	// default to the local data source
 	ds, err := cofidectl_plugin.NewLocalDataSource("cofide.yaml")
 	if err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 
 	// determine plugins to be loaded
 	configProvider := local.YAMLConfigProvider{DataSource: ds.(*cofidectl_plugin.LocalDataSource)}
 	plugins, err := configProvider.GetPlugins()
 	if err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 
 	// if the Connect plugin is enabled use it in place of the local data source
 	if len(plugins) > 0 && plugins[0] == "cofidectl-connect-plugin" {
 		ds, err = loadConnectPlugin(logger)
 		if err != nil {
-			log.Fatal(err)
+			os.Exit(1)
 		}
 	}
 
 	rootCmd, err := cmd.NewRootCommand(ds, os.Args[1:]).GetRootCommand()
 	if err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 
 	if err = rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 }
 
