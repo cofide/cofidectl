@@ -5,7 +5,7 @@ go 1.22.6
 require (
 	buf.build/go/protoyaml v0.2.0
 	cuelang.org/go v0.10.0
-	github.com/cofide/cofide-api-sdk v0.0.0-unpublished
+	github.com/cofide/cofide-api-sdk v0.0.0-20241021112502-6b93f47f2627
 	github.com/gobeam/stringy v0.0.7
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-plugin v1.6.1
@@ -28,10 +28,6 @@ require (
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 // indirect
 )
-
-replace github.com/cofide/cofide-connect v0.0.0-unpublished => ../cofide-connect
-
-replace github.com/cofide/cofide-api-sdk v0.0.0-unpublished => ../cofide-api-sdk
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
