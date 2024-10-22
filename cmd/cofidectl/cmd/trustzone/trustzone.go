@@ -128,7 +128,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
 	f.StringVar(&opts.kubernetes_cluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
-	f.StringVar(&opts.context, "context", "", "Kubernetes context to use for this trust zone")
+	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 
 	cmd.MarkFlagRequired("trust-domain")
@@ -149,7 +149,7 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
 	contexts, err := kubeRepo.GetContexts()
 	cobra.CheckErr(err)
 
-	kubeContext, _ := cmd.Flags().GetString("context")
+	kubeContext, _ := cmd.Flags().GetString("kubernetes-context")
 	if kubeContext != "" {
 		if checkContext(contexts, kubeContext) {
 			return nil
@@ -158,7 +158,7 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
 	}
 
 	kubeContext = promptContext(contexts, client.CmdConfig.CurrentContext)
-	cmd.Flags().Set("context", kubeContext)
+	cmd.Flags().Set("kubernetes-context", kubeContext)
 	return nil
 }
 
