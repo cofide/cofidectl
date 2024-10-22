@@ -230,10 +230,17 @@ func renderStatus(server *spire.ServerStatus, agents *spire.AgentStatus) error {
 		agentData = append(agentData, []string{
 			agent.Name,
 			agent.Status,
-			agent.Id,
 			agent.AttestationType,
 			agent.ExpirationTime.String(),
 			strconv.FormatBool(agent.CanReattest),
+		})
+	}
+
+	agentIdData := make([][]string, 0)
+	for _, agent := range agents.Agents {
+		agentIdData = append(agentIdData, []string{
+			agent.Name,
+			agent.Id,
 		})
 	}
 
@@ -258,9 +265,18 @@ func renderStatus(server *spire.ServerStatus, agents *spire.AgentStatus) error {
 	fmt.Printf("SPIRE Agents (%d/%d ready)\n", agents.Ready, agents.Expected)
 	fmt.Println()
 	table = tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Pod", "Status", "SPIFFE ID", "Attestation type", "Expiration time", "Can re-attest"})
+	table.SetHeader([]string{"Pod", "Status", "Attestation type", "Expiration time", "Can re-attest"})
 	table.SetBorder(false)
 	table.AppendBulk(agentData)
+	table.Render()
+
+	fmt.Println()
+	fmt.Println("SPIRE Agents SPIFFE IDs")
+	fmt.Println()
+	table = tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Pod", "SPIFFE ID"})
+	table.SetBorder(false)
+	table.AppendBulk(agentIdData)
 	table.Render()
 
 	return nil
