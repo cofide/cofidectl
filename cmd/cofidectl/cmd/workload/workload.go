@@ -1,6 +1,7 @@
 package workload
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -8,6 +9,8 @@ import (
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type WorkloadCommand struct {
@@ -75,6 +78,9 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 	return cmd
 }
 
+const debugContainerName = "cofidectl-debug-container"
+const debugContainerImage = "cofidectl-debug"
+
 func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Opts) error {
 	trustZone, err := w.source.GetTrustZone(opts.trust_zone)
 	if err != nil {
@@ -86,11 +92,11 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Op
 		return err
 	}
 
-	if err := createDebugContainer(ctx, client); err != nil {
+	if err := createDebugContainer(ctx, client, opts.pod_name, opts.namespace); err != nil {
 		log.Fatalf("Error creating debug container: %v", err)
 	}
 
-	workload, err := getWorkloadStatus(ctx, client)
+	workload, err := getWorkloadStatus(ctx, client, opts.pod_name, opts.namespace)
 	if err != nil {
 		return err
 	}
@@ -100,12 +106,84 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Op
 	return nil
 }
 
-func createDebugContainer(ctx context.Context, client *kubeutil.Client) error {
-	// TODO
-	return nil
+func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName string, namespace string) error {
+	pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting pod: %v", err)
+	}
+
+	// Check if debug container already exists
+	for _, ec := range pod.Spec.EphemeralContainers {
+		if ec.Name == fmt.Sprintf("%s-cofidectl-debug", podName) {
+			return nil // Debug container already exists
+		}
+	}
+
+	debugContainer := corev1.EphemeralContainer{
+		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+			Name:    fmt.Sprintf("%s-cofidectl-debug", podName),
+			Image:   debugContainerImage,
+			TTY:     true,
+			Stdin:   true,
+			Command: []string{"sleep", "infinity"},
+		},
+		TargetContainerName: pod.Spec.Containers[0].Name,
+	}
+
+	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, debugContainer)
+	_, err = client.Clientset.CoreV1().Pods(namespace).UpdateEphemeralContainers(
+		ctx,
+		pod.Name,
+		pod,
+		metav1.UpdateOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("error creating debug container: %v", err)
+	}
+
+	// Wait for debug container to be ready
+	for {
+		pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx), podName, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("error getting pod status: %v", err)
+		}
+
+		for _, status := range pod.Status.EphemeralContainerStatuses {
+			if status.Name == fmt.Sprintf("%s-cofidectl-debug", podName) && status.State.Running != nil {
+				return nil
+			}
+		}
+	}
 }
 
-func getWorkloadStatus(ctx context.Context, client *kubeutil.Client) (string, error) {
-	// TODO
-	return "", nil
+func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, podName string, namespace string) (string, error) {
+	stdin := &bytes.Buffer{}
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	err := kubeutil.RunCommand(
+		ctx,
+		client.Clientset,
+		client.RestConfig,
+		podName,
+		namespace,
+		debugContainerName,
+		[]string{"./cofidectl-debug"},
+		stdin,
+		stdout,
+		stderr,
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	output := stdout.String()
+
+	stdin.Reset()
+	stdout.Reset()
+	stderr.Reset()
+
+	return output, nil
+
 }
