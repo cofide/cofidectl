@@ -7,7 +7,6 @@ import (
 	"helm.sh/helm/v3/cmd/helm/require"
 
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
-	v1 "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 
 	"github.com/olekukonko/tablewriter"
@@ -61,14 +60,14 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			data := make([][]string, len(federations))
 			for i, federation := range federations {
 				data[i] = []string{
-					fmt.Sprintf("%s (%s)", federation.Left.Name, federation.Left.TrustDomain),
-					fmt.Sprintf("%s (%s)", federation.Right.Name, federation.Right.TrustDomain),
+					fmt.Sprintf("%s", federation.Left),
+					fmt.Sprintf("%s", federation.Right),
 					"Healthy", //TODO
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Trust Zone (domain)", "Trust Zone (domain)", "Status"})
+			table.SetHeader([]string{"Trust Zone", "Trust Zone", "Status"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -97,12 +96,8 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		Args:  require.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			newFederation := &federation_proto.Federation{
-				Left: &v1.TrustZone{
-					Name: opts.left,
-				},
-				Right: &v1.TrustZone{
-					Name: opts.right,
-				},
+				Left:  opts.left,
+				Right: opts.right,
 			}
 			return c.source.AddFederation(newFederation)
 		},

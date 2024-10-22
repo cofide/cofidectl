@@ -7,6 +7,7 @@ import (
 	"os"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
@@ -53,7 +54,7 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			attestationPolicies, err := c.source.ListAttestationPolicy()
+			attestationPolicies, err := c.source.ListAttestationPolicies()
 			if err != nil {
 				return err
 			}
@@ -62,9 +63,9 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 			for i, policy := range attestationPolicies {
 				data[i] = []string{
 					policy.Kind.String(),
-					policy.Options.Namespace,
-					policy.Options.PodKey,
-					policy.Options.PodValue,
+					policy.Namespace,
+					policy.PodKey,
+					policy.PodValue,
 				}
 			}
 
@@ -91,6 +92,7 @@ type Opts struct {
 }
 
 type AttestationPolicyOpts struct {
+	Name          string `yaml:"name,omitempty"`
 	FederatesWith string `yaml:"federatesWith,omitempty"`
 
 	// annotated
@@ -111,6 +113,8 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			str := stringy.New(args[0])
 			opts.kind = str.KebabCase().ToLower()
+			opts.trustZoneName = stringy.New(opts.trustZoneName).ToLower()
+			opts.attestationPolicyOpts.Name = stringy.New(opts.attestationPolicyOpts.Name).KebabCase().ToLower()
 
 			if !validateOpts(opts) {
 				return errors.New("unset flags for annotation policy")
@@ -119,31 +123,38 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			kind, err := GetAttestationPolicyKind(opts.kind)
+			kind, err := attestationpolicy.GetAttestationPolicyKind(opts.kind)
 			if err != nil {
 				return err
 			}
+
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
-				Kind: kind,
-				Options: &attestation_policy_proto.AttestationPolicyOptions{
-					Namespace: opts.attestationPolicyOpts.Namespace,
-					PodKey:    opts.attestationPolicyOpts.PodKey,
-					PodValue:  opts.attestationPolicyOpts.PodValue,
-				},
+				Kind:      kind,
+				Name:      opts.attestationPolicyOpts.Name,
+				Namespace: opts.attestationPolicyOpts.Namespace,
+				PodKey:    opts.attestationPolicyOpts.PodKey,
+				PodValue:  opts.attestationPolicyOpts.PodValue,
 			}
-			return c.source.AddAttestationPolicy(newAttestationPolicy)
+			c.source.AddAttestationPolicy(newAttestationPolicy)
+
+			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
+			if err != nil {
+				return err
+			}
+			return c.source.BindAttestationPolicy(newAttestationPolicy, trustZone)
 		},
 	}
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trustZoneName, "trust-zone", "", "Name of the trust zone to attach this attestation policy to")
+	f.StringVar(&opts.attestationPolicyOpts.Name, "name", "", "Name to use for the attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.Namespace, "namespace", "", "Namespace to use in Namespace attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.PodKey, "annotation-key", "", "Key of Pod annotation to use in Annotation attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.PodValue, "annotation-value", "", "Value of Pod annotation to use in Annotation attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.FederatesWith, "federates-with", "", "Defines a trust domain to federate identity with")
 
 	cmd.MarkFlagRequired("trust-zone")
+	cmd.MarkFlagRequired("name")
 
 	return cmd
 }
