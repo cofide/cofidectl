@@ -92,15 +92,15 @@ type Opts struct {
 }
 
 type AttestationPolicyOpts struct {
-	Name          string `yaml:"name,omitempty"`
-	FederatesWith string `yaml:"federatesWith,omitempty"`
+	Name          string
+	FederatesWith string
 
 	// annotated
-	PodKey   string `yaml:"podKey,omitempty"`
-	PodValue string `yaml:"podValue,omitempty"`
+	PodKey   string
+	PodValue string
 
 	// namespace
-	Namespace string `yaml:"namespace,omitempty"`
+	Namespace string
 }
 
 func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
