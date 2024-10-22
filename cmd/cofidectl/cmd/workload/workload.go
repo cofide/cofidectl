@@ -114,14 +114,14 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 
 	// Check if debug container already exists
 	for _, ec := range pod.Spec.EphemeralContainers {
-		if ec.Name == fmt.Sprintf("%s-cofidectl-debug", podName) {
+		if ec.Name == debugContainerName {
 			return nil // Debug container already exists
 		}
 	}
 
 	debugContainer := corev1.EphemeralContainer{
 		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
-			Name:    fmt.Sprintf("%s-cofidectl-debug", podName),
+			Name:    debugContainerName,
 			Image:   debugContainerImage,
 			TTY:     true,
 			Stdin:   true,
@@ -149,7 +149,7 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 		}
 
 		for _, status := range pod.Status.EphemeralContainerStatuses {
-			if status.Name == fmt.Sprintf("%s-cofidectl-debug", podName) && status.State.Running != nil {
+			if status.Name == debugContainerName && status.State.Running != nil {
 				return nil
 			}
 		}
