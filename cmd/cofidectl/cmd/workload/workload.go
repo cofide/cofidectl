@@ -75,6 +75,10 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 	f.StringVar(&opts.namespace, "namespace", "", "Namespace for the workload")
 	f.StringVar(&opts.trust_zone, "trust-zone", "", "Trust zone for the workload")
 
+	cmd.MarkFlagRequired("pod-name")
+	cmd.MarkFlagRequired("namespace")
+	cmd.MarkFlagRequired("trust-zone")
+
 	return cmd
 }
 
