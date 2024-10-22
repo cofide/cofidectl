@@ -64,7 +64,7 @@ func TestGetServerStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error %c", err)
 	}
-	want := ServerStatus{
+	want := &ServerStatus{
 		Replicas:      1,
 		ReadyReplicas: 0,
 		Containers: []ServerContainer{
@@ -176,7 +176,7 @@ func Test_addAgentK8sStatus(t *testing.T) {
 		t.Fatalf("unexpected error %c", err)
 	}
 
-	want := AgentStatus{
+	want := &AgentStatus{
 		Expected: 2,
 		Ready:    1,
 		Agents: []Agent{

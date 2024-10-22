@@ -146,6 +146,8 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 
 var trustZoneStatusCmdDesc = `
 This command will display the status of trust zones in the Cofide configuration state.
+
+NOTE: This command relies on privileged access to execute SPIRE server CLI commands within the SPIRE server container, which may be considered a security risk in production environments.
 `
 
 func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
@@ -178,6 +180,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string
 		return err
 	}
 
+	// TODO: Check helm status
 	server, err := spire.GetServerStatus(ctx, client)
 	if err != nil {
 		return err
@@ -188,12 +191,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string
 		return err
 	}
 
-	err = renderStatus(server, agents)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return renderStatus(server, agents)
 }
 
 func (c *TrustZoneCommand) getTrustZone(name string) (*trust_zone_proto.TrustZone, error) {
@@ -210,7 +208,7 @@ func (c *TrustZoneCommand) getTrustZone(name string) (*trust_zone_proto.TrustZon
 	return nil, errors.New("not found")
 }
 
-func renderStatus(server spire.ServerStatus, agents spire.AgentStatus) error {
+func renderStatus(server *spire.ServerStatus, agents *spire.AgentStatus) error {
 	serverData := make([][]string, 0)
 	for _, container := range server.Containers {
 		serverData = append(serverData, []string{

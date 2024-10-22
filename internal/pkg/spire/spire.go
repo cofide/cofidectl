@@ -41,29 +41,29 @@ type SCMContainer struct {
 	Ready bool
 }
 
-// GetServerStatus queries the status of a SPIRE server and returns a `ServerStatus`.
-func GetServerStatus(ctx context.Context, client *kubeutil.Client) (ServerStatus, error) {
+// GetServerStatus queries the status of a SPIRE server and returns a `*ServerStatus`.
+func GetServerStatus(ctx context.Context, client *kubeutil.Client) (*ServerStatus, error) {
 	statefulset, err := getServerStatefulSet(ctx, client)
 	if err != nil {
-		return ServerStatus{}, err
+		return nil, err
 	}
 
 	pods, err := getPodsForStatefulSet(ctx, client, statefulset)
 	if err != nil {
-		return ServerStatus{}, err
+		return nil, err
 	}
 
 	containers, err := getServerContainers(pods)
 	if err != nil {
-		return ServerStatus{}, err
+		return nil, err
 	}
 
 	scms, err := getSCMContainers(pods)
 	if err != nil {
-		return ServerStatus{}, err
+		return nil, err
 	}
 
-	status := ServerStatus{
+	status := &ServerStatus{
 		Replicas:      int(*statefulset.Spec.Replicas),
 		ReadyReplicas: int(statefulset.Status.ReadyReplicas),
 		Containers:    containers,
@@ -136,33 +136,33 @@ type Agent struct {
 	CanReattest     bool
 }
 
-// GetAgentStatus queries a SPIRE server for the status of agents attested to it and returns an `AgentStatus`.
-func GetAgentStatus(ctx context.Context, client *kubeutil.Client) (AgentStatus, error) {
+// GetAgentStatus queries a SPIRE server for the status of agents attested to it and returns an `*AgentStatus`.
+func GetAgentStatus(ctx context.Context, client *kubeutil.Client) (*AgentStatus, error) {
 	command := []string{"agent", "list", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)
 	if err != nil {
-		return AgentStatus{}, err
+		return nil, err
 	}
 
 	agents, err := parseAgentList(stdout)
 	if err != nil {
-		return AgentStatus{}, err
+		return nil, err
 	}
 
 	return addAgentK8sStatus(ctx, client, agents)
 }
 
 // addAgentK8sStatus queries the SPIRE agent daemonset and pods, then updates the provided `agents` slice with pod information.
-// It returns an `AgentStatus` including information from the daemonset and the updated agents list.
-func addAgentK8sStatus(ctx context.Context, client *kubeutil.Client, agents []Agent) (AgentStatus, error) {
+// It returns an `*AgentStatus` including information from the daemonset and the updated agents list.
+func addAgentK8sStatus(ctx context.Context, client *kubeutil.Client, agents []Agent) (*AgentStatus, error) {
 	daemonset, err := getAgentDaemonSet(ctx, client)
 	if err != nil {
-		return AgentStatus{}, err
+		return nil, err
 	}
 
 	pods, err := getPodsforDaemonSet(ctx, client, daemonset)
 	if err != nil {
-		return AgentStatus{}, err
+		return nil, err
 	}
 
 	podMap := make(map[string]v1.Pod)
@@ -193,7 +193,7 @@ func addAgentK8sStatus(ctx context.Context, client *kubeutil.Client, agents []Ag
 		agents = append(agents, agent)
 	}
 
-	status := AgentStatus{
+	status := &AgentStatus{
 		Expected: int(daemonset.Status.DesiredNumberScheduled),
 		Ready:    int(daemonset.Status.NumberReady),
 		Agents:   agents,

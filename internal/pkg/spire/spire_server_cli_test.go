@@ -5,12 +5,6 @@ import (
 	"reflect"
 	"testing"
 	"time"
-	// "k8s.io/apimachinery/pkg/runtime"
-	// "k8s.io/client-go/kubernetes"
-	// kfake "k8s.io/client-go/kubernetes/fake"
-	// "k8s.io/client-go/rest"
-	// restfake "k8s.io/client-go/rest/fake"
-	// typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 var oneAgentList = `{
