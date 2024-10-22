@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
@@ -179,7 +178,6 @@ func (h *HelmSPIREProvider) uninstall(statusCh chan provider.ProviderStatus) {
 		}
 
 		statusCh <- provider.ProviderStatus{Stage: "Uninstalled", Message: fmt.Sprintf("Uninstallation completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
-		time.Sleep(time.Duration(1) * time.Second)
 	}()
 }
 
