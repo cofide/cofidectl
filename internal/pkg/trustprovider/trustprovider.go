@@ -36,7 +36,7 @@ func (tp *TrustProvider) GetValues() error {
 			WorkloadAttestorConfig: map[string]interface{}{
 				"enabled":                     true,
 				"skipKubeletVerification":     true,
-				"disableContainerSelectors":   false,
+				"disableContainerSelectors":   true,
 				"useNewContainerLocator":      false,
 				"verboseContainerLocatorLogs": false,
 			},
