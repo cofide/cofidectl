@@ -147,7 +147,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 var trustZoneStatusCmdDesc = `
 This command will display the status of trust zones in the Cofide configuration state.
 
-NOTE: This command relies on privileged access to execute SPIRE server CLI commands within the SPIRE server container, which may be considered a security risk in production environments.
+NOTE: This command relies on privileged access to execute SPIRE server CLI commands within the SPIRE server container, which may not be suitable for production environments.
 `
 
 func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
