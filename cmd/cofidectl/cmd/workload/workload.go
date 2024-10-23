@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
+	"io"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
@@ -83,7 +83,7 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 }
 
 const debugContainerName = "cofidectl-debug-container"
-const debugContainerImage = "cofidectl-debug"
+const debugContainerImage = "cofidectl-debug:latest"
 
 func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Opts) error {
 	trustZone, err := w.source.GetTrustZone(opts.trust_zone)
@@ -96,11 +96,12 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Op
 		return err
 	}
 
-	if err := createDebugContainer(ctx, client, opts.pod_name, opts.namespace); err != nil {
-		log.Fatalf("Error creating debug container: %v", err)
+	pod, err := createDebugContainer(ctx, client, opts.pod_name, opts.namespace)
+	if err != nil {
+		return err
 	}
 
-	workload, err := getWorkloadStatus(ctx, client, opts.pod_name, opts.namespace)
+	workload, err := getWorkloadStatus(ctx, client, pod)
 	if err != nil {
 		return err
 	}
@@ -110,26 +111,26 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Op
 	return nil
 }
 
-func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName string, namespace string) error {
+func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName string, namespace string) (*corev1.Pod, error) {
 	pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("error getting pod: %v", err)
+		return nil, fmt.Errorf("error getting pod: %v", err)
 	}
 
 	// Check if debug container already exists
 	for _, ec := range pod.Spec.EphemeralContainers {
 		if ec.Name == debugContainerName {
-			return nil // Debug container already exists
+			return pod, nil // Debug container already exists
 		}
 	}
 
 	debugContainer := corev1.EphemeralContainer{
 		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
-			Name:    debugContainerName,
-			Image:   debugContainerImage,
-			TTY:     true,
-			Stdin:   true,
-			Command: []string{"sleep", "infinity"},
+			Name:            debugContainerName,
+			Image:           debugContainerImage,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			TTY:             true,
+			Stdin:           true,
 		},
 		TargetContainerName: pod.Spec.Containers[0].Name,
 	}
@@ -142,52 +143,48 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 		metav1.UpdateOptions{},
 	)
 	if err != nil {
-		return fmt.Errorf("error creating debug container: %v", err)
+		return nil, fmt.Errorf("error creating debug container: %v", err)
 	}
 
 	// Wait for debug container to be ready
 	for {
 		pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("error getting pod status: %v", err)
+			return nil, fmt.Errorf("error getting pod status: %v", err)
 		}
 
 		for _, status := range pod.Status.EphemeralContainerStatuses {
 			if status.Name == debugContainerName && status.State.Running != nil {
-				return nil
+				return pod, nil
 			}
 		}
 	}
 }
 
-func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, podName string, namespace string) (string, error) {
-	stdin := &bytes.Buffer{}
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
+func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, pod *corev1.Pod) (string, error) {
+	for _, status := range pod.Status.EphemeralContainerStatuses {
+		if status.Name == debugContainerName {
 
-	err := kubeutil.RunCommand(
-		ctx,
-		client.Clientset,
-		client.RestConfig,
-		podName,
-		namespace,
-		debugContainerName,
-		[]string{"./cofidectl-debug"},
-		stdin,
-		stdout,
-		stderr,
-	)
+			// If container has terminated, get its logs
+			if status.State.Terminated != nil {
+				logs, err := client.Clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
+					Container: debugContainerName,
+				}).Stream(ctx)
+				if err != nil {
+					return "", err
+				}
+				defer logs.Close()
 
-	if err != nil {
-		return "", err
+				// Read the logs
+				buf := new(bytes.Buffer)
+				_, err = io.Copy(buf, logs)
+				if err != nil {
+					return "", err
+				}
+
+				return buf.String(), nil
+			}
+		}
 	}
-
-	output := stdout.String()
-
-	stdin.Reset()
-	stdout.Reset()
-	stderr.Reset()
-
-	return output, nil
-
+	return "", fmt.Errorf("could not determine status")
 }
