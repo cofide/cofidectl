@@ -2,6 +2,7 @@ package trustzone
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -13,6 +14,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
@@ -178,7 +180,13 @@ func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string
 		return err
 	}
 
-	// TODO: Check helm status
+	prov := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+	if installed, err := prov.CheckIfAlreadyInstalled(); err != nil {
+		return err
+	} else if !installed {
+		return errors.New("Cofide configuration has not been installed. Have you run cofidectl up?")
+	}
+
 	server, err := spire.GetServerStatus(ctx, client)
 	if err != nil {
 		return err
