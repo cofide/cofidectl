@@ -11,7 +11,7 @@ import (
 
 type Client struct {
 	CmdConfig  *api.Config
-	Clientset  *kubernetes.Clientset
+	Clientset  kubernetes.Interface
 	RestConfig *rest.Config
 }
 

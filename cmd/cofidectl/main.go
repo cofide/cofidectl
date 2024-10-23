@@ -5,12 +5,15 @@ import (
 	"os"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
+	"github.com/cofide/cofidectl/internal/pkg/config/local"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	hclog "github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
 )
 
 func main() {
+	log.SetFlags(0)
+
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
@@ -26,7 +29,8 @@ func main() {
 	}
 
 	// Determine the plugins to be loaded
-	plugins, err := ds.(*cofidectl_plugin.LocalDataSource).GetPlugins()
+	configProvider := local.YAMLConfigProvider{DataSource: ds.(*cofidectl_plugin.LocalDataSource)}
+	plugins, err := configProvider.GetPlugins()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,11 +45,11 @@ func main() {
 
 	rootCmd, err := cmd.NewRootCommand(ds, os.Args[1:]).GetRootCommand()
 	if err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 
 	if err = rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 }
 

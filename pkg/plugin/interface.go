@@ -9,6 +9,7 @@ import (
 // DataSource is the interface plugins have to implement.
 type DataSource interface {
 	Init() error
+	Validate() error
 	GetTrustZone(string) (*trust_zone_proto.TrustZone, error)
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
 	AddTrustZone(*trust_zone_proto.TrustZone) error
@@ -20,4 +21,5 @@ type DataSource interface {
 
 	AddFederation(*federation_proto.Federation) error
 	ListFederation() ([]*federation_proto.Federation, error)
+	ListFederationByTrustZone(string) ([]*federation_proto.Federation, error)
 }

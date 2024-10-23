@@ -14,8 +14,7 @@ import (
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
-	"github.com/cofide/cofidectl/internal/pkg/trustzone"
+	"github.com/cofide/cofidectl/internal/pkg/config"
 )
 
 // TODO: use Go embedding eg //go:embed cofidectl-schema.cue
@@ -53,47 +52,70 @@ const schemaCue = `
 config: #Config
 `
 
-type Config struct {
-	Plugins             []string                                        `yaml:"plugins,omitempty"`
-	TrustZones          map[string]*trustzone.TrustZone                 `yaml:"trust_zones,omitempty"`
-	AttestationPolicies map[string]*attestationpolicy.AttestationPolicy `yaml:"attestation_policies,omitempty"`
-}
-
 type LocalDataSource struct {
 	filePath   string
-	config     *Config
+	Config     *config.Config
 	cueContext *cue.Context
+	loaded     bool
 }
 
 func (lds *LocalDataSource) Init() error {
-	fmt.Printf("initialising config: %v\n", lds.filePath)
-	if err := lds.CreateDataFile(); err != nil {
+	if !lds.loaded {
+		fmt.Printf("initialising local config file: %v\n", lds.filePath)
+		if err := lds.createDataFile(); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("the config file already exists.")
+	}
+
+	if err := lds.loadState(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
-	trustZones := make(map[string]*trustzone.TrustZone)
-	attestationPolicies := make(map[string]*attestationpolicy.AttestationPolicy)
-
-	cfg := &Config{TrustZones: trustZones, AttestationPolicies: attestationPolicies}
-	lds := &LocalDataSource{
-		filePath: filePath,
-		config:   cfg,
+func (lds *LocalDataSource) Validate() error {
+	if !lds.loaded {
+		return fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
 	}
 
-	if lds.DataFileExists() {
-		lds.loadState()
-		return lds, nil
+	return nil
+}
+
+func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
+	trustZones := &trust_zone_proto.TrustZoneList{}
+	attestationPolicies := &attestation_policy_proto.AttestationPolicyList{}
+
+	cfg := &config.Config{TrustZones: trustZones, AttestationPolicies: attestationPolicies}
+	lds := &LocalDataSource{
+		filePath: filePath,
+		Config:   cfg,
+	}
+
+	dataFileExists, err := lds.dataFileExists()
+	if err != nil {
+		return nil, err
+	}
+
+	if dataFileExists {
+		err = lds.loadState()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return lds, nil
 }
 
 func (lds *LocalDataSource) loadState() error {
-	if !lds.DataFileExists() {
+	dataFileExists, err := lds.dataFileExists()
+	if err != nil {
+		return err
+	}
+
+	if !dataFileExists {
 		return fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
 	}
 
@@ -115,92 +137,15 @@ func (lds *LocalDataSource) loadState() error {
 		return fmt.Errorf("error validating YAML: %s", err)
 	}
 
-	if err := yaml.Unmarshal(yamlData, &lds.config); err != nil {
+	if err := yaml.Unmarshal(yamlData, &lds.Config); err != nil {
 		return fmt.Errorf("error unmarshaling YAML: %s", err)
 	}
 
+	lds.loaded = true
 	return nil
 }
 
-func (lds *LocalDataSource) GetConfig() (*Config, error) {
-	return lds.config, nil
-}
-
-func (lds *LocalDataSource) GetPlugins() ([]string, error) {
-	return lds.config.Plugins, nil
-}
-
-func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
-	lds.config.TrustZones[trustZone.Name] = trustzone.NewTrustZone(trustZone)
-	if err := lds.UpdateDataFile(); err != nil {
-		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
-	}
-	return nil
-}
-
-func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone, error) {
-	var trustZone *trust_zone_proto.TrustZone
-
-	if tz, ok := lds.config.TrustZones[id]; ok {
-		trustZone = tz.TrustZoneProto
-	} else {
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", id)
-	}
-
-	return trustZone, nil
-}
-
-func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
-	lds.config.AttestationPolicies[policy.Name] = attestationpolicy.NewAttestationPolicy(policy)
-	if err := lds.UpdateDataFile(); err != nil {
-		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
-	}
-	return nil
-}
-
-func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy, trustZone *trust_zone_proto.TrustZone) error {
-	localTrustZone, ok := lds.config.TrustZones[trustZone.Name]
-	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
-	}
-
-	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy.Name)
-	if err := lds.UpdateDataFile(); err != nil {
-		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
-	}
-	return nil
-}
-
-func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error) {
-	var attestationPolicy *attestation_policy_proto.AttestationPolicy
-
-	if ap, ok := lds.config.AttestationPolicies[id]; ok {
-		attestationPolicy = ap.AttestationPolicyProto
-		return attestationPolicy, nil
-	} else {
-		return nil, fmt.Errorf("failed to find attestation policy %s in local config", id)
-	}
-}
-
-func (lds *LocalDataSource) AddFederation(federation *federation_proto.Federation) error {
-	leftTrustZone, ok := lds.config.TrustZones[federation.Left.Name]
-	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", federation.Left.Name)
-	}
-
-	_, ok = lds.config.TrustZones[federation.Right.Name]
-	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", federation.Right.Name)
-	}
-
-	leftTrustZone.Federations = append(leftTrustZone.Federations, federation.Right.Name)
-	if err := lds.UpdateDataFile(); err != nil {
-		return fmt.Errorf("failed to add federation to local config: %s", err)
-	}
-	return nil
-}
-
-func (lds *LocalDataSource) CreateDataFile() error {
+func (lds *LocalDataSource) createDataFile() error {
 	err := os.WriteFile(lds.filePath, []byte{}, 0600)
 	if err != nil {
 		return fmt.Errorf("error creating config: %v", err)
@@ -209,12 +154,12 @@ func (lds *LocalDataSource) CreateDataFile() error {
 	return nil
 }
 
-func (lds *LocalDataSource) UpdateDataFile() error {
-	if !lds.DataFileExists() {
-		return fmt.Errorf("config doesn't exist, please run cofidectl init")
+func (lds *LocalDataSource) updateDataFile() error {
+	if !lds.loaded {
+		return fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
 	}
 
-	data, err := yaml.Marshal(lds.config)
+	data, err := yaml.Marshal(lds.Config)
 	if err != nil {
 		return fmt.Errorf("error marshalling config: %v", err)
 	}
@@ -227,41 +172,129 @@ func (lds *LocalDataSource) UpdateDataFile() error {
 	return nil
 }
 
-func (lds *LocalDataSource) DataFileExists() bool {
+func (lds *LocalDataSource) dataFileExists() (bool, error) {
 	if _, err := os.Stat(lds.filePath); errors.Is(err, os.ErrNotExist) {
-		return false
+		return false, nil
+	} else if err != nil {
+		return false, err
 	}
 
-	return true
+	return true, nil
+}
+
+func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
+	if _, ok := lds.Config.GetTrustZoneByName(trustZone.Name); ok {
+		return fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
+	}
+	lds.Config.TrustZones.TrustZones = append(lds.Config.TrustZones.TrustZones, trustZone)
+	if err := lds.updateDataFile(); err != nil {
+		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
+	}
+	return nil
+}
+
+func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone, error) {
+	trustZone, ok := lds.Config.GetTrustZoneByName(id)
+	if !ok {
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", id)
+	}
+
+	return trustZone, nil
+}
+
+func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
+	if _, ok := lds.Config.GetAttestationPolicyByName(policy.Name); ok {
+		return fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
+	}
+	lds.Config.AttestationPolicies.Policies = append(lds.Config.AttestationPolicies.Policies, policy)
+	if err := lds.updateDataFile(); err != nil {
+		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
+	}
+	return nil
+}
+
+func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy, trustZone *trust_zone_proto.TrustZone) error {
+	localTrustZone, ok := lds.Config.GetTrustZoneByName(trustZone.Name)
+	if !ok {
+		return fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
+	}
+
+	if _, ok := lds.Config.GetAttestationPolicyByName(policy.Name); !ok {
+		return fmt.Errorf("attestation policy %s does not exist in local config", policy.Name)
+	}
+
+	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy)
+	if err := lds.updateDataFile(); err != nil {
+		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
+	}
+	return nil
+}
+
+func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error) {
+	var attestationPolicy *attestation_policy_proto.AttestationPolicy
+
+	if ap, ok := lds.Config.GetAttestationPolicyByName(id); ok {
+		attestationPolicy = ap
+		return attestationPolicy, nil
+	} else {
+		return nil, fmt.Errorf("failed to find attestation policy %s in local config", id)
+	}
+}
+
+func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) error {
+	leftTrustZone, err := lds.GetTrustZone(federationProto.Left)
+	if err != nil {
+		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.Left)
+	}
+
+	_, err = lds.GetTrustZone(federationProto.Right)
+	if err != nil {
+		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.Right)
+	}
+
+	leftTrustZone.Federations = append(leftTrustZone.Federations, federationProto)
+	if err := lds.updateDataFile(); err != nil {
+		return fmt.Errorf("failed to add federation to local config: %s", err)
+	}
+	return nil
 }
 
 func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-	trustZoneAsProtos := make([]*trust_zone_proto.TrustZone, 0, len(lds.config.TrustZones))
-	for _, trustZone := range lds.config.TrustZones {
-		trustZoneAsProtos = append(trustZoneAsProtos, trustZone.TrustZoneProto)
-	}
-	return trustZoneAsProtos, nil
+	return lds.Config.TrustZones.TrustZones, nil
 }
 
 func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error) {
-	attestationPoliciesAsProtos := make([]*attestation_policy_proto.AttestationPolicy, 0, len(lds.config.AttestationPolicies))
-	for _, attestationPolicy := range lds.config.AttestationPolicies {
-		attestationPoliciesAsProtos = append(attestationPoliciesAsProtos, attestationPolicy.AttestationPolicyProto)
-	}
-
-	return attestationPoliciesAsProtos, nil
+	return lds.Config.AttestationPolicies.Policies, nil
 }
 
 func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, error) {
 	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
 	federationsAsProto := make([]*federation_proto.Federation, 0)
-	for _, trustZone := range lds.config.TrustZones {
-		for _, federation := range trustZone.Federations {
-			rightTrustZone, err := lds.GetTrustZone(federation)
+	for _, trustZone := range lds.Config.TrustZones.TrustZones {
+		for _, v := range trustZone.Federations {
+			rightTrustZone, err := lds.GetTrustZone(v.Right)
 			if err != nil {
-				federationsAsProto = append(federationsAsProto, &federation_proto.Federation{Left: trustZone.TrustZoneProto, Right: rightTrustZone})
+				return nil, err
 			}
+			federationsAsProto = append(federationsAsProto, &federation_proto.Federation{Left: trustZone.TrustDomain, Right: rightTrustZone.TrustDomain})
 		}
 	}
+	return federationsAsProto, nil
+}
+
+func (lds *LocalDataSource) ListFederationByTrustZone(id string) ([]*federation_proto.Federation, error) {
+	federationsAsProto := make([]*federation_proto.Federation, 0)
+	trustZone, ok := lds.Config.GetTrustZoneByName(id)
+	if !ok {
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.TrustDomain)
+	}
+	for _, v := range trustZone.Federations {
+		rightTrustZone, err := lds.GetTrustZone(v.Right)
+		if err != nil {
+			return nil, err
+		}
+		federationsAsProto = append(federationsAsProto, &federation_proto.Federation{Left: trustZone.TrustDomain, Right: rightTrustZone.TrustDomain})
+	}
+
 	return federationsAsProto, nil
 }

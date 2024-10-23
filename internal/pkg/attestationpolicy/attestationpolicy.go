@@ -3,8 +3,8 @@ package attestationpolicy
 import (
 	"fmt"
 
+	"buf.build/go/protoyaml"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	"gopkg.in/yaml.v3"
 )
 
 type AttestationPolicy struct {
@@ -20,60 +20,44 @@ const (
 	Unspecified = "unspecified"
 )
 
-type AttestationPolicyOpts struct {
-	// Annotated
-	PodKey   string
-	PodValue string
-
-	// Namespace
-	Namespace string
-}
-
 func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.AttestationPolicy) *AttestationPolicy {
 	return &AttestationPolicy{
 		AttestationPolicyProto: attestationPolicy,
 	}
 }
 
-func (ap *AttestationPolicy) MarshalYAML() (interface{}, error) {
-	yamlMap := make(map[string]interface{})
-
-	kind, err := GetAttestationPolicyKindString(ap.AttestationPolicyProto.Kind.String())
-	if err != nil {
-		return nil, err
-	}
-
-	yamlMap["name"] = ap.AttestationPolicyProto.Name
-	yamlMap["kind"] = kind
-	yamlMap["namespace"] = ap.AttestationPolicyProto.Namespace
-	yamlMap["pod_key"] = ap.AttestationPolicyProto.PodKey
-	yamlMap["pod_value"] = ap.AttestationPolicyProto.PodValue
-
-	return yamlMap, nil
+func (ap *AttestationPolicy) marshalToYAML() ([]byte, error) {
+	return protoyaml.Marshal(ap.AttestationPolicyProto)
 }
 
-func (ap *AttestationPolicy) UnmarshalYAML(value *yaml.Node) error {
-	tempMap := make(map[string]interface{})
-	if err := value.Decode(&tempMap); err != nil {
-		return err
+func (ap *AttestationPolicy) unmarshalFromYAML(data []byte) error {
+	return protoyaml.Unmarshal(data, ap.AttestationPolicyProto)
+}
+
+func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
+	var clusterSPIFFEID = make(map[string]interface{})
+	switch ap.AttestationPolicyProto.Kind {
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED:
+		clusterSPIFFEID["podSelector"] = map[string]interface{}{
+			"matchLabels": map[string]interface{}{
+				ap.AttestationPolicyProto.PodKey: ap.AttestationPolicyProto.PodValue,
+			},
+		}
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE:
+		clusterSPIFFEID["namespaceSelector"] = map[string]interface{}{
+			"matchExpressions": []map[string]interface{}{
+				{
+					"key":      "kubernetes.io/metadata.name",
+					"operator": "In",
+					"values":   []string{ap.AttestationPolicyProto.Namespace},
+				},
+			},
+		}
+	default:
+		clusterSPIFFEID["enabled"] = "false"
 	}
 
-	if ap.AttestationPolicyProto == nil {
-		ap.AttestationPolicyProto = &attestation_policy_proto.AttestationPolicy{}
-	}
-
-	kind, err := GetAttestationPolicyKind(tempMap["kind"].(string))
-	if err != nil {
-		return err
-	}
-
-	ap.AttestationPolicyProto.Name = tempMap["name"].(string)
-	ap.AttestationPolicyProto.Kind = kind
-	ap.AttestationPolicyProto.Namespace = tempMap["namespace"].(string)
-	ap.AttestationPolicyProto.PodKey = tempMap["pod_key"].(string)
-	ap.AttestationPolicyProto.PodValue = tempMap["pod_value"].(string)
-
-	return nil
+	return clusterSPIFFEID
 }
 
 func GetAttestationPolicyKind(kind string) (attestation_policy_proto.AttestationPolicyKind, error) {

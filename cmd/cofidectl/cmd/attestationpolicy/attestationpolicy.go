@@ -2,6 +2,7 @@ package attestationpolicy
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -53,6 +54,10 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
+
 			attestationPolicies, err := c.source.ListAttestationPolicies()
 			if err != nil {
 				return err
@@ -122,6 +127,10 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
+
 			kind, err := attestationpolicy.GetAttestationPolicyKind(opts.kind)
 			if err != nil {
 				return err
@@ -134,17 +143,13 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 				PodKey:    opts.attestationPolicyOpts.PodKey,
 				PodValue:  opts.attestationPolicyOpts.PodValue,
 			}
-			err = c.source.AddAttestationPolicy(newAttestationPolicy)
+			c.source.AddAttestationPolicy(newAttestationPolicy)
+
+			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
 			if err != nil {
 				return err
 			}
-
-			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
-			if trustZone != nil {
-				return c.source.BindAttestationPolicy(newAttestationPolicy, trustZone)
-			} else {
-				return err
-			}
+			return c.source.BindAttestationPolicy(newAttestationPolicy, trustZone)
 		},
 	}
 
@@ -157,16 +162,12 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.attestationPolicyOpts.FederatesWith, "federates-with", "", "Defines a trust domain to federate identity with")
 
 	cmd.MarkFlagRequired("trust-zone")
+	cmd.MarkFlagRequired("name")
 
 	return cmd
 }
 
 func validateOpts(opts Opts) bool {
-	if opts.attestationPolicyOpts.Name == "" {
-		slog.Error("flag \"name\" must be provided for an attestation policy")
-		return false
-	}
-
 	if opts.kind == "namespace" && opts.attestationPolicyOpts.Namespace == "" {
 		slog.Error("flag \"namespace\" must be provided for Namespace attestation policy kind")
 		return false
@@ -178,4 +179,16 @@ func validateOpts(opts Opts) bool {
 	}
 
 	return true
+}
+
+func GetAttestationPolicyKind(s string) (attestation_policy_proto.AttestationPolicyKind, error) {
+	switch s {
+	case "annotated":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
+	case "namespace":
+		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
+	}
+
+	// TODO: Update error message.
+	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %s", s))
 }

@@ -18,6 +18,9 @@ type RootCommand struct {
 	args   []string
 }
 
+var cfgFile string
+var kubeCfgFile string
+
 func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootCommand {
 	return &RootCommand{
 		source: source,
@@ -25,8 +28,6 @@ func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootComm
 	}
 }
 
-var cfgFile string
-var kubeCfgFile string
 var rootCmdDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
 
 func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
@@ -45,6 +46,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 
 	initCmd := NewInitCommand(r.source)
 	upCmd := NewUpCommand(r.source)
+	downCmd := NewDownCommand(r.source)
 	tzCmd := trustzone.NewTrustZoneCommand(r.source)
 	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
 	fedCmd := federation.NewFederationCommand(r.source)
@@ -57,6 +59,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		fedCmd.GetRootCommand(),
 		wlCmd.GetRootCommand(),
 		upCmd.UpCmd(),
+		downCmd.DownCmd(),
 	)
 
 	return cmd, nil

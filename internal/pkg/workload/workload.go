@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	"github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/remotecommand"
@@ -28,30 +29,20 @@ type RegisteredWorkload struct {
 	Type      string
 }
 
-type selector struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
-
-type spiffeID struct {
-	Path        string `json:"path"`
-	TrustDomain string `json:"trust_domain"`
-}
-
-type registrationEntry struct {
-	Selectors []selector `json:"selectors"`
-	SPIFFEID  spiffeID   `json:"spiffe_id"`
-}
-
-type registrationEntries struct {
-	Entries []registrationEntry
-}
-
 type UnregisteredWorkload struct {
 	Name      string
 	Namespace string
 	Status    string
 	Type      string
+}
+
+type registrationEntry struct {
+	Selectors []*types.Selector `json:"selectors"`
+	SPIFFEID  *types.SPIFFEID   `json:"spiffe_id"`
+}
+
+type registrationEntries struct {
+	Entries []registrationEntry
 }
 
 func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]RegisteredWorkload, error) {
@@ -90,6 +81,53 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 	}
 
 	return registeredWorkloads, nil
+}
+
+func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) ([]registrationEntry, error) {
+	podExecOpts := &v1.PodExecOptions{
+		Command:   []string{"/opt/spire/bin/spire-server", "entry", "show", "-output", "json"},
+		Container: "spire-server",
+		Stdin:     true,
+		Stdout:    true,
+		Stderr:    true,
+	}
+
+	request := client.Clientset.CoreV1().
+		RESTClient().
+		Post().
+		Namespace("spire").
+		Resource("pods").
+		Name("spire-server-0").
+		SubResource("exec").
+		VersionedParams(podExecOpts, scheme.ParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(client.RestConfig, "POST", request.URL())
+	if err != nil {
+		return nil, err
+	}
+
+	stdin := &bytes.Buffer{}
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
+		Stdin:  stdin,
+		Stdout: stdout,
+		Stderr: stderr,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	parsedRegistrationEntries := &registrationEntries{}
+	err = json.Unmarshal(stdout.Bytes(), parsedRegistrationEntries)
+	if err != nil {
+		return nil, err
+	}
+
+	registrationEntries := parsedRegistrationEntries.Entries
+
+	return registrationEntries, nil
 }
 
 func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string) ([]UnregisteredWorkload, error) {
@@ -174,51 +212,4 @@ func generateRegistrationEntriesMap(registrationEntries []registrationEntry) map
 	}
 
 	return registrationEntriesMap
-}
-
-func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) ([]registrationEntry, error) {
-	podExecOpts := &v1.PodExecOptions{
-		Command:   []string{"/opt/spire/bin/spire-server", "entry", "show", "-output", "json"},
-		Container: "spire-server",
-		Stdin:     true,
-		Stdout:    true,
-		Stderr:    true,
-	}
-
-	request := client.Clientset.CoreV1().
-		RESTClient().
-		Post().
-		Namespace("spire").
-		Resource("pods").
-		Name("spire-server-0").
-		SubResource("exec").
-		VersionedParams(podExecOpts, scheme.ParameterCodec)
-
-	exec, err := remotecommand.NewSPDYExecutor(client.RestConfig, "POST", request.URL())
-	if err != nil {
-		return nil, err
-	}
-
-	stdin := &bytes.Buffer{}
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-
-	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdin:  stdin,
-		Stdout: stdout,
-		Stderr: stderr,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	parsedRegistrationEntries := &registrationEntries{}
-	err = json.Unmarshal(stdout.Bytes(), parsedRegistrationEntries)
-	if err != nil {
-		return nil, err
-	}
-
-	registrationEntries := parsedRegistrationEntries.Entries
-
-	return registrationEntries, nil
 }

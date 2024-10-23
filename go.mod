@@ -3,24 +3,32 @@ module github.com/cofide/cofidectl
 go 1.22.6
 
 require (
+	buf.build/go/protoyaml v0.2.0
 	cuelang.org/go v0.10.0
-	github.com/cofide/cofide-api-sdk v0.0.0-unpublished
+	github.com/cofide/cofide-api-sdk v0.0.0-20241021112502-6b93f47f2627
 	github.com/gobeam/stringy v0.0.7
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-plugin v1.6.1
 	github.com/manifoldco/promptui v0.9.0
 	github.com/spf13/cobra v1.8.1
+	github.com/spiffe/go-spiffe/v2 v2.4.0
+	github.com/spiffe/spire-api-sdk v1.10.4
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.67.1
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.1
 )
 
-require github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
-
-replace github.com/cofide/cofide-connect v0.0.0-unpublished => ../cofide-connect
-
-replace github.com/cofide/cofide-api-sdk v0.0.0-unpublished => ../cofide-api-sdk
+require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240717164558-a6c49f84cc0f.2 // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
+	github.com/bufbuild/protovalidate-go v0.6.3 // indirect
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
+	github.com/google/cel-go v0.21.0 // indirect
+	github.com/stoewer/go-strcase v1.3.0 // indirect
+	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 // indirect
+)
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
