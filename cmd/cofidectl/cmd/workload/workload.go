@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 type WorkloadCommand struct {
@@ -84,7 +85,7 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 	return cmd
 }
 
-const debugContainerName = "cofidectl-debug-container"
+const debugContainerNamePrefix = "cofidectl-debug"
 const debugContainerImage = "cofidectl-debug:latest"
 
 func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Opts) error {
@@ -98,21 +99,21 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Op
 		return err
 	}
 
-	// Create a spinner to display whilst installation is underway
+	// Create a spinner to display whilst the debug container is created and executed and logs retrieved
 	s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
 	s.Start()
 	s.Suffix = "Starting debug container"
 
-	pod, err := createDebugContainer(ctx, client, opts.pod_name, opts.namespace)
+	pod, container, err := createDebugContainer(ctx, client, opts.pod_name, opts.namespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create ephemeral debug container: %s", err)
 	}
 
 	s.Suffix = "Retrieving workload status"
 
-	workload, err := getWorkloadStatus(ctx, client, pod)
+	workload, err := getWorkloadStatus(ctx, client, pod, container)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not retrieve logs of the ephemeral debug container: %s", err)
 	}
 
 	s.Stop()
@@ -122,20 +123,13 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Op
 	return nil
 }
 
-func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName string, namespace string) (*corev1.Pod, error) {
+func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName string, namespace string) (*corev1.Pod, string, error) {
 	pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("error getting pod: %v", err)
+		return nil, "", fmt.Errorf("error getting pod: %v", err)
 	}
 
-	// Check if debug container already exists
-	existingDebugContainer := false
-	for _, ec := range pod.Spec.EphemeralContainers {
-		if ec.Name == debugContainerName {
-			existingDebugContainer = true
-			break
-		}
-	}
+	debugContainerName := fmt.Sprintf("%s-%s", debugContainerNamePrefix, rand.String(5))
 
 	debugContainer := corev1.EphemeralContainer{
 		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
@@ -148,9 +142,7 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 		TargetContainerName: pod.Spec.Containers[0].Name,
 	}
 
-	if !existingDebugContainer {
-		pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, debugContainer)
-	}
+	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, debugContainer)
 
 	_, err = client.Clientset.CoreV1().Pods(namespace).UpdateEphemeralContainers(
 		ctx,
@@ -159,48 +151,39 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 		metav1.UpdateOptions{},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error creating debug container: %v", err)
+		return nil, "", fmt.Errorf("error creating debug container: %v", err)
 	}
 
-	// Wait for debug container to be ready
+	// Wait for the debug container to complete
 	for {
 		pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("error getting pod status: %v", err)
+			return nil, "", fmt.Errorf("error getting pod status: %v", err)
 		}
 
 		for _, status := range pod.Status.EphemeralContainerStatuses {
-			if status.Name == debugContainerName && status.State.Running != nil {
-				return pod, nil
+			if status.Name == debugContainerName && status.State.Terminated != nil {
+				return pod, debugContainerName, nil
 			}
 		}
 	}
 }
 
-func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, pod *corev1.Pod) (string, error) {
-	for _, status := range pod.Status.EphemeralContainerStatuses {
-		if status.Name == debugContainerName {
-
-			// If container has terminated, get its logs
-			if status.State.Terminated != nil {
-				logs, err := client.Clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
-					Container: debugContainerName,
-				}).Stream(ctx)
-				if err != nil {
-					return "", err
-				}
-				defer logs.Close()
-
-				// Read the logs
-				buf := new(bytes.Buffer)
-				_, err = io.Copy(buf, logs)
-				if err != nil {
-					return "", err
-				}
-
-				return buf.String(), nil
-			}
-		}
+func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, pod *corev1.Pod, container string) (string, error) {
+	logs, err := client.Clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{
+		Container: container,
+	}).Stream(ctx)
+	if err != nil {
+		return "", err
 	}
-	return "", fmt.Errorf("could not determine status")
+	defer logs.Close()
+
+	// Read the logs
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, logs)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
