@@ -22,20 +22,20 @@ func main() {
 
 	var ds cofidectl_plugin.DataSource
 
-	// default to the local data source
+	// Defaults to the local data source
 	ds, err := cofidectl_plugin.NewLocalDataSource("cofide.yaml")
 	if err != nil {
 		os.Exit(1)
 	}
 
-	// determine plugins to be loaded
+	// Determine the plugins to be loaded
 	configProvider := local.YAMLConfigProvider{DataSource: ds.(*cofidectl_plugin.LocalDataSource)}
 	plugins, err := configProvider.GetPlugins()
 	if err != nil {
 		os.Exit(1)
 	}
 
-	// if the Connect plugin is enabled use it in place of the local data source
+	// If the Connect plugin is enabled use it in place of the local data source
 	if len(plugins) > 0 && plugins[0] == "cofidectl-connect-plugin" {
 		ds, err = loadConnectPlugin(logger)
 		if err != nil {
