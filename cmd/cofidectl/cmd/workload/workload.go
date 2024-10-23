@@ -138,6 +138,12 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			TTY:             true,
 			Stdin:           true,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					ReadOnly:  true,
+					Name:      "spiffe-workload-api",
+					MountPath: "/spiffe-workload-api",
+				}},
 		},
 		TargetContainerName: pod.Spec.Containers[0].Name,
 	}
