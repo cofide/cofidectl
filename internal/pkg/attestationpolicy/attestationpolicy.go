@@ -3,12 +3,11 @@ package attestationpolicy
 import (
 	"fmt"
 
-	"buf.build/go/protoyaml"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 )
 
 type AttestationPolicy struct {
-	AttestationPolicyProto *attestation_policy_proto.AttestationPolicy `yaml:"attestationPolicy"`
+	AttestationPolicyProto *attestation_policy_proto.AttestationPolicy
 }
 
 const (
@@ -22,14 +21,6 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 	return &AttestationPolicy{
 		AttestationPolicyProto: attestationPolicy,
 	}
-}
-
-func (ap *AttestationPolicy) marshalToYAML() ([]byte, error) {
-	return protoyaml.Marshal(ap.AttestationPolicyProto)
-}
-
-func (ap *AttestationPolicy) unmarshalFromYAML(data []byte) error {
-	return protoyaml.Unmarshal(data, ap.AttestationPolicyProto)
 }
 
 func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
