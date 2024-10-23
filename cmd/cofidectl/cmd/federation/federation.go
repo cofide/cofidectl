@@ -90,10 +90,10 @@ type Opts struct {
 func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
-		Use:   "add [NAME]",
+		Use:   "add",
 		Short: "Add a new federation",
 		Long:  federationAddCmdDesc,
-		Args:  require.ExactArgs(1),
+		Args:  require.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			newFederation := &federation_proto.Federation{
 				Left:  opts.left,
