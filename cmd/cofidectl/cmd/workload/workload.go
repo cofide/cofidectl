@@ -128,13 +128,6 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 		return nil, fmt.Errorf("error getting pod: %v", err)
 	}
 
-	// Check if debug container already exists
-	for _, ec := range pod.Spec.EphemeralContainers {
-		if ec.Name == debugContainerName {
-			return pod, nil // Debug container already exists
-		}
-	}
-
 	debugContainer := corev1.EphemeralContainer{
 		EphemeralContainerCommon: corev1.EphemeralContainerCommon{
 			Name:            debugContainerName,
