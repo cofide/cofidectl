@@ -54,6 +54,10 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
+
 			attestationPolicies, err := c.source.ListAttestationPolicies()
 			if err != nil {
 				return err
@@ -123,6 +127,10 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
+
 			kind, err := attestationpolicy.GetAttestationPolicyKind(opts.kind)
 			if err != nil {
 				return err

@@ -57,6 +57,10 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 		Long:  trustZoneListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
+
 			trustZones, err := c.source.ListTrustZones()
 			if err != nil {
 				return err
@@ -110,6 +114,10 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
+
 			err := c.getKubernetesContext(cmd)
 			if err != nil {
 				return err

@@ -38,14 +38,13 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		SilenceUsage: true,
 	}
 
-	//cobra.OnInitialize(initConfig)
-
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
 
 	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cofide.yaml)")
 
+	initCmd := NewInitCommand(r.source)
 	upCmd := NewUpCommand(r.source)
 	downCmd := NewDownCommand(r.source)
 	tzCmd := trustzone.NewTrustZoneCommand(r.source)
@@ -54,6 +53,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	wlCmd := workload.NewWorkloadCommand(r.source)
 
 	cmd.AddCommand(
+		initCmd.GetRootCommand(),
 		tzCmd.GetRootCommand(),
 		apCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
