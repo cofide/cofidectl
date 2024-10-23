@@ -110,7 +110,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := c.getKubernetesContext(cmd)
+			err := c.getKubernetesContext(cmd, &opts)
 			if err != nil {
 				return err
 			}
@@ -138,7 +138,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
+func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *Opts) error {
 	kubeConfig, err := cmd.Flags().GetString("kube-config")
 	if err != nil {
 		return err
@@ -150,16 +150,14 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
 	contexts, err := kubeRepo.GetContexts()
 	cobra.CheckErr(err)
 
-	kubeContext, _ := cmd.Flags().GetString("kubernetes-context")
-	if kubeContext != "" {
-		if checkContext(contexts, kubeContext) {
+	if opts.context != "" {
+		if checkContext(contexts, opts.context) {
 			return nil
 		}
-		return errors.New(fmt.Sprintf("could not find kubectl context '%s'", kubeContext))
+		return errors.New(fmt.Sprintf("could not find kubectl context '%s'", opts.context))
 	}
 
-	kubeContext = promptContext(contexts, client.CmdConfig.CurrentContext)
-	cmd.Flags().Set("kubernetes-context", kubeContext)
+	opts.context = promptContext(contexts, client.CmdConfig.CurrentContext)
 	return nil
 }
 
