@@ -11,8 +11,6 @@ type AttestationPolicy struct {
 	AttestationPolicyProto *attestation_policy_proto.AttestationPolicy `yaml:"attestationPolicy"`
 }
 
-type AttestationPolicyKind string
-
 const (
 	Annotated   = "annotated"
 	Cluster     = "cluster"
