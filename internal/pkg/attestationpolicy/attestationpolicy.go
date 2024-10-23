@@ -62,8 +62,6 @@ func GetAttestationPolicyKind(kind string) (attestation_policy_proto.Attestation
 	switch kind {
 	case "annotated", "ATTESTATION_POLICY_KIND_ANNOTATED":
 		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
-	case "cluster", "ATTESTATION_POLICY_KIND_CLUSTER":
-		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_CLUSTER, nil
 	case "namespace", "ATTESTATION_POLICY_KIND_NAMESPACE":
 		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
 	}
@@ -76,8 +74,6 @@ func GetAttestationPolicyKindString(kind string) (string, error) {
 	switch kind {
 	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED.String():
 		return Annotated, nil
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_CLUSTER.String():
-		return Cluster, nil
 	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE.String():
 		return Namespace, nil
 	}
