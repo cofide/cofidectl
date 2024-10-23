@@ -25,5 +25,5 @@ func (tz *TrustZone) unmarshalFromYAML(data []byte) error {
 }
 
 func (tz *TrustZone) GetTrustProvider() (*trustprovider.TrustProvider, error) {
-	return trustprovider.NewTrustProvider(tz.TrustZoneProto.TrustProvider.Kind), nil
+	return trustprovider.NewTrustProvider(tz.TrustZoneProto.TrustProvider.Kind)
 }
