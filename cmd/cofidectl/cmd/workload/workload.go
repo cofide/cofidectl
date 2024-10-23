@@ -27,13 +27,16 @@ This command consists of multiple sub-commands to interact with workloads.
 
 func (c *WorkloadCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "workload list [ARGS]",
-		Short: "List trust zone workloads",
+		Use:   "workload list|discover [ARGS]",
+		Short: "List trust zone workloads or discover candidate workloads",
 		Long:  workloadRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
-	cmd.AddCommand(c.GetListCommand())
+	cmd.AddCommand(
+		c.GetListCommand(),
+		c.GetDiscoverCommand(),
+	)
 
 	return cmd
 }
@@ -54,6 +57,10 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 		Long:  workloadListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := w.source.Validate(); err != nil {
+				return err
+			}
+
 			var err error
 			var trustZones []*trust_zone_proto.TrustZone
 
@@ -137,6 +144,10 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 		Long:  workloadDiscoverCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := w.source.Validate(); err != nil {
+				return err
+			}
+
 			var err error
 			var trustZones []*trust_zone_proto.TrustZone
 
@@ -173,7 +184,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZone, "trust-zone", "", "list the registered workloads in a specific trust zone")
+	f.StringVar(&opts.trustZone, "trust-zone", "", "list the unregistered workloads in a specific trust zone")
 
 	return cmd
 }
