@@ -76,8 +76,6 @@ func (h *HelmSPIREProvider) installChart(statusCh chan provider.ProviderStatus) 
 	go func() {
 		defer close(statusCh)
 
-		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
-
 		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing SPIRE CRDs to cluster %s", h.trustZone.KubernetesCluster)}
 		_, err := h.installSPIRECRDs()
 		if err != nil {
@@ -127,8 +125,6 @@ func (h *HelmSPIREProvider) postInstallUpgrade(statusCh chan provider.ProviderSt
 func (h *HelmSPIREProvider) upgradeChart(statusCh chan provider.ProviderStatus) {
 	go func() {
 		defer close(statusCh)
-
-		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for upgrade"}
 
 		statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Upgrading SPIRE chart on cluster %s", h.trustZone.KubernetesCluster)}
 		_, err := h.upgradeSPIRE()
