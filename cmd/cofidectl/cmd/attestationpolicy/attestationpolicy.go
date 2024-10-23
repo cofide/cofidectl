@@ -133,7 +133,10 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 				PodKey:    opts.attestationPolicyOpts.PodKey,
 				PodValue:  opts.attestationPolicyOpts.PodValue,
 			}
-			c.source.AddAttestationPolicy(newAttestationPolicy)
+			err = c.source.AddAttestationPolicy(newAttestationPolicy)
+			if err != nil {
+				return err
+			}
 
 			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
 			if err != nil {
