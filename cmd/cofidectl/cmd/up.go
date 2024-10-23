@@ -9,8 +9,7 @@ import (
 
 	"github.com/briandowns/spinner"
 
-	"github.com/cofide/cofidectl/internal/pkg/config"
-	"github.com/cofide/cofidectl/internal/pkg/config/local"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/fatih/color"
 	v1 "k8s.io/api/core/v1"
@@ -49,23 +48,19 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			ds, _ := u.source.(*cofidectl_plugin.LocalDataSource)
-			configProvider := local.YAMLConfigProvider{DataSource: ds}
-			config, err := configProvider.GetConfig()
-
+			trustZones, err := u.source.ListTrustZones()
 			if err != nil {
 				return err
 			}
-
-			if len(config.TrustZones.TrustZones) == 0 {
+			if len(trustZones) == 0 {
 				return fmt.Errorf("no trust zones have been configured")
 			}
 
-			if err := installSPIREStack(config); err != nil {
+			if err := u.installSPIREStack(trustZones); err != nil {
 				return err
 			}
 
-			if err := watchAndConfigure(config); err != nil {
+			if err := u.watchAndConfigure(trustZones); err != nil {
 				return err
 			}
 
@@ -75,9 +70,9 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 	return cmd
 }
 
-func installSPIREStack(config *config.Config) error {
-	for _, trustZone := range config.TrustZones.TrustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, config)
+func (u *UpCommand) installSPIREStack(trustZones []*trust_zone_proto.TrustZone) error {
+	for _, trustZone := range trustZones {
+		generator := helm.NewHelmValuesGenerator(trustZone, u.source)
 		spireValues, err := generator.GenerateValues()
 		if err != nil {
 			return err
@@ -114,9 +109,9 @@ func installSPIREStack(config *config.Config) error {
 	return nil
 }
 
-func watchAndConfigure(config *config.Config) error {
+func (u *UpCommand) watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
-	for _, trustZone := range config.TrustZones.TrustZones {
+	for _, trustZone := range trustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
 		s.Suffix = fmt.Sprintf(" Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.KubernetesCluster)
 		s.Start()
@@ -143,8 +138,7 @@ func watchAndConfigure(config *config.Config) error {
 		fmt.Printf("%s All SPIRE server pods and services are ready for %s in cluster %s\n\n", green("✅"), trustZone.Name, trustZone.KubernetesCluster)
 	}
 
-	err := applyPostInstallHelmConfig(config)
-	if err != nil {
+	if err := u.applyPostInstallHelmConfig(trustZones); err != nil {
 		return err
 	}
 
@@ -285,9 +279,9 @@ func createServiceWatcher(kubeContext string) (watch.Interface, error) {
 	return watcher, nil
 }
 
-func applyPostInstallHelmConfig(config *config.Config) error {
-	for _, trustZone := range config.TrustZones.TrustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, config)
+func (u *UpCommand) applyPostInstallHelmConfig(trustZones []*trust_zone_proto.TrustZone) error {
+	for _, trustZone := range trustZones {
+		generator := helm.NewHelmValuesGenerator(trustZone, u.source)
 
 		spireValues, err := generator.GenerateValues()
 		if err != nil {
