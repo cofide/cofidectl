@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
+	"github.com/briandowns/spinner"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
@@ -96,15 +98,24 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts Op
 		return err
 	}
 
+	// Create a spinner to display whilst installation is underway
+	s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
+	s.Start()
+	s.Suffix = "Starting debug container"
+
 	pod, err := createDebugContainer(ctx, client, opts.pod_name, opts.namespace)
 	if err != nil {
 		return err
 	}
 
+	s.Suffix = "Retrieving workload status"
+
 	workload, err := getWorkloadStatus(ctx, client, pod)
 	if err != nil {
 		return err
 	}
+
+	s.Stop()
 
 	fmt.Println(workload)
 
