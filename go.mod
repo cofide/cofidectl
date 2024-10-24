@@ -18,8 +18,6 @@ require (
 	helm.sh/helm/v3 v3.16.1
 )
 
-require github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
-
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
@@ -37,6 +35,7 @@ require (
 	github.com/briandowns/spinner v1.23.1
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
 	github.com/containerd/containerd v1.7.12 // indirect
 	github.com/containerd/log v0.1.0 // indirect
