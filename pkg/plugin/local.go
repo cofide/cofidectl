@@ -223,6 +223,12 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 		return fmt.Errorf("attestation policy %s does not exist in local config", policy.Name)
 	}
 
+	for _, ap := range localTrustZone.AttestationPolicies {
+		if ap.Name == policy.Name {
+			return fmt.Errorf("attestation policy %s is already bound to trust zone %s", policy.Name, trustZone.Name)
+		}
+	}
+
 	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %w", err)

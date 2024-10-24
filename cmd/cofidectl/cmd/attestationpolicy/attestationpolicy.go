@@ -117,8 +117,6 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			str := stringy.New(args[0])
 			opts.kind = str.KebabCase().ToLower()
-			opts.trustZoneName = stringy.New(opts.trustZoneName).ToLower()
-			opts.attestationPolicyOpts.Name = stringy.New(opts.attestationPolicyOpts.Name).KebabCase().ToLower()
 
 			if !validateOpts(opts) {
 				return errors.New("unset flags for annotation policy")
@@ -143,7 +141,10 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 				PodKey:    opts.attestationPolicyOpts.PodKey,
 				PodValue:  opts.attestationPolicyOpts.PodValue,
 			}
-			c.source.AddAttestationPolicy(newAttestationPolicy)
+			err = c.source.AddAttestationPolicy(newAttestationPolicy)
+			if err != nil {
+				return err
+			}
 
 			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
 			if err != nil {
@@ -157,8 +158,8 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.trustZoneName, "trust-zone", "", "Name of the trust zone to attach this attestation policy to")
 	f.StringVar(&opts.attestationPolicyOpts.Name, "name", "", "Name to use for the attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.Namespace, "namespace", "", "Namespace to use in Namespace attestation policy")
-	f.StringVar(&opts.attestationPolicyOpts.PodKey, "annotation-key", "", "Key of Pod annotation to use in Annotation attestation policy")
-	f.StringVar(&opts.attestationPolicyOpts.PodValue, "annotation-value", "", "Value of Pod annotation to use in Annotation attestation policy")
+	f.StringVar(&opts.attestationPolicyOpts.PodKey, "annotation-key", "", "Key of Pod annotation to use in Annotated attestation policy")
+	f.StringVar(&opts.attestationPolicyOpts.PodValue, "annotation-value", "", "Value of Pod annotation to use in Annotated attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.FederatesWith, "federates-with", "", "Defines a trust domain to federate identity with")
 
 	cmd.MarkFlagRequired("trust-zone")
@@ -173,8 +174,8 @@ func validateOpts(opts Opts) bool {
 		return false
 	}
 
-	if opts.kind == "annotation" && (opts.attestationPolicyOpts.PodKey == "" || opts.attestationPolicyOpts.PodValue == "") {
-		slog.Error("flags \"annotation-key\" and \"annotation-value\" must be provided for Annotation attestation policy kind")
+	if opts.kind == "annotated" && (opts.attestationPolicyOpts.PodKey == "" || opts.attestationPolicyOpts.PodValue == "") {
+		slog.Error("flags \"annotation-key\" and \"annotation-value\" must be provided for annotated attestation policy kind")
 		return false
 	}
 

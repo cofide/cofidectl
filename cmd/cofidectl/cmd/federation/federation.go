@@ -71,7 +71,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Trust Zone", "Trust Zone", "Status"})
+			table.SetHeader([]string{"Source Trust Zone", "Destination Trust Zone", "Status"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -94,10 +94,10 @@ type Opts struct {
 func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
-		Use:   "add [NAME]",
+		Use:   "add",
 		Short: "Add a new federation",
 		Long:  federationAddCmdDesc,
-		Args:  require.ExactArgs(1),
+		Args:  require.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := c.source.Validate(); err != nil {
 				return err

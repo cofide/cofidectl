@@ -19,12 +19,14 @@ type TrustProvider struct {
 	Proto        *trust_provider_proto.TrustProvider
 }
 
-func NewTrustProvider(kind string) *TrustProvider {
+func NewTrustProvider(kind string) (*TrustProvider, error) {
 	tp := &TrustProvider{
 		Kind: kind,
 	}
-	tp.GetValues()
-	return tp
+	if err := tp.GetValues(); err != nil {
+		return nil, err
+	}
+	return tp, nil
 }
 
 func (tp *TrustProvider) GetValues() error {
