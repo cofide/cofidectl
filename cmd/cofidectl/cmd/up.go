@@ -117,7 +117,7 @@ func watchAndConfigure(config *config.Config) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range config.TrustZones.TrustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Prefix = fmt.Sprintf("Waiting for pod and service in %s: ", trustZone.KubernetesCluster)
+		s.Suffix = fmt.Sprintf(" Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.KubernetesCluster)
 		s.Start()
 
 		clusterIP, err := watchSPIREPodAndService(trustZone.KubernetesContext)
@@ -138,10 +138,9 @@ func watchAndConfigure(config *config.Config) error {
 		trustZone.Bundle = bundle
 
 		s.Stop()
+		green := color.New(color.FgGreen).SprintFunc()
+		fmt.Printf("%s All SPIRE server pods and services are ready for %s in cluster %s\n\n", green("✅"), trustZone.Name, trustZone.KubernetesCluster)
 	}
-
-	green := color.New(color.FgGreen).SprintFunc()
-	fmt.Printf("%s All pods and services are ready.\n\n", green("✅"))
 
 	err := applyPostInstallHelmConfig(config)
 	if err != nil {
