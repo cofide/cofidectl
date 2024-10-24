@@ -33,6 +33,10 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 		Long:  downCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := d.source.Validate(); err != nil {
+				return err
+			}
+
 			trustZones, err := d.source.ListTrustZones()
 			if err != nil {
 				return err
@@ -43,8 +47,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return nil
 			}
 
-			err = uninstallSPIREStack(trustZones)
-			if err != nil {
+			if err := uninstallSPIREStack(trustZones); err != nil {
 				return err
 			}
 

@@ -52,6 +52,10 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 		Long:  federationListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
+
 			federations, err := c.source.ListFederations()
 			if err != nil {
 				return err
@@ -95,6 +99,10 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		Long:  federationAddCmdDesc,
 		Args:  require.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
+
 			newFederation := &federation_proto.Federation{
 				Left:  opts.left,
 				Right: opts.right,
