@@ -18,6 +18,9 @@ require (
 	helm.sh/helm/v3 v3.16.1
 )
 
+// Uncomment the following for development with local Cofide API SDK changes:
+// replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
+
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
