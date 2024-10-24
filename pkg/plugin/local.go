@@ -299,6 +299,12 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.Right)
 	}
 
+	for _, federation := range leftTrustZone.Federations {
+		if federation.Right == federationProto.Right {
+			return fmt.Errorf("federation already exists between %s and %s", federationProto.Left, federationProto.Right)
+		}
+	}
+
 	leftTrustZone.Federations = append(leftTrustZone.Federations, federationProto)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add federation to local config: %s", err)
