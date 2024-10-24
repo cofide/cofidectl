@@ -18,7 +18,6 @@ type RootCommand struct {
 	args   []string
 }
 
-var cfgFile string
 var kubeCfgFile string
 
 func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootCommand {
@@ -42,7 +41,6 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	cobra.CheckErr(err)
 
 	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
-	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cofide.yaml)")
 
 	initCmd := NewInitCommand(r.source)
 	upCmd := NewUpCommand(r.source)

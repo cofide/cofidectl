@@ -12,8 +12,8 @@ const (
 )
 
 type TrustProvider struct {
-	Name         string `yaml:"name,omitempty"`
-	Kind         string `yaml:"kind"`
+	Name         string
+	Kind         string
 	AgentConfig  TrustProviderAgentConfig
 	ServerConfig TrustProviderServerConfig
 	Proto        *trust_provider_proto.TrustProvider
