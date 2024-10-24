@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -117,7 +118,7 @@ func watchAndConfigure(config *config.Config) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range config.TrustZones.TrustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Prefix = fmt.Sprintf("Waiting for pod and service in %s: ", trustZone.KubernetesCluster)
+		s.Suffix = fmt.Sprintf(" Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.KubernetesCluster)
 		s.Start()
 
 		clusterIP, err := watchSPIREPodAndService(trustZone.KubernetesContext)
@@ -138,10 +139,9 @@ func watchAndConfigure(config *config.Config) error {
 		trustZone.Bundle = bundle
 
 		s.Stop()
+		green := color.New(color.FgGreen).SprintFunc()
+		fmt.Printf("%s All SPIRE server pods and services are ready for %s in cluster %s\n\n", green("✅"), trustZone.Name, trustZone.KubernetesCluster)
 	}
-
-	green := color.New(color.FgGreen).SprintFunc()
-	fmt.Printf("%s All pods and services are ready.\n\n", green("✅"))
 
 	err := applyPostInstallHelmConfig(config)
 	if err != nil {
@@ -165,7 +165,6 @@ func watchSPIREPodAndService(kubeContext string) (string, error) {
 	defer serviceWatcher.Stop()
 
 	podReady := false
-	serviceReady := false
 	var serviceIP string
 
 	timeout := time.After(5 * time.Minute)
@@ -178,7 +177,10 @@ func watchSPIREPodAndService(kubeContext string) (string, error) {
 			}
 			if event.Type == watch.Added || event.Type == watch.Modified {
 				pod := event.Object.(*v1.Pod)
-				if isPodReady(pod) {
+				// FieldSelector should ensure this, but use belt & braces.
+				if pod.Name != "spire-server-0" {
+					slog.Warn("Event received for unexpected pod", slog.String("pod", pod.Name))
+				} else if isPodReady(pod) {
 					podReady = true
 				}
 			}
@@ -188,16 +190,18 @@ func watchSPIREPodAndService(kubeContext string) (string, error) {
 			}
 			if event.Type == watch.Added || event.Type == watch.Modified {
 				service := event.Object.(*v1.Service)
-				if isServiceReady(service) {
-					serviceReady = true
-					serviceIP, _ = getServiceExternalIP(service)
+				// FieldSelector should ensure this, but use belt & braces.
+				if service.Name != "spire-server" {
+					slog.Warn("Event received for unexpected service", slog.String("service", service.Name))
+				} else if ip, err := getServiceExternalIP(service); err == nil {
+					serviceIP = ip
 				}
 			}
 		case <-timeout:
 			return "", fmt.Errorf("timeout waiting for pod and service to be ready")
 		}
 
-		if podReady && serviceReady {
+		if podReady && serviceIP != "" {
 			return serviceIP, nil
 		}
 	}
@@ -247,6 +251,7 @@ func createPodWatcher(kubeContext string) (watch.Interface, error) {
 	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64(120)
 		return client.Clientset.CoreV1().Pods("spire").Watch(context.Background(), metav1.ListOptions{
+			FieldSelector:  "metadata.name=spire-server-0",
 			TimeoutSeconds: &timeout,
 		})
 	}
@@ -267,6 +272,7 @@ func createServiceWatcher(kubeContext string) (watch.Interface, error) {
 	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64(120)
 		return client.Clientset.CoreV1().Services("spire").Watch(context.Background(), metav1.ListOptions{
+			FieldSelector:  "metadata.name=spire-server",
 			TimeoutSeconds: &timeout,
 		})
 	}
@@ -328,10 +334,6 @@ func isPodReady(pod *v1.Pod) bool {
 		}
 	}
 	return false
-}
-
-func isServiceReady(service *v1.Service) bool {
-	return service.Spec.ClusterIP != ""
 }
 
 func getServiceExternalIP(service *v1.Service) (string, error) {
