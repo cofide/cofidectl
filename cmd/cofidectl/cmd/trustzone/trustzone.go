@@ -165,6 +165,9 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 		Long:  trustZoneStatusCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
