@@ -52,7 +52,7 @@ func main() {
 
 	rootCmd, err := cmd.NewRootCommand(ds, os.Args[1:]).GetRootCommand()
 	if err != nil {
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	if err = rootCmd.Execute(); err != nil {
