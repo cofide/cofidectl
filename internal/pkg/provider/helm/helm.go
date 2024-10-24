@@ -250,11 +250,6 @@ func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
 	return upgradeChart(h.cfg, client, SPIREChartName, h.settings, h.spireValues)
 }
 
-func (h *HelmSPIREProvider) upgradeSPIRECRDs() (*release.Release, error) {
-	client := &action.Upgrade{}
-	return upgradeChart(h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
-}
-
 func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {

@@ -57,8 +57,7 @@ func GetAttestationPolicyKind(kind string) (attestation_policy_proto.Attestation
 		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
 	}
 
-	// TODO: Update error message.
-	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
+	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf("unknown attestation policy kind %s", kind)
 }
 
 func GetAttestationPolicyKindString(kind string) (string, error) {
@@ -70,5 +69,5 @@ func GetAttestationPolicyKindString(kind string) (string, error) {
 	}
 
 	// TODO: Update error message.
-	return Unspecified, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
+	return Unspecified, fmt.Errorf("unknown attestation policy kind %s", kind)
 }

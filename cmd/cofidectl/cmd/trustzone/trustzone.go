@@ -146,8 +146,8 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 
-	cmd.MarkFlagRequired("trust-domain")
-	cmd.MarkFlagRequired("kubernetes-cluster")
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
+	cobra.CheckErr(cmd.MarkFlagRequired("kubernetes-cluster"))
 
 	return cmd
 }
@@ -300,7 +300,7 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *Opts) 
 		if checkContext(contexts, opts.context) {
 			return nil
 		}
-		return errors.New(fmt.Sprintf("could not find kubectl context '%s'", opts.context))
+		return fmt.Errorf("could not find kubectl context '%s'", opts.context)
 	}
 
 	opts.context = promptContext(contexts, client.CmdConfig.CurrentContext)

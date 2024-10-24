@@ -1,7 +1,6 @@
 package federation
 
 import (
-	"fmt"
 	"os"
 
 	"helm.sh/helm/v3/cmd/helm/require"
@@ -64,9 +63,9 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			data := make([][]string, len(federations))
 			for i, federation := range federations {
 				data[i] = []string{
-					fmt.Sprintf("%s", federation.Left),
-					fmt.Sprintf("%s", federation.Right),
-					"Healthy", //TODO
+					federation.Left,
+					federation.Right,
+					"Healthy", // TODO
 				}
 			}
 
@@ -114,8 +113,9 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringVar(&opts.left, "left", "", "Trust zone to federate")
 	f.StringVar(&opts.right, "right", "", "Trust zone to federate")
-	cmd.MarkFlagRequired("left")
-	cmd.MarkFlagRequired("right")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("left"))
+	cobra.CheckErr(cmd.MarkFlagRequired("right"))
 
 	return cmd
 }

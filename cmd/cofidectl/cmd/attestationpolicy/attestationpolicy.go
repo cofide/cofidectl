@@ -162,8 +162,8 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.attestationPolicyOpts.PodValue, "annotation-value", "", "Value of Pod annotation to use in Annotated attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.FederatesWith, "federates-with", "", "Defines a trust domain to federate identity with")
 
-	cmd.MarkFlagRequired("trust-zone")
-	cmd.MarkFlagRequired("name")
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+	cobra.CheckErr(cmd.MarkFlagRequired("name"))
 
 	return cmd
 }
@@ -191,5 +191,5 @@ func GetAttestationPolicyKind(s string) (attestation_policy_proto.AttestationPol
 	}
 
 	// TODO: Update error message.
-	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %s", s))
+	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf("unknown attestation policy kind %s", s)
 }
