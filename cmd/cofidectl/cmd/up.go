@@ -44,6 +44,10 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 		Long:  upCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := u.source.Validate(); err != nil {
+				return err
+			}
+
 			ds, _ := u.source.(*cofidectl_plugin.LocalDataSource)
 			configProvider := local.YAMLConfigProvider{DataSource: ds}
 			config, err := configProvider.GetConfig()
@@ -56,15 +60,14 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return fmt.Errorf("no trust zones have been configured")
 			}
 
-			err = installSPIREStack(config)
-			if err != nil {
+			if err := installSPIREStack(config); err != nil {
 				return err
 			}
 
-			err = watchAndConfigure(config)
-			if err != nil {
+			if err := watchAndConfigure(config); err != nil {
 				return err
 			}
+
 			return nil
 		},
 	}

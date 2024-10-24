@@ -3,7 +3,6 @@ package plugin
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 
 	"cuelang.org/go/cue"
@@ -57,6 +56,32 @@ type LocalDataSource struct {
 	filePath   string
 	Config     *config.Config
 	cueContext *cue.Context
+	loaded     bool
+}
+
+func (lds *LocalDataSource) Init() error {
+	if !lds.loaded {
+		fmt.Printf("initialising local config file: %v\n", lds.filePath)
+		if err := lds.createDataFile(); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("the config file already exists.")
+	}
+
+	if err := lds.loadState(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (lds *LocalDataSource) Validate() error {
+	if !lds.loaded {
+		return fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
+	}
+
+	return nil
 }
 
 func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
@@ -68,25 +93,32 @@ func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
 		filePath: filePath,
 		Config:   cfg,
 	}
-	if err := lds.loadState(); err != nil {
+
+	dataFileExists, err := lds.dataFileExists()
+	if err != nil {
 		return nil, err
+	}
+
+	if dataFileExists {
+		err = lds.loadState()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return lds, nil
 }
 
 func (lds *LocalDataSource) loadState() error {
-	cwd, err := os.Getwd()
+	dataFileExists, err := lds.dataFileExists()
 	if err != nil {
-		return fmt.Errorf("error determining current working directory: %s", "error")
+		return err
 	}
-	cfgFile := cwd + "/cofide.yaml"
-	// check to see if the configuration file exists
-	if _, err := os.Stat(lds.filePath); errors.Is(err, os.ErrNotExist) {
-		// no existing configuration here
-		slog.Info("initialising Cofide configuration", "config_file", cfgFile)
-		return lds.UpdateDataFile()
+
+	if !dataFileExists {
+		return fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
 	}
+
 	// load YAML config file from disk
 	yamlData, err := os.ReadFile(lds.filePath)
 	if err != nil {
@@ -109,7 +141,45 @@ func (lds *LocalDataSource) loadState() error {
 		return fmt.Errorf("error unmarshaling YAML: %s", err)
 	}
 
+	lds.loaded = true
 	return nil
+}
+
+func (lds *LocalDataSource) createDataFile() error {
+	err := os.WriteFile(lds.filePath, []byte{}, 0600)
+	if err != nil {
+		return fmt.Errorf("error creating config: %v", err)
+	}
+
+	return nil
+}
+
+func (lds *LocalDataSource) updateDataFile() error {
+	if !lds.loaded {
+		return fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
+	}
+
+	data, err := yaml.Marshal(lds.Config)
+	if err != nil {
+		return fmt.Errorf("error marshalling config: %v", err)
+	}
+
+	err = os.WriteFile(lds.filePath, data, 0600)
+	if err != nil {
+		return fmt.Errorf("error updating config: %v", err)
+	}
+
+	return nil
+}
+
+func (lds *LocalDataSource) dataFileExists() (bool, error) {
+	if _, err := os.Stat(lds.filePath); errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
@@ -117,7 +187,7 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 		return fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
 	}
 	lds.Config.TrustZones.TrustZones = append(lds.Config.TrustZones.TrustZones, trustZone)
-	if err := lds.UpdateDataFile(); err != nil {
+	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
 	}
 	return nil
@@ -137,7 +207,7 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 		return fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
 	}
 	lds.Config.AttestationPolicies.Policies = append(lds.Config.AttestationPolicies.Policies, policy)
-	if err := lds.UpdateDataFile(); err != nil {
+	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
 	}
 	return nil
@@ -160,7 +230,7 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 	}
 
 	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy)
-	if err := lds.UpdateDataFile(); err != nil {
+	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
 	}
 	return nil
@@ -189,19 +259,9 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 	}
 
 	leftTrustZone.Federations = append(leftTrustZone.Federations, federationProto)
-	if err := lds.UpdateDataFile(); err != nil {
+	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add federation to local config: %s", err)
 	}
-	return nil
-}
-
-func (lds *LocalDataSource) UpdateDataFile() error {
-	data, err := yaml.Marshal(lds.Config)
-	if err != nil {
-		return fmt.Errorf("error marshalling config: %v", err)
-	}
-	os.WriteFile(lds.filePath, data, 0644)
-
 	return nil
 }
 

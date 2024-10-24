@@ -183,6 +183,11 @@ func (h *HelmSPIREProvider) uninstall(statusCh chan provider.ProviderStatus) {
 	}()
 }
 
+// CheckIfAlreadyInstalled returns true if the SPIRE chart has previously been installed.
+func (h *HelmSPIREProvider) CheckIfAlreadyInstalled() (bool, error) {
+	return checkIfAlreadyInstalled(h.cfg, SPIREChartName)
+}
+
 func DiscardLogger(format string, v ...any) {}
 
 func (h *HelmSPIREProvider) initActionConfig() (*action.Configuration, error) {
