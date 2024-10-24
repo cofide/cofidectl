@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
@@ -200,6 +201,46 @@ func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone
 	}
 
 	return trustZone, nil
+}
+
+func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) error {
+	for i, current := range lds.Config.TrustZones.TrustZones {
+		if current.Name == trustZone.Name {
+			if err := validateTrustZoneUpdate(current, trustZone); err != nil {
+				return err
+			}
+
+			lds.Config.TrustZones.TrustZones[i] = trustZone
+
+			if err := lds.updateDataFile(); err != nil {
+				return fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.TrustDomain, err)
+			}
+
+			return nil
+		}
+	}
+
+	return fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
+}
+
+func validateTrustZoneUpdate(current *trust_zone_proto.TrustZone, new *trust_zone_proto.TrustZone) error {
+	if new.Name != current.Name {
+		return fmt.Errorf("cannot update name for existing trust zone %s", current.Name)
+	}
+	if new.TrustDomain != current.TrustDomain {
+		return fmt.Errorf("cannot update trust domain for existing trust zone %s", current.Name)
+	}
+	if new.TrustProvider != current.TrustProvider {
+		return fmt.Errorf("cannot update trust provider for existing trust zone %s", current.Name)
+	}
+	// The following should be updated though other means.
+	if !slices.Equal(new.Federations, current.Federations) {
+		return fmt.Errorf("cannot update federations for existing trust zone %s", current.Name)
+	}
+	if !slices.Equal(new.AttestationPolicies, current.AttestationPolicies) {
+		return fmt.Errorf("cannot update attestation policies for existing trust zone %s", current.Name)
+	}
+	return nil
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
