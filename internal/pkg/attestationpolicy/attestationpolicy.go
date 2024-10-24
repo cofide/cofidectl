@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 )
 
 type AttestationPolicy struct {
@@ -23,7 +24,7 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 	}
 }
 
-func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
+func (ap *AttestationPolicy) GetHelmConfig(source cofidectl_plugin.DataSource) (map[string]interface{}, error) {
 	var clusterSPIFFEID = make(map[string]interface{})
 	switch ap.AttestationPolicyProto.Kind {
 	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED:
@@ -43,10 +44,23 @@ func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
 			},
 		}
 	default:
-		clusterSPIFFEID["enabled"] = "false"
+		return nil, fmt.Errorf("unexpected attestation policy kind %s", attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE)
 	}
 
-	return clusterSPIFFEID
+	if len(ap.AttestationPolicyProto.FederatesWith) > 0 {
+		// Convert from trust zones to trust domains.
+		federatesWith := []string{}
+		for _, tzName := range ap.AttestationPolicyProto.FederatesWith {
+			if trustZone, err := source.GetTrustZone(tzName); err != nil {
+				return nil, err
+			} else {
+				federatesWith = append(federatesWith, trustZone.TrustDomain)
+			}
+		}
+		clusterSPIFFEID["federatesWith"] = federatesWith
+	}
+
+	return clusterSPIFFEID, nil
 }
 
 func GetAttestationPolicyKind(kind string) (attestation_policy_proto.AttestationPolicyKind, error) {

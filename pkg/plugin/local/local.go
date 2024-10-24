@@ -208,6 +208,24 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 		}
 	}
 
+	remoteTzs := map[string]bool{}
+	for _, federation := range trustZone.Federations {
+		remoteTzs[federation.Right] = true
+	}
+	for _, remoteTz := range policy.FederatesWith {
+		if remoteTz == trustZone.Name {
+			// Is this a problem?
+			return fmt.Errorf("attestation policy %s federates with its own trust zone %s", policy.Name, trustZone.Name)
+		}
+		if _, ok := remoteTzs[remoteTz]; !ok {
+			if _, ok := lds.Config.GetTrustZoneByName(remoteTz); !ok {
+				return fmt.Errorf("attestation policy %s federates with unknown trust zone %s", policy.Name, remoteTz)
+			} else {
+				return fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", policy.Name, remoteTz, trustZone.Name)
+			}
+		}
+	}
+
 	policy, err := proto.CloneAttestationPolicy(policy)
 	if err != nil {
 		return err

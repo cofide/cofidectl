@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
@@ -70,11 +71,12 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 					policy.Namespace,
 					policy.PodKey,
 					policy.PodValue,
+					strings.Join(policy.FederatesWith, ", "),
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Kind", "Namespace", "Pod Key", "Pod Value"})
+			table.SetHeader([]string{"Kind", "Namespace", "Pod Key", "Pod Value", "Federates With"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -97,7 +99,7 @@ type Opts struct {
 
 type AttestationPolicyOpts struct {
 	Name          string
-	FederatesWith string
+	FederatesWith []string
 
 	// annotated
 	PodKey   string
@@ -135,11 +137,12 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			}
 
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
-				Kind:      kind,
-				Name:      opts.attestationPolicyOpts.Name,
-				Namespace: opts.attestationPolicyOpts.Namespace,
-				PodKey:    opts.attestationPolicyOpts.PodKey,
-				PodValue:  opts.attestationPolicyOpts.PodValue,
+				Kind:          kind,
+				Name:          opts.attestationPolicyOpts.Name,
+				Namespace:     opts.attestationPolicyOpts.Namespace,
+				PodKey:        opts.attestationPolicyOpts.PodKey,
+				PodValue:      opts.attestationPolicyOpts.PodValue,
+				FederatesWith: opts.attestationPolicyOpts.FederatesWith,
 			}
 			err = c.source.AddAttestationPolicy(newAttestationPolicy)
 			if err != nil {
@@ -160,7 +163,7 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.attestationPolicyOpts.Namespace, "namespace", "", "Namespace to use in Namespace attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.PodKey, "annotation-key", "", "Key of Pod annotation to use in Annotated attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.PodValue, "annotation-value", "", "Value of Pod annotation to use in Annotated attestation policy")
-	f.StringVar(&opts.attestationPolicyOpts.FederatesWith, "federates-with", "", "Defines a trust domain to federate identity with")
+	f.StringSliceVar(&opts.attestationPolicyOpts.FederatesWith, "federates-with", nil, "Defines a trust domain to federate identity with. May be specified multiple times")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
 	cobra.CheckErr(cmd.MarkFlagRequired("name"))
