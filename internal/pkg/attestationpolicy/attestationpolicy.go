@@ -74,11 +74,11 @@ func GetAttestationPolicyKind(kind string) (attestation_policy_proto.Attestation
 	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf("unknown attestation policy kind %s", kind)
 }
 
-func GetAttestationPolicyKindString(kind string) (string, error) {
+func GetAttestationPolicyKindString(kind attestation_policy_proto.AttestationPolicyKind) (string, error) {
 	switch kind {
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED.String():
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED:
 		return Annotated, nil
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE.String():
+	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE:
 		return Namespace, nil
 	}
 

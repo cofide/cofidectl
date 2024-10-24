@@ -66,8 +66,13 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 
 			data := make([][]string, len(attestationPolicies))
 			for i, policy := range attestationPolicies {
+				kind, err := attestationpolicy.GetAttestationPolicyKindString(policy.Kind)
+				if err != nil {
+					return err
+				}
 				data[i] = []string{
-					policy.Kind.String(),
+					policy.Name,
+					kind,
 					policy.Namespace,
 					policy.PodKey,
 					policy.PodValue,
@@ -76,7 +81,7 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Kind", "Namespace", "Pod Key", "Pod Value", "Federates With"})
+			table.SetHeader([]string{"Name", "Kind", "Namespace", "Pod Key", "Pod Value", "Federates With"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
