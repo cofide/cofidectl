@@ -3,6 +3,7 @@ package fixtures
 import (
 	"fmt"
 
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
@@ -26,11 +27,11 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				Right: "tz2",
 			},
 		},
-		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
+		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
-				Name:      "ap1",
-				Kind:      2,
-				Namespace: "ns1",
+				TrustZone:     "tz1",
+				Policy:        "ap1",
+				FederatesWith: []string{"tz2"},
 			},
 		},
 	},
@@ -49,12 +50,11 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				Right: "tz1",
 			},
 		},
-		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
+		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
-				Name:     "ap2",
-				Kind:     1,
-				PodKey:   "foo",
-				PodValue: "bar",
+				TrustZone:     "tz2",
+				Policy:        "ap2",
+				FederatesWith: []string{"tz1"},
 			},
 		},
 	},

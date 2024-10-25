@@ -72,12 +72,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	// add attestation policies as ClusterSPIFFEIDs to be reconcilced by spire-controller-manager
 	if len(g.trustZone.AttestationPolicies) > 0 {
 		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = false
-		for _, ap := range g.trustZone.AttestationPolicies {
-			clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(ap).GetHelmConfig(g.source)
+		for _, binding := range g.trustZone.AttestationPolicies {
+			policy, err := g.source.GetAttestationPolicy(binding.Policy)
 			if err != nil {
 				return nil, err
 			}
-			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."%s"`, ap.Name)] = clusterSPIFFEIDs
+			clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+			if err != nil {
+				return nil, err
+			}
+			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."%s"`, policy.Name)] = clusterSPIFFEIDs
 		}
 	} else {
 		// defaults to true

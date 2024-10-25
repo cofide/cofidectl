@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
@@ -13,7 +12,6 @@ import (
 	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"helm.sh/helm/v3/cmd/helm/require"
 )
 
 type AttestationPolicyCommand struct {
@@ -76,12 +74,11 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 					policy.Namespace,
 					policy.PodKey,
 					policy.PodValue,
-					strings.Join(policy.FederatesWith, ", "),
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Kind", "Namespace", "Pod Key", "Pod Value", "Federates With"})
+			table.SetHeader([]string{"Name", "Kind", "Namespace", "Pod Key", "Pod Value"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -98,13 +95,11 @@ This command will add a new attestation policy to the Cofide configuration state
 
 type Opts struct {
 	kind                  string
-	trustZoneName         string
 	attestationPolicyOpts AttestationPolicyOpts
 }
 
 type AttestationPolicyOpts struct {
-	Name          string
-	FederatesWith []string
+	Name string
 
 	// annotated
 	PodKey   string
@@ -120,7 +115,7 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 		Use:   "add [KIND]",
 		Short: "Add a new attestation policy",
 		Long:  attestationPolicyAddCmdDesc,
-		Args:  require.ExactArgs(1),
+		Args:  cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			str := stringy.New(args[0])
 			opts.kind = str.KebabCase().ToLower()
@@ -142,35 +137,22 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			}
 
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
-				Kind:          kind,
-				Name:          opts.attestationPolicyOpts.Name,
-				Namespace:     opts.attestationPolicyOpts.Namespace,
-				PodKey:        opts.attestationPolicyOpts.PodKey,
-				PodValue:      opts.attestationPolicyOpts.PodValue,
-				FederatesWith: opts.attestationPolicyOpts.FederatesWith,
+				Kind:      kind,
+				Name:      opts.attestationPolicyOpts.Name,
+				Namespace: opts.attestationPolicyOpts.Namespace,
+				PodKey:    opts.attestationPolicyOpts.PodKey,
+				PodValue:  opts.attestationPolicyOpts.PodValue,
 			}
-			err = c.source.AddAttestationPolicy(newAttestationPolicy)
-			if err != nil {
-				return err
-			}
-
-			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
-			if err != nil {
-				return err
-			}
-			return c.source.BindAttestationPolicy(newAttestationPolicy, trustZone)
+			return c.source.AddAttestationPolicy(newAttestationPolicy)
 		},
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZoneName, "trust-zone", "", "Name of the trust zone to attach this attestation policy to")
 	f.StringVar(&opts.attestationPolicyOpts.Name, "name", "", "Name to use for the attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.Namespace, "namespace", "", "Namespace to use in Namespace attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.PodKey, "annotation-key", "", "Key of Pod annotation to use in Annotated attestation policy")
 	f.StringVar(&opts.attestationPolicyOpts.PodValue, "annotation-value", "", "Value of Pod annotation to use in Annotated attestation policy")
-	f.StringSliceVar(&opts.attestationPolicyOpts.FederatesWith, "federates-with", nil, "Defines a trust domain to federate identity with. May be specified multiple times")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
 	cobra.CheckErr(cmd.MarkFlagRequired("name"))
 
 	return cmd

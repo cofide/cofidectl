@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
@@ -161,7 +162,7 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 	if !slices.EqualFunc(new.Federations, current.Federations, proto.FederationsEqual) {
 		return fmt.Errorf("cannot update federations for existing trust zone %s", current.Name)
 	}
-	if !slices.EqualFunc(new.AttestationPolicies, current.AttestationPolicies, proto.AttestationPoliciesEqual) {
+	if !slices.EqualFunc(new.AttestationPolicies, current.AttestationPolicies, proto.APBindingsEqual) {
 		return fmt.Errorf("cannot update attestation policies for existing trust zone %s", current.Name)
 	}
 	return nil
@@ -192,58 +193,75 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 	return nil
 }
 
-func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy, trustZone *trust_zone_proto.TrustZone) error {
-	localTrustZone, ok := lds.config.GetTrustZoneByName(trustZone.Name)
-	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
-	}
-
-	if _, ok := lds.config.GetAttestationPolicyByName(policy.Name); !ok {
-		return fmt.Errorf("attestation policy %s does not exist in local config", policy.Name)
-	}
-
-	for _, ap := range localTrustZone.AttestationPolicies {
-		if ap.Name == policy.Name {
-			return fmt.Errorf("attestation policy %s is already bound to trust zone %s", policy.Name, trustZone.Name)
-		}
-	}
-
-	remoteTzs := map[string]bool{}
-	for _, federation := range trustZone.Federations {
-		remoteTzs[federation.Right] = true
-	}
-	for _, remoteTz := range policy.FederatesWith {
-		if remoteTz == trustZone.Name {
-			// Is this a problem?
-			return fmt.Errorf("attestation policy %s federates with its own trust zone %s", policy.Name, trustZone.Name)
-		}
-		if _, ok := remoteTzs[remoteTz]; !ok {
-			if _, ok := lds.Config.GetTrustZoneByName(remoteTz); !ok {
-				return fmt.Errorf("attestation policy %s federates with unknown trust zone %s", policy.Name, remoteTz)
-			} else {
-				return fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", policy.Name, remoteTz, trustZone.Name)
-			}
-		}
-	}
-
-	policy, err := proto.CloneAttestationPolicy(policy)
-	if err != nil {
-		return err
-	}
-
-	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy)
-	if err := lds.updateDataFile(); err != nil {
-		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
-	}
-	return nil
-}
-
 func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error) {
 	if policy, ok := lds.config.GetAttestationPolicyByName(id); ok {
 		return proto.CloneAttestationPolicy(policy)
 	} else {
 		return nil, fmt.Errorf("failed to find attestation policy %s in local config", id)
 	}
+}
+
+func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) error {
+	localTrustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
+	if !ok {
+		return fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
+	}
+
+	_, ok = lds.config.GetAttestationPolicyByName(binding.Policy)
+	if !ok {
+		return fmt.Errorf("attestation policy %s does not exist in local config", binding.Policy)
+	}
+
+	for _, apb := range localTrustZone.AttestationPolicies {
+		if apb.Policy == binding.Policy {
+			return fmt.Errorf("attestation policy %s is already bound to trust zone %s", binding.Policy, binding.TrustZone)
+		}
+	}
+
+	remoteTzs := map[string]bool{}
+	for _, federation := range localTrustZone.Federations {
+		remoteTzs[federation.Right] = true
+	}
+	for _, remoteTz := range binding.FederatesWith {
+		if remoteTz == binding.TrustZone {
+			// Is this a problem?
+			return fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.Policy, binding.TrustZone)
+		}
+		if _, ok := remoteTzs[remoteTz]; !ok {
+			if _, ok := lds.config.GetTrustZoneByName(remoteTz); !ok {
+				return fmt.Errorf("attestation policy %s federates with unknown trust zone %s", binding.Policy, remoteTz)
+			} else {
+				return fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", binding.Policy, remoteTz, binding.TrustZone)
+			}
+		}
+	}
+
+	binding, err := proto.CloneAPBinding(binding)
+	if err != nil {
+		return err
+	}
+	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, binding)
+	if err := lds.updateDataFile(); err != nil {
+		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
+	}
+	return nil
+}
+
+func (lds *LocalDataSource) ListAPBindingsByTrustZone(name string) ([]*ap_binding_proto.APBinding, error) {
+	trustZone, ok := lds.config.GetTrustZoneByName(name)
+	if !ok {
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", name)
+	}
+
+	var bindings []*ap_binding_proto.APBinding
+	for _, binding := range trustZone.AttestationPolicies {
+		binding, err := proto.CloneAPBinding(binding)
+		if err != nil {
+			return nil, err
+		}
+		bindings = append(bindings, binding)
+	}
+	return bindings, nil
 }
 
 func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) error {
@@ -255,6 +273,10 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 	_, ok = lds.config.GetTrustZoneByName(federationProto.Right)
 	if !ok {
 		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.Right)
+	}
+
+	if federationProto.Left == federationProto.Right {
+		return fmt.Errorf("cannot federate trust zone %s with itself", federationProto.Left)
 	}
 
 	for _, federation := range leftTrustZone.Federations {
