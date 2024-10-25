@@ -8,20 +8,20 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
-	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 )
 
 type HelmValuesGenerator struct {
-	config    *config.Config
+	source    cofidectl_plugin.DataSource
 	trustZone *trust_zone_proto.TrustZone
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, config *config.Config) *HelmValuesGenerator {
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource) *HelmValuesGenerator {
 	return &HelmValuesGenerator{
 		trustZone: trustZone,
-		config:    config,
+		source:    source,
 	}
 }
 
@@ -84,8 +84,8 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	if len(g.trustZone.Federations) > 0 {
 		spireServerValues[`"spire-server"."federation"."enabled"`] = true
 		for _, fed := range g.trustZone.Federations {
-			tz, ok := g.config.GetTrustZoneByName(fed.Right)
-			if !ok {
+			tz, err := g.source.GetTrustZone(fed.Right)
+			if err != nil {
 				return nil, err
 			}
 			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.Right)] = federation.NewFederation(tz).GetHelmConfig()
