@@ -1,0 +1,66 @@
+name: ci
+on: 
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+        env:
+          GOPRIVATE: github.com/cofide
+      - name: Use GitHub deploy key
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.COFIDE_API_SDK_PRIVATE_KEY }}"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+      - name: Setup access to private Go modules (cofide-api-sdk)
+        run: |
+          git config --global url."ssh://git@github.com/".insteadOf https://github.com/
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          args: --timeout=5m
+
+  build-test:
+    name: build
+    runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/cofide
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install just
+        uses: taiki-e/install-action@just
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Use GitHub deploy key
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.COFIDE_API_SDK_PRIVATE_KEY }}"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+      - name: Setup access to private Go modules (cofide-api-sdk)
+        run: |
+          git config --global url."ssh://git@github.com/".insteadOf https://github.com/
+      - name: Install dependencies
+        run: |
+          go mod download
+      - name: Build and run tests
+        run: just test

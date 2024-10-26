@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
@@ -17,18 +16,14 @@ import (
 )
 
 const (
-	SPIRERepositoryURL      = "https://spiffe.github.io/helm-charts-hardened/"
-	SPIRERepositoryName     = "spire"
-	SPIRECRDsRepositoryName = "spire-crds"
+	SPIRERepositoryName = "spire"
 
 	SPIREChartName        = "spire"
 	SPIREChartVersion     = "0.21.0"
 	SPIRECRDsChartName    = "spire-crds"
 	SPIRECRDsChartVersion = "0.4.0"
 
-	SPIREReleaseName     = "spire"
-	SPIRECRDsReleaseName = "spire-crds"
-	SPIRENamespace       = "spire"
+	SPIRENamespace = "spire"
 )
 
 // HelmSPIREProvider implements a Helm-based installer for the Cofide stack. It uses the SPIFFE/SPIRE project's own
@@ -39,8 +34,6 @@ type HelmSPIREProvider struct {
 	cfg              *action.Configuration
 	SPIREVersion     string
 	SPIRECRDsVersion string
-	spireClient      *action.Install
-	spireCRDsClient  *action.Install
 	spireValues      map[string]interface{}
 	spireCRDsValues  map[string]interface{}
 	trustZone        *trust_zone_proto.TrustZone
@@ -64,8 +57,6 @@ func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, sp
 	if err != nil {
 		log.Fatal(err)
 	}
-	prov.spireCRDsClient = newInstall(prov.cfg, SPIRECRDsChartName, prov.SPIRECRDsVersion)
-	prov.spireClient = newInstall(prov.cfg, SPIREChartName, prov.SPIREVersion)
 
 	return prov
 }
@@ -85,23 +76,21 @@ func (h *HelmSPIREProvider) installChart(statusCh chan provider.ProviderStatus) 
 	go func() {
 		defer close(statusCh)
 
-		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for installation"}
-
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing CRDs to cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing SPIRE CRDs for %s to cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster)}
 		_, err := h.installSPIRECRDs()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install SPIRE CRDs for %s to cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing SPIRE chart to cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Installing SPIRE chart for %s to cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster)}
 		_, err = h.installSPIRE()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install SPIRE chart on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Installing", Message: fmt.Sprintf("Failed to install SPIRE chart for %s to cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Installed", Message: fmt.Sprintf("Installation completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Installed", Message: fmt.Sprintf("Installation completed for %s on cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true}
 	}()
 }
 
@@ -122,14 +111,14 @@ func (h *HelmSPIREProvider) postInstallUpgrade(statusCh chan provider.ProviderSt
 	go func() {
 		defer close(statusCh)
 
-		statusCh <- provider.ProviderStatus{Stage: "Configuring", Message: fmt.Sprintf("Applying post-installation configuration to cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Configuring", Message: fmt.Sprintf("Applying post-installation configuration for %s to cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster)}
 		_, err := h.upgradeSPIRE()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Configuring", Message: fmt.Sprintf("Failed to apply post-installation configuration to cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Configuring", Message: fmt.Sprintf("Failed to apply post-installation configuration for %s to cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Configured", Message: fmt.Sprintf("Post-installation configuration completed for cluster %s", h.trustZone.KubernetesCluster), Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Configured", Message: fmt.Sprintf("Post-installation configuration completed for %s on cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true}
 	}()
 }
 
@@ -137,16 +126,14 @@ func (h *HelmSPIREProvider) upgradeChart(statusCh chan provider.ProviderStatus) 
 	go func() {
 		defer close(statusCh)
 
-		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Preparing chart for upgrade"}
-
-		statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Upgrading SPIRE chart on cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Upgrading SPIRE chart for %s on cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster)}
 		_, err := h.upgradeSPIRE()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Failed to upgrade SPIRE chart on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Upgrading", Message: fmt.Sprintf("Failed to upgrade SPIRE chart for %s on cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Upgraded", Message: fmt.Sprintf("Upgrade completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
+		statusCh <- provider.ProviderStatus{Stage: "Upgraded", Message: fmt.Sprintf("Upgrade completed for %s on cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true}
 	}()
 }
 
@@ -164,22 +151,21 @@ func (h *HelmSPIREProvider) uninstall(statusCh chan provider.ProviderStatus) {
 	go func() {
 		defer close(statusCh)
 
-		statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Uninstalling CRDs from cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Uninstalling SPIRE CRDs for %s from cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster)}
 		_, err := h.uninstallSPIRECRDs()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Failed to uninstall CRDs on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Failed to uninstall SPIRE CRDs for %s from cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Uninstalling SPIRE chart from cluster %s", h.trustZone.KubernetesCluster)}
+		statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Uninstalling SPIRE chart for %s from cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster)}
 		_, err = h.uninstallSPIRE()
 		if err != nil {
-			statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Failed to uninstall SPIRE chart on cluster %s", h.trustZone.KubernetesCluster), Done: true, Error: err}
+			statusCh <- provider.ProviderStatus{Stage: "Uninstalling", Message: fmt.Sprintf("Failed to uninstall SPIRE chart for %s from cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true, Error: err}
 			return
 		}
 
-		statusCh <- provider.ProviderStatus{Stage: "Uninstalled", Message: fmt.Sprintf("Uninstallation completed for %s on cluster %s", h.trustZone.TrustDomain, h.trustZone.KubernetesCluster), Done: true}
-		time.Sleep(time.Duration(1) * time.Second)
+		statusCh <- provider.ProviderStatus{Stage: "Uninstalled", Message: fmt.Sprintf("Uninstallation completed for %s on cluster %s", h.trustZone.Name, h.trustZone.KubernetesCluster), Done: true}
 	}()
 }
 
@@ -235,7 +221,7 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 	}
 
 	options, err := client.ChartPathOptions.LocateChart(
-		fmt.Sprintf("spire/%s", chartName),
+		fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName),
 		settings,
 	)
 	if err != nil {
@@ -264,11 +250,6 @@ func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
 	return upgradeChart(h.cfg, client, SPIREChartName, h.settings, h.spireValues)
 }
 
-func (h *HelmSPIREProvider) upgradeSPIRECRDs() (*release.Release, error) {
-	client := &action.Upgrade{}
-	return upgradeChart(h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
-}
-
 func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
@@ -280,7 +261,7 @@ func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName s
 	}
 
 	options, err := client.ChartPathOptions.LocateChart(
-		fmt.Sprintf("spire/%s", chartName),
+		fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName),
 		settings,
 	)
 	if err != nil {

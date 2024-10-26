@@ -124,7 +124,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
-			err := c.getKubernetesContext(cmd)
+			err := c.getKubernetesContext(cmd, &opts)
 			if err != nil {
 				return err
 			}
@@ -143,11 +143,11 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
 	f.StringVar(&opts.kubernetes_cluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
-	f.StringVar(&opts.context, "context", "", "Kubernetes context to use for this trust zone")
+	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 
-	cmd.MarkFlagRequired("trust-domain")
-	cmd.MarkFlagRequired("kubernetes-cluster")
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
+	cobra.CheckErr(cmd.MarkFlagRequired("kubernetes-cluster"))
 
 	return cmd
 }
@@ -165,6 +165,9 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 		Long:  trustZoneStatusCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := c.source.Validate(); err != nil {
+				return err
+			}
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
@@ -281,7 +284,7 @@ func renderStatus(server *spire.ServerStatus, agents *spire.AgentStatus) error {
 	return nil
 }
 
-func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
+func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *Opts) error {
 	kubeConfig, err := cmd.Flags().GetString("kube-config")
 	if err != nil {
 		return err
@@ -293,16 +296,14 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command) error {
 	contexts, err := kubeRepo.GetContexts()
 	cobra.CheckErr(err)
 
-	kubeContext, _ := cmd.Flags().GetString("context")
-	if kubeContext != "" {
-		if checkContext(contexts, kubeContext) {
+	if opts.context != "" {
+		if checkContext(contexts, opts.context) {
 			return nil
 		}
-		fmt.Printf("could not find kubectl context '%s'", kubeContext)
+		return fmt.Errorf("could not find kubectl context '%s'", opts.context)
 	}
 
-	kubeContext = promptContext(contexts, client.CmdConfig.CurrentContext)
-	cmd.Flags().Set("context", kubeContext)
+	opts.context = promptContext(contexts, client.CmdConfig.CurrentContext)
 	return nil
 }
 

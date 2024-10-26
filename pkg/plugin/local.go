@@ -223,6 +223,12 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 		return fmt.Errorf("attestation policy %s does not exist in local config", policy.Name)
 	}
 
+	for _, ap := range localTrustZone.AttestationPolicies {
+		if ap.Name == policy.Name {
+			return fmt.Errorf("attestation policy %s is already bound to trust zone %s", policy.Name, trustZone.Name)
+		}
+	}
+
 	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
@@ -267,7 +273,7 @@ func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_pro
 	return lds.Config.AttestationPolicies.Policies, nil
 }
 
-func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, error) {
+func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, error) {
 	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
 	federationsAsProto := make([]*federation_proto.Federation, 0)
 	for _, trustZone := range lds.Config.TrustZones.TrustZones {
@@ -282,9 +288,9 @@ func (lds *LocalDataSource) ListFederation() ([]*federation_proto.Federation, er
 	return federationsAsProto, nil
 }
 
-func (lds *LocalDataSource) ListFederationByTrustZone(id string) ([]*federation_proto.Federation, error) {
+func (lds *LocalDataSource) ListFederationsByTrustZone(tzName string) ([]*federation_proto.Federation, error) {
 	federationsAsProto := make([]*federation_proto.Federation, 0)
-	trustZone, ok := lds.Config.GetTrustZoneByName(id)
+	trustZone, ok := lds.Config.GetTrustZoneByName(tzName)
 	if !ok {
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.TrustDomain)
 	}

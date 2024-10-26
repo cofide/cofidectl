@@ -1,7 +1,6 @@
 package federation
 
 import (
-	"fmt"
 	"os"
 
 	"helm.sh/helm/v3/cmd/helm/require"
@@ -30,7 +29,7 @@ This command consists of multiple sub-commands to administer Cofide trust zone f
 func (c *FederationCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "federation add|list [ARGS]",
-		Short: "add, list federation",
+		Short: "Add, list federations",
 		Long:  federationRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -56,7 +55,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				return err
 			}
 
-			federations, err := c.source.ListFederation()
+			federations, err := c.source.ListFederations()
 			if err != nil {
 				return err
 			}
@@ -64,14 +63,14 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			data := make([][]string, len(federations))
 			for i, federation := range federations {
 				data[i] = []string{
-					fmt.Sprintf("%s", federation.Left),
-					fmt.Sprintf("%s", federation.Right),
-					"Healthy", //TODO
+					federation.Left,
+					federation.Right,
+					"Healthy", // TODO
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Trust Zone", "Trust Zone", "Status"})
+			table.SetHeader([]string{"Source Trust Zone", "Destination Trust Zone", "Status"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -94,10 +93,10 @@ type Opts struct {
 func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
-		Use:   "add [NAME]",
+		Use:   "add",
 		Short: "Add a new federation",
 		Long:  federationAddCmdDesc,
-		Args:  require.ExactArgs(1),
+		Args:  require.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := c.source.Validate(); err != nil {
 				return err
@@ -114,8 +113,9 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringVar(&opts.left, "left", "", "Trust zone to federate")
 	f.StringVar(&opts.right, "right", "", "Trust zone to federate")
-	cmd.MarkFlagRequired("left")
-	cmd.MarkFlagRequired("right")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("left"))
+	cobra.CheckErr(cmd.MarkFlagRequired("right"))
 
 	return cmd
 }

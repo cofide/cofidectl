@@ -3,15 +3,12 @@ package attestationpolicy
 import (
 	"fmt"
 
-	"buf.build/go/protoyaml"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 )
 
 type AttestationPolicy struct {
-	AttestationPolicyProto *attestation_policy_proto.AttestationPolicy `yaml:"attestationPolicy"`
+	AttestationPolicyProto *attestation_policy_proto.AttestationPolicy
 }
-
-type AttestationPolicyKind string
 
 const (
 	Annotated   = "annotated"
@@ -24,14 +21,6 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 	return &AttestationPolicy{
 		AttestationPolicyProto: attestationPolicy,
 	}
-}
-
-func (ap *AttestationPolicy) marshalToYAML() ([]byte, error) {
-	return protoyaml.Marshal(ap.AttestationPolicyProto)
-}
-
-func (ap *AttestationPolicy) unmarshalFromYAML(data []byte) error {
-	return protoyaml.Unmarshal(data, ap.AttestationPolicyProto)
 }
 
 func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
@@ -64,26 +53,21 @@ func GetAttestationPolicyKind(kind string) (attestation_policy_proto.Attestation
 	switch kind {
 	case "annotated", "ATTESTATION_POLICY_KIND_ANNOTATED":
 		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
-	case "cluster", "ATTESTATION_POLICY_KIND_CLUSTER":
-		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_CLUSTER, nil
 	case "namespace", "ATTESTATION_POLICY_KIND_NAMESPACE":
 		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
 	}
 
-	// TODO: Update error message.
-	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
+	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf("unknown attestation policy kind %s", kind)
 }
 
 func GetAttestationPolicyKindString(kind string) (string, error) {
 	switch kind {
 	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED.String():
 		return Annotated, nil
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_CLUSTER.String():
-		return Cluster, nil
 	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE.String():
 		return Namespace, nil
 	}
 
 	// TODO: Update error message.
-	return Unspecified, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
+	return Unspecified, fmt.Errorf("unknown attestation policy kind %s", kind)
 }
