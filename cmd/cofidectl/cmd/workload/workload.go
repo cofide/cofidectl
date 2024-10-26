@@ -46,7 +46,8 @@ This command will list all of the registered workloads.
 `
 
 type Opts struct {
-	trustZone string
+	trustZone      string
+	includeSecrets bool
 }
 
 func (w *WorkloadCommand) GetListCommand() *cobra.Command {
@@ -174,7 +175,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderUnregisteredWorkloads(kubeConfig, trustZones)
+			err = renderUnregisteredWorkloads(kubeConfig, trustZones, opts.includeSecrets)
 			if err != nil {
 				return err
 			}
@@ -185,32 +186,41 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trustZone, "trust-zone", "", "list the unregistered workloads in a specific trust zone")
+	f.BoolVar(&opts.includeSecrets, "include-secrets", false, "aditionally discover related secrets and analyse for risk")
 
 	return cmd
 }
 
-func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
+func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.KubernetesContext, false)
+		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.KubernetesContext, includeSecrets)
 		if err != nil {
 			return err
 		}
 
 		for _, workload := range registeredWorkloads {
-			data = append(data, []string{
+			rows := []string{
 				workload.Name,
 				trustZone.Name,
 				workload.Type,
 				workload.Status,
 				workload.Namespace,
-			})
+			}
+			if includeSecrets {
+				rows = append(rows, fmt.Sprintf("%d", len(workload.Secrets)))
+			}
+			data = append(data, rows)
 		}
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Trust Zone", "Type", "Status", "Namespace"})
+	headers := []string{"Name", "Trust Zone", "Type", "Status", "Namespace"}
+	if includeSecrets {
+		headers = append(headers, "Secrets")
+	}
+	table.SetHeader(headers)
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
