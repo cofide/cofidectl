@@ -2,9 +2,13 @@ package spire
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
+	"strings"
 	"time"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -214,4 +218,51 @@ func getPodsforDaemonSet(ctx context.Context, client *kubeutil.Client, daemonset
 	return client.Clientset.CoreV1().
 		Pods(namespace).
 		List(ctx, listOptions)
+}
+
+// Workload contains details of a workload registered with SPIRE
+type RegisteredEntry struct {
+	Id *types.SPIFFEID
+}
+
+func GetRegistrationEntries(ctx context.Context, client *kubeutil.Client) (map[string]*RegisteredEntry, error) {
+	command := []string{"entry", "show", "-output", "json"}
+	stdout, _, err := execInServerContainer(ctx, client, command)
+	if err != nil {
+		return nil, err
+	}
+
+	registrationEntries, err := parseEntryList(stdout)
+	if err != nil {
+		return nil, err
+	}
+
+	registrationEntriesMap := make(map[string]*RegisteredEntry)
+
+	for _, registrationEntry := range registrationEntries.Entries {
+		var podUID string
+
+		selectors := registrationEntry.Selectors
+		if len(selectors) == 0 {
+			continue
+		}
+
+		for _, selector := range selectors {
+			if selector.Type == k8sSelectorType {
+				if !strings.HasPrefix(selector.Value, k8sPodUIDSelectorPrefix) {
+					slog.Warn(fmt.Sprintf("failed to find the k8s:pod-uid selector value for workload with workload id: %s", registrationEntry.Id))
+					continue
+				}
+				podUID = strings.TrimPrefix(selector.Value, k8sPodUIDSelectorPrefix)
+			}
+		}
+
+		if podUID == "" {
+			continue
+		}
+
+		registrationEntriesMap[podUID] = &RegisteredEntry{registrationEntry.Id}
+	}
+
+	return registrationEntriesMap, nil
 }

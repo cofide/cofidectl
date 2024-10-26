@@ -193,7 +193,7 @@ func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_pro
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.KubernetesContext)
+		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.KubernetesContext, false)
 		if err != nil {
 			return err
 		}
