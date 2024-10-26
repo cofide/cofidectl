@@ -28,7 +28,7 @@ This command consists of multiple sub-commands to interact with workloads.
 func (c *WorkloadCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workload list|discover [ARGS]",
-		Short: "List trust zone workloads or discover candidate workloads",
+		Short: "List workloads in a trust zone or discover candidate workloads",
 		Long:  workloadRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
