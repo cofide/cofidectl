@@ -209,7 +209,7 @@ func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_pro
 				workload.Namespace,
 			}
 			if includeSecrets {
-				rows = append(rows, fmt.Sprintf("%d", len(workload.Secrets)))
+				rows = append(rows, fmt.Sprintf("%d (%d at risk)", len(workload.Secrets), workload.SecretsAtRisk))
 			}
 			data = append(data, rows)
 		}

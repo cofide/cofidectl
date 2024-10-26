@@ -12,12 +12,13 @@ import (
 )
 
 type Workload struct {
-	Name      string
-	Namespace string
-	SPIFFEID  string
-	Status    string
-	Type      string
-	Secrets   []*WorkloadSecretMetadata
+	Name          string
+	Namespace     string
+	SPIFFEID      string
+	Status        string
+	Type          string
+	Secrets       []*WorkloadSecretMetadata
+	SecretsAtRisk int
 }
 
 type WorkloadSecretMetadata struct {
@@ -128,16 +129,18 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDisc
 }
 
 func findRelatedSecrets(pod *v1.Pod, workload *Workload, secrets *v1.SecretList) {
+	secretsAtRisk := 0
 	for _, secret := range secrets.Items {
 		age := time.Since(secret.CreationTimestamp.Time)
-		// Consider secrets older than 30 days as long-lived
+		key := fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
+		workload.Secrets = append(workload.Secrets, &WorkloadSecretMetadata{
+			Name: key,
+			Type: "secret",
+			Age:  age,
+		})
+		// Consider secrets older than 30 days as long-lived and a source for potential risk
 		if age > 30*24*time.Hour {
-			key := fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
-			workload.Secrets = append(workload.Secrets, &WorkloadSecretMetadata{
-				Name: key,
-				Type: "secret",
-				Age:  age,
-			})
+			secretsAtRisk++
 		}
 	}
 
@@ -172,4 +175,5 @@ func findRelatedSecrets(pod *v1.Pod, workload *Workload, secrets *v1.SecretList)
 			}
 		}
 	}
+	workload.SecretsAtRisk = secretsAtRisk
 }
