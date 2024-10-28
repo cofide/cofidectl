@@ -22,6 +22,10 @@ func CloneTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.Tr
 	}
 }
 
+func TrustZonesEqual(tz1, tz2 *trust_zone_proto.TrustZone) bool {
+	return proto.Equal(tz1, tz2)
+}
+
 func CloneAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error) {
 	if clone, ok := proto.Clone(policy).(*attestation_policy_proto.AttestationPolicy); !ok {
 		return nil, fmt.Errorf("bug: type assertion failed for attestation policy %s", policy.Name)
