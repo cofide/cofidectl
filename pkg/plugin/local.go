@@ -88,8 +88,8 @@ func (lds *LocalDataSource) Validate() error {
 }
 
 func NewLocalDataSource(filePath string) (*LocalDataSource, error) {
-	trustZones := &trust_zone_proto.TrustZoneList{}
-	attestationPolicies := &attestation_policy_proto.AttestationPolicyList{}
+	trustZones := []*trust_zone_proto.TrustZone{}
+	attestationPolicies := []*attestation_policy_proto.AttestationPolicy{}
 
 	cfg := &config.Config{TrustZones: trustZones, AttestationPolicies: attestationPolicies}
 	lds := &LocalDataSource{
@@ -190,7 +190,7 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 		return fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
 	}
 	trustZone = proto.CloneTrustZone(trustZone)
-	lds.Config.TrustZones.TrustZones = append(lds.Config.TrustZones.TrustZones, trustZone)
+	lds.Config.TrustZones = append(lds.Config.TrustZones, trustZone)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
 	}
@@ -208,13 +208,13 @@ func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone
 }
 
 func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) error {
-	for i, current := range lds.Config.TrustZones.TrustZones {
+	for i, current := range lds.Config.TrustZones {
 		if current.Name == trustZone.Name {
 			if err := validateTrustZoneUpdate(current, trustZone); err != nil {
 				return err
 			}
 
-			lds.Config.TrustZones.TrustZones[i] = proto.CloneTrustZone(trustZone)
+			lds.Config.TrustZones[i] = proto.CloneTrustZone(trustZone)
 
 			if err := lds.updateDataFile(); err != nil {
 				return fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.TrustDomain, err)
@@ -262,7 +262,7 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 		return fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
 	}
 	policy = proto.CloneAttestationPolicy(policy)
-	lds.Config.AttestationPolicies.Policies = append(lds.Config.AttestationPolicies.Policies, policy)
+	lds.Config.AttestationPolicies = append(lds.Config.AttestationPolicies, policy)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
 	}
@@ -330,7 +330,7 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 
 func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
 	var trustZones []*trust_zone_proto.TrustZone
-	for _, trustZone := range lds.Config.TrustZones.TrustZones {
+	for _, trustZone := range lds.Config.TrustZones {
 		trustZones = append(trustZones, proto.CloneTrustZone(trustZone))
 	}
 	return trustZones, nil
@@ -338,7 +338,7 @@ func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, err
 
 func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error) {
 	var policies []*attestation_policy_proto.AttestationPolicy
-	for _, policy := range lds.Config.AttestationPolicies.Policies {
+	for _, policy := range lds.Config.AttestationPolicies {
 		policies = append(policies, proto.CloneAttestationPolicy(policy))
 	}
 	return policies, nil
@@ -348,7 +348,7 @@ func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, e
 	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
 	//federations := make([]*federation_proto.Federation, 0)
 	var federations []*federation_proto.Federation
-	for _, trustZone := range lds.Config.TrustZones.TrustZones {
+	for _, trustZone := range lds.Config.TrustZones {
 		for _, federation := range trustZone.Federations {
 			federation = proto.CloneFederation(federation)
 			federations = append(federations, federation)
