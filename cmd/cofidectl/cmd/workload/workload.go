@@ -45,13 +45,12 @@ var workloadListCmdDesc = `
 This command will list all of the registered workloads.
 `
 
-type Opts struct {
-	trustZone      string
-	includeSecrets bool
+type ListOpts struct {
+	trustZone string
 }
 
 func (w *WorkloadCommand) GetListCommand() *cobra.Command {
-	opts := Opts{}
+	opts := ListOpts{}
 	cmd := &cobra.Command{
 		Use:   "list [ARGS]",
 		Short: "List workloads",
@@ -137,8 +136,13 @@ var workloadDiscoverCmdDesc = `
 This command will discover all of the unregistered workloads.
 `
 
+type DiscoverOpts struct {
+	trustZone      string
+	includeSecrets bool
+}
+
 func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
-	opts := Opts{}
+	opts := DiscoverOpts{}
 	cmd := &cobra.Command{
 		Use:   "discover [ARGS]",
 		Short: "Discover workloads",
