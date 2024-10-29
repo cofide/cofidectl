@@ -189,10 +189,14 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 	if _, ok := lds.Config.GetTrustZoneByName(trustZone.Name); ok {
 		return fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
 	}
-	trustZone = proto.CloneTrustZone(trustZone)
+	trustZone, err := proto.CloneTrustZone(trustZone)
+	if err != nil {
+		return err
+	}
+
 	lds.Config.TrustZones = append(lds.Config.TrustZones, trustZone)
 	if err := lds.updateDataFile(); err != nil {
-		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
+		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.Name, err)
 	}
 	return nil
 }
@@ -203,8 +207,7 @@ func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", id)
 	}
 
-	trustZone = proto.CloneTrustZone(trustZone)
-	return trustZone, nil
+	return proto.CloneTrustZone(trustZone)
 }
 
 func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) error {
@@ -214,10 +217,15 @@ func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZon
 				return err
 			}
 
-			lds.Config.TrustZones[i] = proto.CloneTrustZone(trustZone)
+			trustZone, err := proto.CloneTrustZone(trustZone)
+			if err != nil {
+				return err
+			}
+
+			lds.Config.TrustZones[i] = trustZone
 
 			if err := lds.updateDataFile(); err != nil {
-				return fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.TrustDomain, err)
+				return fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.Name, err)
 			}
 
 			return nil
@@ -261,7 +269,10 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 	if _, ok := lds.Config.GetAttestationPolicyByName(policy.Name); ok {
 		return fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
 	}
-	policy = proto.CloneAttestationPolicy(policy)
+	policy, err := proto.CloneAttestationPolicy(policy)
+	if err != nil {
+		return err
+	}
 	lds.Config.AttestationPolicies = append(lds.Config.AttestationPolicies, policy)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
@@ -285,7 +296,11 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 		}
 	}
 
-	policy = proto.CloneAttestationPolicy(policy)
+	policy, err := proto.CloneAttestationPolicy(policy)
+	if err != nil {
+		return err
+	}
+
 	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, policy)
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
@@ -295,8 +310,7 @@ func (lds *LocalDataSource) BindAttestationPolicy(policy *attestation_policy_pro
 
 func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error) {
 	if policy, ok := lds.Config.GetAttestationPolicyByName(id); ok {
-		policy = proto.CloneAttestationPolicy(policy)
-		return policy, nil
+		return proto.CloneAttestationPolicy(policy)
 	} else {
 		return nil, fmt.Errorf("failed to find attestation policy %s in local config", id)
 	}
@@ -319,7 +333,11 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		}
 	}
 
-	federationProto = proto.CloneFederation(federationProto)
+	federationProto, err := proto.CloneFederation(federationProto)
+	if err != nil {
+		return err
+	}
+
 	leftTrustZone.Federations = append(leftTrustZone.Federations, federationProto)
 
 	if err := lds.updateDataFile(); err != nil {
@@ -331,7 +349,11 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
 	var trustZones []*trust_zone_proto.TrustZone
 	for _, trustZone := range lds.Config.TrustZones {
-		trustZones = append(trustZones, proto.CloneTrustZone(trustZone))
+		trustZone, err := proto.CloneTrustZone(trustZone)
+		if err != nil {
+			return nil, err
+		}
+		trustZones = append(trustZones, trustZone)
 	}
 	return trustZones, nil
 }
@@ -339,18 +361,24 @@ func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, err
 func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error) {
 	var policies []*attestation_policy_proto.AttestationPolicy
 	for _, policy := range lds.Config.AttestationPolicies {
-		policies = append(policies, proto.CloneAttestationPolicy(policy))
+		policy, err := proto.CloneAttestationPolicy(policy)
+		if err != nil {
+			return nil, err
+		}
+		policies = append(policies, policy)
 	}
 	return policies, nil
 }
 
 func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, error) {
 	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
-	//federations := make([]*federation_proto.Federation, 0)
 	var federations []*federation_proto.Federation
 	for _, trustZone := range lds.Config.TrustZones {
 		for _, federation := range trustZone.Federations {
-			federation = proto.CloneFederation(federation)
+			federation, err := proto.CloneFederation(federation)
+			if err != nil {
+				return nil, err
+			}
 			federations = append(federations, federation)
 		}
 	}
@@ -360,12 +388,15 @@ func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, e
 func (lds *LocalDataSource) ListFederationsByTrustZone(tzName string) ([]*federation_proto.Federation, error) {
 	trustZone, ok := lds.Config.GetTrustZoneByName(tzName)
 	if !ok {
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.TrustDomain)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
 	}
 
 	var federations []*federation_proto.Federation
 	for _, federation := range trustZone.Federations {
-		federation = proto.CloneFederation(federation)
+		federation, err := proto.CloneFederation(federation)
+		if err != nil {
+			return nil, err
+		}
 		federations = append(federations, federation)
 	}
 	return federations, nil

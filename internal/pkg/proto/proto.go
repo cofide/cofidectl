@@ -11,25 +11,25 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 )
 
-func CloneTrustZone(trustZone *trust_zone_proto.TrustZone) *trust_zone_proto.TrustZone {
+func CloneTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
 	if clone, ok := proto.Clone(trustZone).(*trust_zone_proto.TrustZone); !ok {
-		panic(fmt.Sprintf("type assertion failed for trust zone %v", trustZone))
+		return nil, fmt.Errorf("bug: type assertion failed for trust zone %s", trustZone.Name)
 	} else {
 		if clone == trustZone {
-			panic("trust zone clones are the same")
+			return nil, fmt.Errorf("bug: trust zone %s clones point to same address", trustZone.Name)
 		}
-		return clone
+		return clone, nil
 	}
 }
 
-func CloneAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) *attestation_policy_proto.AttestationPolicy {
+func CloneAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error) {
 	if clone, ok := proto.Clone(policy).(*attestation_policy_proto.AttestationPolicy); !ok {
-		panic(fmt.Sprintf("type assertion failed for attestation policy %v", policy))
+		return nil, fmt.Errorf("bug: type assertion failed for attestation policy %s", policy.Name)
 	} else {
 		if clone == policy {
-			panic("attestation policy clones are the same")
+			return nil, fmt.Errorf("bug: attestation policy %s clones are the same", policy.Name)
 		}
-		return clone
+		return clone, nil
 	}
 }
 
@@ -37,14 +37,14 @@ func AttestationPoliciesEqual(ap1, ap2 *attestation_policy_proto.AttestationPoli
 	return proto.Equal(ap1, ap2)
 }
 
-func CloneFederation(federation *federation_proto.Federation) *federation_proto.Federation {
+func CloneFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error) {
 	if clone, ok := proto.Clone(federation).(*federation_proto.Federation); !ok {
-		panic(fmt.Sprintf("type assertion failed for federation %v", federation))
+		return nil, fmt.Errorf("bug: type assertion failed for federation %s-%s", federation.Left, federation.Right)
 	} else {
 		if clone == federation {
-			panic("federation clones are the same")
+			return nil, fmt.Errorf("bug: federation %s-%s clones are the same", federation.Left, federation.Right)
 		}
-		return clone
+		return clone, nil
 	}
 }
 
