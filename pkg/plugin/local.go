@@ -346,7 +346,6 @@ func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_pro
 
 func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, error) {
 	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
-	//federations := make([]*federation_proto.Federation, 0)
 	var federations []*federation_proto.Federation
 	for _, trustZone := range lds.Config.TrustZones.TrustZones {
 		for _, federation := range trustZone.Federations {
