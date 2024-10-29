@@ -186,7 +186,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trustZone, "trust-zone", "", "list the unregistered workloads in a specific trust zone")
-	f.BoolVar(&opts.includeSecrets, "include-secrets", false, "aditionally discover related secrets and analyse for risk")
+	f.BoolVar(&opts.includeSecrets, "include-secrets", false, "discover workload secrets and analyse for risk")
 
 	return cmd
 }
