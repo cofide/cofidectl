@@ -220,7 +220,7 @@ func getPodsforDaemonSet(ctx context.Context, client *kubeutil.Client, daemonset
 		List(ctx, listOptions)
 }
 
-// Workload contains details of a workload registered with SPIRE
+// RegisteredEntry contains details of a workload registered with SPIRE
 type RegisteredEntry struct {
 	Id *types.SPIFFEID
 }
