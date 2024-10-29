@@ -26,7 +26,7 @@ type WorkloadSecretMetadata struct {
 	Age    time.Duration
 }
 
-// GetRegisteredWorkloads will find all workloads that are registered with the WI platform
+// GetRegisteredWorkloads will find all workloads that are registered
 func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Workload, error) {
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, kubeContext)
 	if err != nil {
