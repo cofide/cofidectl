@@ -13,6 +13,7 @@ type DataSource interface {
 	GetTrustZone(string) (*trust_zone_proto.TrustZone, error)
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
 	AddTrustZone(*trust_zone_proto.TrustZone) error
+	UpdateTrustZone(*trust_zone_proto.TrustZone) error
 
 	AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) error
 	BindAttestationPolicy(*attestation_policy_proto.AttestationPolicy, *trust_zone_proto.TrustZone) error

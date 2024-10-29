@@ -133,6 +133,10 @@ func (u *UpCommand) watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) 
 
 		trustZone.Bundle = bundle
 
+		if err := u.source.UpdateTrustZone(trustZone); err != nil {
+			return fmt.Errorf("failed to update trust zone %s: %w", trustZone.Name, err)
+		}
+
 		s.Stop()
 		green := color.New(color.FgGreen).SprintFunc()
 		fmt.Printf("%s All SPIRE server pods and services are ready for %s in cluster %s\n\n", green("✅"), trustZone.Name, trustZone.KubernetesCluster)
