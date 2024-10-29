@@ -192,7 +192,7 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 	trustZone = proto.CloneTrustZone(trustZone)
 	lds.Config.TrustZones.TrustZones = append(lds.Config.TrustZones.TrustZones, trustZone)
 	if err := lds.updateDataFile(); err != nil {
-		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.TrustDomain, err)
+		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.Name, err)
 	}
 	return nil
 }
@@ -217,7 +217,7 @@ func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZon
 			lds.Config.TrustZones.TrustZones[i] = proto.CloneTrustZone(trustZone)
 
 			if err := lds.updateDataFile(); err != nil {
-				return fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.TrustDomain, err)
+				return fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.Name, err)
 			}
 
 			return nil
@@ -359,7 +359,7 @@ func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, e
 func (lds *LocalDataSource) ListFederationsByTrustZone(tzName string) ([]*federation_proto.Federation, error) {
 	trustZone, ok := lds.Config.GetTrustZoneByName(tzName)
 	if !ok {
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.TrustDomain)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
 	}
 
 	var federations []*federation_proto.Federation
