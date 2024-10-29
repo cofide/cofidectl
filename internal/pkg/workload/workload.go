@@ -12,19 +12,18 @@ import (
 )
 
 type Workload struct {
-	Name          string
-	Namespace     string
-	SPIFFEID      string
-	Status        string
-	Type          string
-	Secrets       []*WorkloadSecretMetadata
-	SecretsAtRisk int
+	Name             string
+	Namespace        string
+	SPIFFEID         string
+	Status           string
+	Type             string
+	NumSecrets       int
+	NumSecretsAtRisk int
 }
 
 type WorkloadSecretMetadata struct {
-	Name string
-	Type string
-	Age  time.Duration
+	AtRisk bool
+	Age    time.Duration
 }
 
 // GetRegisteredWorkloads will find all workloads that are registered with the WI platform
@@ -115,10 +114,10 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDisc
 				Type:      "Pod",
 			}
 
-			// add related secrets (metadata) if secret discovery is enabled
+			// Add related secrets (metadata) if secret discovery is enabled
 			if secretDiscovery {
-				findRelatedSecrets(&pod, unregisteredWorkload, secrets)
-
+				secrets := analyseSecrets(secrets)
+				associateSecrets(&pod, unregisteredWorkload, secrets)
 			}
 
 			unregisteredWorkloads = append(unregisteredWorkloads, *unregisteredWorkload)
@@ -128,29 +127,40 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDisc
 	return unregisteredWorkloads, nil
 }
 
-func findRelatedSecrets(pod *v1.Pod, workload *Workload, secrets *v1.SecretList) {
-	secretsAtRisk := 0
+func isAtRisk(creationTS time.Time) (time.Duration, bool) {
+	// Consider secrets older than 30 days as long-lived and a source for potential risk
+	age := time.Since(creationTS)
+	if age > 30*24*time.Hour {
+		return age, true
+	}
+	return age, false
+}
+
+func analyseSecrets(secrets *v1.SecretList) map[string]WorkloadSecretMetadata {
+	// Analyse the metadata for all secrets and determine the age
+	workloadSecrets := make(map[string]WorkloadSecretMetadata)
 	for _, secret := range secrets.Items {
-		age := time.Since(secret.CreationTimestamp.Time)
 		key := fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
-		workload.Secrets = append(workload.Secrets, &WorkloadSecretMetadata{
-			Name: key,
-			Type: "secret",
-			Age:  age,
-		})
-		// Consider secrets older than 30 days as long-lived and a source for potential risk
-		if age > 30*24*time.Hour {
-			secretsAtRisk++
+		age, atRisk := isAtRisk(secret.CreationTimestamp.Time)
+		workloadSecrets[key] = WorkloadSecretMetadata{
+			AtRisk: atRisk,
+			Age:    age,
 		}
 	}
+	return workloadSecrets
+}
 
+func associateSecrets(pod *v1.Pod, workload *Workload, secrets map[string]WorkloadSecretMetadata) {
+	// Check secrets mounted in pod volumes
 	for _, volume := range pod.Spec.Volumes {
 		if volume.Secret != nil {
 			key := fmt.Sprintf("%s/%s", pod.Namespace, volume.Secret.SecretName)
-			workload.Secrets = append(workload.Secrets, &WorkloadSecretMetadata{
-				Name: key,
-				Type: "volume",
-			})
+			if secret, exists := secrets[key]; exists {
+				workload.NumSecrets++
+				if secret.AtRisk {
+					workload.NumSecretsAtRisk++
+				}
+			}
 		}
 	}
 
@@ -159,21 +169,24 @@ func findRelatedSecrets(pod *v1.Pod, workload *Workload, secrets *v1.SecretList)
 		for _, env := range container.EnvFrom {
 			if env.SecretRef != nil {
 				key := fmt.Sprintf("%s/%s", pod.Namespace, env.SecretRef.Name)
-				workload.Secrets = append(workload.Secrets, &WorkloadSecretMetadata{
-					Name: key,
-					Type: "env",
-				})
+				if secret, exists := secrets[key]; exists {
+					workload.NumSecrets++
+					if secret.AtRisk {
+						workload.NumSecretsAtRisk++
+					}
+				}
 			}
 		}
 		for _, env := range container.Env {
 			if env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil {
 				key := fmt.Sprintf("%s/%s", pod.Namespace, env.ValueFrom.SecretKeyRef.Name)
-				workload.Secrets = append(workload.Secrets, &WorkloadSecretMetadata{
-					Name: key,
-					Type: "env",
-				})
+				if secret, exists := secrets[key]; exists {
+					workload.NumSecrets++
+					if secret.AtRisk {
+						workload.NumSecretsAtRisk++
+					}
+				}
 			}
 		}
 	}
-	workload.SecretsAtRisk = secretsAtRisk
 }
