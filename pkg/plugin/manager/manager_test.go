@@ -1,4 +1,4 @@
-package loader
+package manager
 
 import (
 	"errors"
@@ -56,13 +56,13 @@ func TestLoader_GetPlugins_success(t *testing.T) {
 				t.Fatalf("NewMemoryLoader() error = %v", err)
 			}
 
-			l := NewLoader(configLoader)
+			l := NewManager(configLoader)
 			// Mock out the Connect plugin loader function.
 			l.loadConnectPlugin = func(logger hclog.Logger) (cofidectl_plugin.DataSource, error) {
 				return newFakeConnectDataSource(t, configLoader), nil
 			}
 
-			got, err := l.GetPlugins()
+			got, err := l.GetPlugin()
 			if err != nil {
 				t.Fatalf("Loader.GetPlugins() error = %v", err)
 			}
@@ -99,13 +99,13 @@ func TestLoader_GetPlugins_failure(t *testing.T) {
 				t.Fatalf("NewMemoryLoader() error = %v", err)
 			}
 
-			l := NewLoader(configLoader)
+			l := NewManager(configLoader)
 			// Mock out the Connect plugin loader function, and inject a load failure.
 			l.loadConnectPlugin = func(logger hclog.Logger) (cofidectl_plugin.DataSource, error) {
 				return nil, errors.New("failed to create connect plugin")
 			}
 
-			_, err = l.GetPlugins()
+			_, err = l.GetPlugin()
 			if err == nil {
 				t.Fatalf("Loader.GetPlugins() did not return error")
 			}

@@ -1,4 +1,4 @@
-package loader
+package manager
 
 import (
 	"errors"
@@ -13,20 +13,20 @@ import (
 	go_plugin "github.com/hashicorp/go-plugin"
 )
 
-// Loader provides an interface for loading `DataSource` plugins based on configuration.
-type Loader struct {
+// PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
+type PluginManager struct {
 	configLoader      config.Loader
 	loadConnectPlugin func(logger hclog.Logger) (cofidectl_plugin.DataSource, error)
 }
 
-func NewLoader(configLoader config.Loader) *Loader {
-	return &Loader{
+func NewManager(configLoader config.Loader) *PluginManager {
+	return &PluginManager{
 		configLoader:      configLoader,
 		loadConnectPlugin: loadConnectPlugin,
 	}
 }
 
-func (l *Loader) GetPlugins() ([]cofidectl_plugin.DataSource, error) {
+func (l *PluginManager) GetPlugin() (cofidectl_plugin.DataSource, error) {
 	exists, err := l.configLoader.Exists()
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (l *Loader) GetPlugins() ([]cofidectl_plugin.DataSource, error) {
 				return nil, err
 			}
 
-			plugins = append(plugins, ds)
+			return ds, nil
 		} else {
 			return nil, errors.New("only the cofidectl-connect-plugin is currently supported")
 		}
@@ -70,10 +70,10 @@ func (l *Loader) GetPlugins() ([]cofidectl_plugin.DataSource, error) {
 			return nil, err
 		}
 
-		plugins = append(plugins, lds)
+		return lds, nil
 	}
 
-	return plugins, nil
+	return nil, nil
 }
 
 func loadConnectPlugin(logger hclog.Logger) (cofidectl_plugin.DataSource, error) {

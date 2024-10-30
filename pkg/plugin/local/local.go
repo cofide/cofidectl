@@ -97,20 +97,20 @@ func (lds *LocalDataSource) updateDataFile() error {
 	return lds.loader.Write(lds.config)
 }
 
-func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) error {
+func (lds *LocalDataSource) CreateTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
 	if _, ok := lds.config.GetTrustZoneByName(trustZone.Name); ok {
-		return fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
+		return nil, fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
 	}
 	trustZone, err := proto.CloneTrustZone(trustZone)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	lds.config.TrustZones = append(lds.config.TrustZones, trustZone)
 	if err := lds.updateDataFile(); err != nil {
-		return fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.Name, err)
+		return nil, fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.Name, err)
 	}
-	return nil
+	return trustZone, nil
 }
 
 func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone, error) {

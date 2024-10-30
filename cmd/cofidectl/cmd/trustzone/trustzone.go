@@ -136,7 +136,13 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				KubernetesContext: opts.context,
 				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: opts.profile},
 			}
-			return c.source.AddTrustZone(newTrustZone)
+
+			_, err = c.source.CreateTrustZone(newTrustZone)
+			if err != nil {
+				return fmt.Errorf("failed to create trust zone %s: %s", newTrustZone.Name, err)
+			}
+
+			return nil
 		},
 	}
 
