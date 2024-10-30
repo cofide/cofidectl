@@ -5,6 +5,7 @@ go 1.22.6
 require (
 	cuelang.org/go v0.10.0
 	github.com/cofide/cofide-api-sdk v0.1.0
+	github.com/google/go-cmp v0.6.0
 	github.com/gobeam/stringy v0.0.7
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-plugin v1.6.1
@@ -70,7 +71,6 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0 // indirect

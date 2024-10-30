@@ -1,84 +1,27 @@
 package config
 
 import (
-	"reflect"
-	"slices"
 	"testing"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
+	"github.com/google/go-cmp/cmp"
 	"gopkg.in/yaml.v3"
 )
-
-var emptyYAMLConfig string = `trustzones: []
-attestationpolicies: []
-`
-
-var fullYAMLConfig string = `plugins:
-    - test-plugin
-trustzones:
-    - name: tz1
-      trustdomain: td1
-      kubernetescluster: local1
-      kubernetescontext: kind-local1
-      trustprovider:
-        name: ""
-        kind: kubernetes
-      bundleendpointurl: 127.0.0.1
-      bundle: ""
-      federations:
-        - left: tz1
-          right: tz2
-      attestationpolicies:
-        - name: ap1
-          kind: 2
-          podkey: ""
-          podvalue: ""
-          namespace: ns1
-    - name: tz2
-      trustdomain: td2
-      kubernetescluster: local2
-      kubernetescontext: kind-local2
-      trustprovider:
-        name: ""
-        kind: kubernetes
-      bundleendpointurl: 127.0.0.2
-      bundle: ""
-      federations:
-        - left: tz2
-          right: tz1
-      attestationpolicies:
-        - name: ap2
-          kind: 1
-          podkey: foo
-          podvalue: bar
-          namespace: ""
-attestationpolicies:
-    - name: ap1
-      kind: 2
-      podkey: ""
-      podvalue: ""
-      namespace: ns1
-    - name: ap2
-      kind: 1
-      podkey: foo
-      podvalue: bar
-      namespace: ""
-`
 
 func TestConfig_YAMLMarshall(t *testing.T) {
 	// Ensure that the YAML representation of Config is as expected.
 	tests := []struct {
-		name   string
-		config Config
-		want   string
+		name     string
+		config   Config
+		wantFile string
 	}{
 		{
-			name:   "empty",
-			config: Config{},
-			want:   emptyYAMLConfig,
+			name:     "default",
+			config:   Config{},
+			wantFile: "default.yaml",
 		},
 		{
 			name: "full",
@@ -93,7 +36,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap2"),
 				},
 			},
-			want: fullYAMLConfig,
+			wantFile: "full.yaml",
 		},
 	}
 	for _, tt := range tests {
@@ -102,9 +45,9 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error marshalling configuration to YAML: %v", err)
 			}
-			gotStr := string(got)
-			if !reflect.DeepEqual(gotStr, tt.want) {
-				t.Errorf("yaml.Marshall(config) = %v, want %v", gotStr, tt.want)
+			want := readTestConfig(t, tt.wantFile)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("yaml.Marshall(config) mismatch (-want,+got):\n%s", diff)
 			}
 		})
 	}
@@ -114,12 +57,12 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 	// Ensure that the YAML representation of Config is as expected.
 	tests := []struct {
 		name string
-		yaml string
+		file string
 		want Config
 	}{
 		{
-			name: "empty",
-			yaml: emptyYAMLConfig,
+			name: "default",
+			file: "default.yaml",
 			want: Config{
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
@@ -127,7 +70,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 		},
 		{
 			name: "full",
-			yaml: fullYAMLConfig,
+			file: "full.yaml",
 			want: Config{
 				Plugins: []string{"test-plugin"},
 				TrustZones: []*trust_zone_proto.TrustZone{
@@ -144,28 +87,112 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got Config
-			err := yaml.Unmarshal([]byte(tt.yaml), &got)
+			yamlConfig := readTestConfig(t, tt.file)
+			err := yaml.Unmarshal([]byte(yamlConfig), &got)
 			if err != nil {
 				t.Fatalf("error unmarshalling configuration from YAML: %v", err)
 			}
-			if !configsEqual(&got, &tt.want) {
-				t.Errorf("yaml.Unmarshall() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(&got, &tt.want, proto.IgnoreUnexported()); diff != "" {
+				t.Errorf("yaml.Unmarshall() mismatch (-want,+got):\n%s", diff)
 			}
 		})
 	}
 }
 
-// configsEqual compares two `Config`s for equality.
-// `reflect.DeepEqual` may see differences in the protobuf internals, so we need to use proto.Equal to compare messages.
-func configsEqual(c1, c2 *Config) bool {
-	if !slices.Equal(c1.Plugins, c2.Plugins) {
-		return false
+func TestConfig_GetTrustZoneByName(t *testing.T) {
+	tests := []struct {
+		name       string
+		trustZones []*trust_zone_proto.TrustZone
+		trustZone  string
+		wantTz     *trust_zone_proto.TrustZone
+		wantOk     bool
+	}{
+		{
+			name: "found",
+			trustZones: []*trust_zone_proto.TrustZone{
+				fixtures.TrustZone("tz1"),
+				fixtures.TrustZone("tz2"),
+			},
+			trustZone: "tz2",
+			wantTz:    fixtures.TrustZone("tz2"),
+			wantOk:    true,
+		},
+		{
+			name:       "not found",
+			trustZones: []*trust_zone_proto.TrustZone{},
+			trustZone:  "tz1",
+			wantTz:     nil,
+			wantOk:     false,
+		},
+		{
+			name:       "nil list",
+			trustZones: nil,
+			trustZone:  "tz1",
+			wantTz:     nil,
+			wantOk:     false,
+		},
 	}
-	if !slices.EqualFunc(c1.TrustZones, c2.TrustZones, proto.TrustZonesEqual) {
-		return false
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Config{
+				TrustZones: tt.trustZones,
+			}
+			gotTz, gotOk := c.GetTrustZoneByName(tt.trustZone)
+			if diff := cmp.Diff(tt.wantTz, gotTz, proto.IgnoreUnexported()); diff != "" {
+				t.Errorf("Config.GetTrustZoneByName() mismatch (-want,+got):\n%s", diff)
+			}
+			if gotOk != tt.wantOk {
+				t.Errorf("Config.GetTrustZoneByName() got1 = %v, want %v", gotOk, tt.wantOk)
+			}
+		})
 	}
-	if !slices.EqualFunc(c1.AttestationPolicies, c2.AttestationPolicies, proto.AttestationPoliciesEqual) {
-		return false
+}
+
+func TestConfig_GetAttestationPolicyByName(t *testing.T) {
+	tests := []struct {
+		name     string
+		policies []*attestation_policy_proto.AttestationPolicy
+		policy   string
+		wantAp   *attestation_policy_proto.AttestationPolicy
+		wantOk   bool
+	}{
+		{
+			name: "found",
+			policies: []*attestation_policy_proto.AttestationPolicy{
+				fixtures.AttestationPolicy("ap1"),
+				fixtures.AttestationPolicy("ap2"),
+			},
+			policy: "ap2",
+			wantAp: fixtures.AttestationPolicy("ap2"),
+			wantOk: true,
+		},
+		{
+			name:     "not found",
+			policies: []*attestation_policy_proto.AttestationPolicy{},
+			policy:   "ap1",
+			wantAp:   nil,
+			wantOk:   false,
+		},
+		{
+			name:     "nil list",
+			policies: nil,
+			policy:   "ap1",
+			wantAp:   nil,
+			wantOk:   false,
+		},
 	}
-	return true
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Config{
+				AttestationPolicies: tt.policies,
+			}
+			gotAp, gotOk := c.GetAttestationPolicyByName(tt.policy)
+			if diff := cmp.Diff(tt.wantAp, gotAp, proto.IgnoreUnexported()); diff != "" {
+				t.Errorf("Config.GetAttestationPolicyByName() mismatch (-want,+got):\n%s", diff)
+			}
+			if gotOk != tt.wantOk {
+				t.Errorf("Config.GetAttestationPolicyByName() got1 = %v, want %v", gotOk, tt.wantOk)
+			}
+		})
+	}
 }

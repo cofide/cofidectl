@@ -21,9 +21,6 @@ func NewConfig() *Config {
 }
 
 func (c *Config) GetTrustZoneByName(name string) (*trust_zone_proto.TrustZone, bool) {
-	if c.TrustZones == nil {
-		return nil, false
-	}
 	for _, tz := range c.TrustZones {
 		if tz.Name == name {
 			return tz, true
@@ -33,9 +30,6 @@ func (c *Config) GetTrustZoneByName(name string) (*trust_zone_proto.TrustZone, b
 }
 
 func (c *Config) GetAttestationPolicyByName(name string) (*attestation_policy_proto.AttestationPolicy, bool) {
-	if c.AttestationPolicies == nil {
-		return nil, false
-	}
 	for _, ap := range c.AttestationPolicies {
 		if ap.Name == name {
 			return ap, true
