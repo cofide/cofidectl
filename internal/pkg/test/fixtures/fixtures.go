@@ -19,12 +19,12 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 	"tz1": {
 		Name:              "tz1",
 		TrustDomain:       "td1",
-		KubernetesCluster: stringPtr("local1"),
-		KubernetesContext: stringPtr("kind-local1"),
+		KubernetesCluster: StringPtr("local1"),
+		KubernetesContext: StringPtr("kind-local1"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: stringPtr("kubernetes"),
+			Kind: StringPtr("kubernetes"),
 		},
-		BundleEndpointUrl: stringPtr("127.0.0.1"),
+		BundleEndpointUrl: StringPtr("127.0.0.1"),
 		Federations: []*federation_proto.Federation{
 			{
 				From: "tz1",
@@ -42,12 +42,12 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 	"tz2": {
 		Name:              "tz2",
 		TrustDomain:       "td2",
-		KubernetesCluster: stringPtr("local2"),
-		KubernetesContext: stringPtr("kind-local2"),
+		KubernetesCluster: StringPtr("local2"),
+		KubernetesContext: StringPtr("kind-local2"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: stringPtr("kubernetes"),
+			Kind: StringPtr("kubernetes"),
 		},
-		BundleEndpointUrl: stringPtr("127.0.0.2"),
+		BundleEndpointUrl: StringPtr("127.0.0.2"),
 		Federations: []*federation_proto.Federation{
 			{
 				From: "tz2",
@@ -61,6 +61,19 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				FederatesWith: []string{"tz1"},
 			},
 		},
+	},
+	// tz3 has no federations or bound attestation policies.
+	"tz3": {
+		Name:              "tz3",
+		TrustDomain:       "td3",
+		KubernetesCluster: StringPtr("local3"),
+		KubernetesContext: StringPtr("kind-local3"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		BundleEndpointUrl:   StringPtr("127.0.0.3"),
+		Federations:         []*federation_proto.Federation{},
+		AttestationPolicies: []*ap_binding_proto.APBinding{},
 	},
 }
 
@@ -150,6 +163,6 @@ func AttestationPolicy(name string) *attestation_policy_proto.AttestationPolicy 
 	return ap
 }
 
-func stringPtr(s string) *string {
+func StringPtr(s string) *string {
 	return &s
 }
