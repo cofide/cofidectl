@@ -82,13 +82,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 
 	// add federations as clusterFederatedTrustDomains to be reconcilced by spire-controller-manager
 	if len(g.trustZone.Federations) > 0 {
-		spireServerValues[`"spire-server"."federation"."enabled"`] = true
 		for _, fed := range g.trustZone.Federations {
 			tz, err := g.source.GetTrustZone(fed.Right)
 			if err != nil {
 				return nil, err
 			}
-			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.Right)] = federation.NewFederation(tz).GetHelmConfig()
+			if tz.BundleEndpointUrl != "" {
+				spireServerValues[`"spire-server"."federation"."enabled"`] = true
+				config := federation.NewFederation(tz).GetHelmConfig()
+				spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.Right)] = config
+			}
 		}
 	}
 

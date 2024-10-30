@@ -18,7 +18,7 @@ func NewFederation(trustZone *trust_zone_proto.TrustZone) *Federation {
 
 func (fed *Federation) GetHelmConfig() map[string]interface{} {
 	clusterFederatedTrustDomain := map[string]interface{}{
-		"bundleEndpointURL": fmt.Sprintf("https://%s:8443", fed.destTrustZone.BundleEndpointUrl),
+		"bundleEndpointURL": fed.destTrustZone.BundleEndpointUrl,
 		"bundleEndpointProfile": map[string]interface{}{
 			"type":             "https_spiffe",
 			"endpointSPIFFEID": fmt.Sprintf("spiffe://%s/spire/server", fed.destTrustZone.TrustDomain),
