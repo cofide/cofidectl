@@ -1,10 +1,10 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -33,23 +33,31 @@ func (s *SubCommand) Execute() error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.Timeout)
 	defer cancel()
 
-	cmd := exec.Command(fmt.Sprintf("./%s", s.BinaryName), strings.Join(s.Args, ","))
+	cmd := exec.Command(s.BinaryName, s.Args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// Setup process group kill on timeout
 	go func() {
 		<-ctx.Done()
 		if ctx.Err() == context.DeadlineExceeded {
-			// Kill the entire process group
-			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			pgid, err := syscall.Getpgid(cmd.Process.Pid)
+			if err == nil {
+				_ = syscall.Kill(-pgid, syscall.SIGKILL)
+			}
 		}
 	}()
 
-	out, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("executing %s: %w", s.BinaryName, err)
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error executing %s: %w", s.BinaryName, err)
 	}
 
-	fmt.Println(string(out))
+	output := buf.String()
+	fmt.Println(output)
+
 	return nil
+
 }

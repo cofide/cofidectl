@@ -23,7 +23,7 @@ func Run() error {
 	pluginManager := manager.NewManager(configLoader)
 	ds, err := pluginManager.GetPlugin()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	/*
@@ -42,11 +42,11 @@ func Run() error {
 
 	rootCmd, err := cmd.NewRootCommand(ds, os.Args[1:]).GetRootCommand()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if err = rootCmd.Execute(); err != nil {
-		os.Exit(1)
+		return err
 	}
 
 	return nil

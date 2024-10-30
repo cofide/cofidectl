@@ -23,7 +23,7 @@ func newFakeConnectDataSource(t *testing.T, configLoader config.Loader) *fakeCon
 	return &fakeConnectDataSource{LocalDataSource: *lds}
 }
 
-func TestLoader_GetPlugins_success(t *testing.T) {
+func TestPluginManager_GetPlugin_success(t *testing.T) {
 	tests := []struct {
 		name   string
 		config config.Config
