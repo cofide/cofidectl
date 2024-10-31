@@ -31,7 +31,8 @@ func RunCommand(ctx context.Context, client kubernetes.Interface, config *restcl
 		Name(podName).
 		SubResource("exec").
 		VersionedParams(opts, scheme.ParameterCodec)
-	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
+
+	exec, err := remotecommand.NewWebSocketExecutor(config, "POST", req.URL().String())
 	if err != nil {
 		return fmt.Errorf("new executor: %w", err)
 	}
