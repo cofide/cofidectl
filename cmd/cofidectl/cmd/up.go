@@ -18,18 +18,20 @@ import (
 	"k8s.io/client-go/tools/cache"
 	toolsWatch "k8s.io/client-go/tools/watch"
 
+	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
 )
 
 type UpCommand struct {
+	cmdCtx *cmd_context.CommandContext
 	source cofidectl_plugin.DataSource
 }
 
-func NewUpCommand(source cofidectl_plugin.DataSource) *UpCommand {
+func NewUpCommand(cmdCtx *cmd_context.CommandContext) *UpCommand {
 	return &UpCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -44,11 +46,16 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 		Long:  upCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := u.source.Validate(); err != nil {
+			ds, err := u.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
 				return err
 			}
 
-			trustZones, err := u.source.ListTrustZones()
+			if err := ds.Validate(); err != nil {
+				return err
+			}
+
+			trustZones, err := ds.ListTrustZones()
 			if err != nil {
 				return err
 			}
@@ -71,8 +78,13 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 }
 
 func (u *UpCommand) installSPIREStack(trustZones []*trust_zone_proto.TrustZone) error {
+	ds, err := u.cmdCtx.PluginManager.GetPlugin()
+	if err != nil {
+		return err
+	}
+
 	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, u.source)
+		generator := helm.NewHelmValuesGenerator(trustZone, ds)
 		spireValues, err := generator.GenerateValues()
 		if err != nil {
 			return err

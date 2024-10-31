@@ -24,7 +24,7 @@ type SubCommand struct {
 	Timeout    time.Duration
 }
 
-func getPluginDir() (string, error) {
+func GetPluginDir() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user home: %w", err)
@@ -43,7 +43,7 @@ func ExecuteSubCommand(binary string, args []string) error {
 }
 
 func (s *SubCommand) Execute() error {
-	pluginDir, err := getPluginDir()
+	pluginDir, err := GetPluginDir()
 	if err != nil {
 		return err
 	}

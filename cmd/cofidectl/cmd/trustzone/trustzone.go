@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 
+	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/manifoldco/promptui"
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
@@ -15,19 +16,18 @@ import (
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 )
 
 type TrustZoneCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmd_context.CommandContext
 }
 
-func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
+func NewTrustZoneCommand(cmdCtx *cmd_context.CommandContext) *TrustZoneCommand {
 	return &TrustZoneCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -63,11 +63,16 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 		Long:  trustZoneListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
 				return err
 			}
 
-			trustZones, err := c.source.ListTrustZones()
+			if err := ds.Validate(); err != nil {
+				return err
+			}
+
+			trustZones, err := ds.ListTrustZones()
 			if err != nil {
 				return err
 			}
@@ -120,11 +125,16 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
 				return err
 			}
 
-			err := c.getKubernetesContext(cmd, &opts)
+			if err := ds.Validate(); err != nil {
+				return err
+			}
+
+			err = c.getKubernetesContext(cmd, &opts)
 			if err != nil {
 				return err
 			}
@@ -137,7 +147,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: opts.profile},
 			}
 
-			_, err = c.source.CreateTrustZone(newTrustZone)
+			_, err = ds.CreateTrustZone(newTrustZone)
 			if err != nil {
 				return fmt.Errorf("failed to create trust zone %s: %s", newTrustZone.Name, err)
 			}
@@ -171,7 +181,12 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 		Long:  trustZoneStatusCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
+				return err
+			}
+
+			if err := ds.Validate(); err != nil {
 				return err
 			}
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
@@ -186,7 +201,12 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 }
 
 func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string) error {
-	trustZone, err := c.source.GetTrustZone(tzName)
+	ds, err := c.cmdCtx.PluginManager.GetPlugin()
+	if err != nil {
+		return err
+	}
+
+	trustZone, err := ds.GetTrustZone(tzName)
 	if err != nil {
 		return err
 	}

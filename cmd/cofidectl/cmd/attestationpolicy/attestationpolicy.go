@@ -7,8 +7,8 @@ import (
 	"os"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -16,12 +16,12 @@ import (
 )
 
 type AttestationPolicyCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmd_context.CommandContext
 }
 
-func NewAttestationPolicyCommand(source cofidectl_plugin.DataSource) *AttestationPolicyCommand {
+func NewAttestationPolicyCommand(cmdCtx *cmd_context.CommandContext) *AttestationPolicyCommand {
 	return &AttestationPolicyCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -54,11 +54,16 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
 				return err
 			}
 
-			attestationPolicies, err := c.source.ListAttestationPolicies()
+			if err := ds.Validate(); err != nil {
+				return err
+			}
+
+			attestationPolicies, err := ds.ListAttestationPolicies()
 			if err != nil {
 				return err
 			}
@@ -125,7 +130,12 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
+				return err
+			}
+
+			if err := ds.Validate(); err != nil {
 				return err
 			}
 
@@ -141,16 +151,16 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 				PodKey:    opts.attestationPolicyOpts.PodKey,
 				PodValue:  opts.attestationPolicyOpts.PodValue,
 			}
-			err = c.source.AddAttestationPolicy(newAttestationPolicy)
+			err = ds.AddAttestationPolicy(newAttestationPolicy)
 			if err != nil {
 				return err
 			}
 
-			trustZone, err := c.source.GetTrustZone(opts.trustZoneName)
+			trustZone, err := ds.GetTrustZone(opts.trustZoneName)
 			if err != nil {
 				return err
 			}
-			return c.source.BindAttestationPolicy(newAttestationPolicy, trustZone)
+			return ds.BindAttestationPolicy(newAttestationPolicy, trustZone)
 		},
 	}
 

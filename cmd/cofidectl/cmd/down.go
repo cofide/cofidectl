@@ -6,20 +6,19 @@ import (
 
 	"github.com/briandowns/spinner"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 type DownCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmd_context.CommandContext
 }
 
-func NewDownCommand(source cofidectl_plugin.DataSource) *DownCommand {
+func NewDownCommand(cmdCtx *cmd_context.CommandContext) *DownCommand {
 	return &DownCommand{
-		source: source,
-	}
+		cmdCtx: cmdCtx}
 }
 
 var downCmdDesc = `
@@ -33,11 +32,16 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 		Long:  downCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := d.source.Validate(); err != nil {
+			ds, err := d.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
 				return err
 			}
 
-			trustZones, err := d.source.ListTrustZones()
+			if err := ds.Validate(); err != nil {
+				return err
+			}
+
+			trustZones, err := ds.ListTrustZones()
 			if err != nil {
 				return err
 			}

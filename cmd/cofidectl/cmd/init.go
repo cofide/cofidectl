@@ -5,17 +5,19 @@ import (
 	"log"
 	"os"
 
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/spf13/cobra"
 )
 
 type InitCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *context.CommandContext
 }
 
-func NewInitCommand(source cofidectl_plugin.DataSource) *InitCommand {
+func NewInitCommand(cmdCtx *context.CommandContext) *InitCommand {
 	return &InitCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -36,13 +38,28 @@ func (i *InitCommand) GetRootCommand() *cobra.Command {
 		Long:  initRootCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if opts.enableConnect {
-				fmt.Println("👀 get in touch with us at hello@cofide.io to find out more")
-				os.Exit(1)
+			ds, err := i.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
+				return err
 			}
 
-			if err := i.source.Init(); err != nil {
+			if err := ds.Init(); err != nil {
 				log.Fatal(err)
+			}
+
+			if opts.enableConnect {
+				if ok, _ := plugin.PluginExists("cofidectl-connect"); ok {
+					if localDS, ok := ds.(*local.LocalDataSource); ok {
+						if err := localDS.AddPlugin("cofidectl-connect"); err != nil {
+							return fmt.Errorf("could not enable Connect plugin")
+						}
+						fmt.Println("cofidectl is now Connect-enabled")
+						return nil
+					}
+				} else {
+					fmt.Println("👀 get in touch with us at hello@cofide.io to find out more")
+					os.Exit(1)
+				}
 			}
 
 			return nil

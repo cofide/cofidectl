@@ -5,19 +5,19 @@ import (
 	"os"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/internal/pkg/workload"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type WorkloadCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmd_context.CommandContext
 }
 
-func NewWorkloadCommand(source cofidectl_plugin.DataSource) *WorkloadCommand {
+func NewWorkloadCommand(cmdCtx *cmd_context.CommandContext) *WorkloadCommand {
 	return &WorkloadCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -57,15 +57,20 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 			var err error
 			var trustZones []*trust_zone_proto.TrustZone
 
+			ds, err := w.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
+				return err
+			}
+
 			if opts.trustZone != "" {
-				trustZone, err := w.source.GetTrustZone(opts.trustZone)
+				trustZone, err := ds.GetTrustZone(opts.trustZone)
 				if err != nil {
 					return err
 				}
 
 				trustZones = append(trustZones, trustZone)
 			} else {
-				trustZones, err = w.source.ListTrustZones()
+				trustZones, err = ds.ListTrustZones()
 				if err != nil {
 					return err
 				}
