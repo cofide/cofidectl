@@ -16,7 +16,6 @@ import (
 type RootCommand struct {
 	source cofidectl_plugin.DataSource
 	args   []string
-	plugin string
 }
 
 var kubeCfgFile string
