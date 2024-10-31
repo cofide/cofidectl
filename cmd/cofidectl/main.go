@@ -13,9 +13,7 @@ import (
 )
 
 const (
-	localPlugin   = "local"
 	connectPlugin = "cofidectl-connect"
-	pluginPrefix  = "cofidectl-"
 )
 
 func Run() error {
@@ -23,7 +21,7 @@ func Run() error {
 	configLoader := config.NewFileLoader("cofide.yaml")
 	pluginManager := manager.NewManager(configLoader)
 
-	// Check if there is a plugin subcommand to execute
+	// Check if there is a plugin sub-command to execute
 	if len(os.Args) > 1 && strings.HasSuffix(connectPlugin, os.Args[1]) {
 		return plugin.ExecuteSubCommand(connectPlugin, os.Args[2:])
 	}
