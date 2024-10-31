@@ -122,7 +122,7 @@ func (u *UpCommand) watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) 
 			return fmt.Errorf("error in context %s: %v", trustZone.KubernetesContext, err)
 		}
 
-		trustZone.BundleEndpointUrl = clusterIP
+		trustZone.BundleEndpointUrl = fmt.Sprintf("https://%s:8443", clusterIP)
 
 		// obtain the bundle
 		bundle, err := getBundle(trustZone.KubernetesContext)
