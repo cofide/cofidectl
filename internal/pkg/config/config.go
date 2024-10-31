@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
+
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"github.com/cofide/cofidectl/pkg/plugin"
 )
 
 // Config describes the cofide.yaml configuration file format.
@@ -36,4 +39,13 @@ func (c *Config) GetAttestationPolicyByName(name string) (*attestation_policy_pr
 		}
 	}
 	return nil, false
+}
+
+func (c *Config) AddPlugin(name string) error {
+	if _, err := plugin.PluginExists(name); err != nil {
+		return fmt.Errorf("failed to find plugin %s in Cofide plugin path", name)
+	}
+	c.Plugins = append(c.Plugins, name)
+
+	return nil
 }

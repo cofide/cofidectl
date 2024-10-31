@@ -10,7 +10,6 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
-	"github.com/cofide/cofidectl/pkg/plugin"
 )
 
 type LocalDataSource struct {
@@ -227,18 +226,6 @@ func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy
 	} else {
 		return nil, fmt.Errorf("failed to find attestation policy %s in local config", id)
 	}
-}
-
-func (lds *LocalDataSource) AddPlugin(name string) error {
-	if _, err := plugin.PluginExists(name); err != nil {
-		return fmt.Errorf("failed to find plugin %s in Cofide plugin path", name)
-	}
-	lds.config.Plugins = append(lds.config.Plugins, name)
-
-	if err := lds.updateDataFile(); err != nil {
-		return fmt.Errorf("failed to add plugin to local config: %s", err)
-	}
-	return nil
 }
 
 func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) error {
