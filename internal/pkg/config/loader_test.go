@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	"github.com/cofide/cofidectl/internal/pkg/proto"
 )
 
 func TestFileLoaderImplementsLoader(t *testing.T) {
@@ -110,7 +110,7 @@ func TestFileLoaderNonEmptyConfig(t *testing.T) {
 	}
 
 	want := config
-	if diff := cmp.Diff(want, got, proto.IgnoreUnexported()); diff != "" {
+	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
 		t.Errorf("FileLoader.Read() mismatch (-want,+got):\n%s", diff)
 	}
 }
@@ -237,7 +237,7 @@ func TestMemoryLoaderNonEmptyConfig(t *testing.T) {
 	}
 
 	want := config
-	if diff := cmp.Diff(want, got, proto.IgnoreUnexported()); diff != "" {
+	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
 		t.Errorf("MemoryLoader.Read() mismatch (-want,+got):\n%s", diff)
 	}
 }
@@ -284,7 +284,7 @@ func TestMemoryLoaderInitialConfig(t *testing.T) {
 	}
 
 	want := config
-	if diff := cmp.Diff(want, got, proto.IgnoreUnexported()); diff != "" {
+	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
 		t.Errorf("MemoryLoader.Read() mismatch (-want,+got):\n%s", diff)
 	}
 }

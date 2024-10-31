@@ -5,9 +5,9 @@ import (
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	"github.com/cofide/cofidectl/internal/pkg/proto"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/testing/protocmp"
 	"gopkg.in/yaml.v3"
 )
 
@@ -92,7 +92,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error unmarshalling configuration from YAML: %v", err)
 			}
-			if diff := cmp.Diff(&got, &tt.want, proto.IgnoreUnexported()); diff != "" {
+			if diff := cmp.Diff(&got, &tt.want, protocmp.Transform()); diff != "" {
 				t.Errorf("yaml.Unmarshall() mismatch (-want,+got):\n%s", diff)
 			}
 		})
@@ -138,7 +138,7 @@ func TestConfig_GetTrustZoneByName(t *testing.T) {
 				TrustZones: tt.trustZones,
 			}
 			gotTz, gotOk := c.GetTrustZoneByName(tt.trustZone)
-			if diff := cmp.Diff(tt.wantTz, gotTz, proto.IgnoreUnexported()); diff != "" {
+			if diff := cmp.Diff(tt.wantTz, gotTz, protocmp.Transform()); diff != "" {
 				t.Errorf("Config.GetTrustZoneByName() mismatch (-want,+got):\n%s", diff)
 			}
 			if gotOk != tt.wantOk {
@@ -187,7 +187,7 @@ func TestConfig_GetAttestationPolicyByName(t *testing.T) {
 				AttestationPolicies: tt.policies,
 			}
 			gotAp, gotOk := c.GetAttestationPolicyByName(tt.policy)
-			if diff := cmp.Diff(tt.wantAp, gotAp, proto.IgnoreUnexported()); diff != "" {
+			if diff := cmp.Diff(tt.wantAp, gotAp, protocmp.Transform()); diff != "" {
 				t.Errorf("Config.GetAttestationPolicyByName() mismatch (-want,+got):\n%s", diff)
 			}
 			if gotOk != tt.wantOk {
