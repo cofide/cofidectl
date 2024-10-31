@@ -27,25 +27,25 @@ func TestPluginManager_GetPlugin_success(t *testing.T) {
 	tests := []struct {
 		name   string
 		config config.Config
-		want   func(config.Loader) []cofidectl_plugin.DataSource
+		want   func(config.Loader) cofidectl_plugin.DataSource
 	}{
 		{
 			name:   "empty",
 			config: config.Config{Plugins: []string{}},
-			want: func(cl config.Loader) []cofidectl_plugin.DataSource {
+			want: func(cl config.Loader) cofidectl_plugin.DataSource {
 				lds, err := local.NewLocalDataSource(cl)
 				if err != nil {
 					t.Fatalf("NewLocalDataSource() error = %v", err)
 				}
-				return []cofidectl_plugin.DataSource{lds}
+				return lds
 			},
 		},
 		{
 			name:   "connect",
 			config: config.Config{Plugins: []string{"cofidectl-connect-plugin"}},
-			want: func(cl config.Loader) []cofidectl_plugin.DataSource {
+			want: func(cl config.Loader) cofidectl_plugin.DataSource {
 				fcds := newFakeConnectDataSource(t, cl)
-				return []cofidectl_plugin.DataSource{fcds}
+				return fcds
 			},
 		},
 	}
