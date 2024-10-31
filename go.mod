@@ -21,7 +21,7 @@ require (
 )
 
 // Uncomment the following for development with local Cofide API SDK changes:
-// replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
+replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
