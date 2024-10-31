@@ -41,8 +41,6 @@ func (l *PluginManager) GetPlugin() (cofidectl_plugin.DataSource, error) {
 		pluginNames = cfg.Plugins
 	}
 
-	plugins := []cofidectl_plugin.DataSource{}
-
 	// If the Connect plugin is enabled use it in place of the local data source
 	for _, plugin := range pluginNames {
 		if plugin == "cofidectl-connect-plugin" {
@@ -64,16 +62,12 @@ func (l *PluginManager) GetPlugin() (cofidectl_plugin.DataSource, error) {
 	}
 
 	// If no plugins have been loaded, fall back to the local data source plugin.
-	if len(plugins) == 0 {
-		lds, err := local.NewLocalDataSource(l.configLoader)
-		if err != nil {
-			return nil, err
-		}
-
-		return lds, nil
+	lds, err := local.NewLocalDataSource(l.configLoader)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, nil
+	return lds, nil
 }
 
 func loadConnectPlugin(logger hclog.Logger) (cofidectl_plugin.DataSource, error) {

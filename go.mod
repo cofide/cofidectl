@@ -5,8 +5,8 @@ go 1.22.6
 require (
 	cuelang.org/go v0.10.0
 	github.com/cofide/cofide-api-sdk v0.1.0
-	github.com/google/go-cmp v0.6.0
 	github.com/gobeam/stringy v0.0.7
+	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/go-plugin v1.6.1
 	github.com/manifoldco/promptui v0.9.0
