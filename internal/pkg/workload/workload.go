@@ -89,12 +89,14 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDisc
 		return nil, err
 	}
 
+	var secretsMap map[string]WorkloadSecretMetadata
 	var secrets *v1.SecretList
 	if secretDiscovery {
 		secrets, err = client.Clientset.CoreV1().Secrets("").List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
+		secretsMap = analyseSecrets(secrets)
 	}
 
 	unregisteredWorkloads := []Workload{}
@@ -116,8 +118,7 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDisc
 
 			// Add related secrets (metadata) if secret discovery is enabled
 			if secretDiscovery {
-				secrets := analyseSecrets(secrets)
-				associateSecrets(&pod, unregisteredWorkload, secrets)
+				associateSecrets(&pod, unregisteredWorkload, secretsMap)
 			}
 
 			unregisteredWorkloads = append(unregisteredWorkloads, *unregisteredWorkload)
