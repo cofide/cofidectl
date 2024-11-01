@@ -1,45 +1,61 @@
 #Plugin: string
 
 #TrustZone: {
-	name: string
-	trustdomain: string
-	kubernetescluster: string
-	kubernetescontext: string
-	trustprovider: #TrustProvider
-	bundleendpointurl: string
-	bundle: string
+	name!: string
+	trust_domain!: string
+	kubernetes_cluster!: string
+	kubernetes_context!: string
+	trust_provider!: #TrustProvider
+	bundle_endpoint_url?: string
+	bundle?: string
 	federations: [...#Federation]
-	attestationpolicies: [...#APBinding]
+	attestation_policies: [...#APBinding]
 }
 
 #TrustProvider: {
-	name: string
-	kind: string
+	name?: string
+	kind!: string
 }
 
 #APBinding: {
-	trustzone: string
-	policy: string
-	federateswith: [...string]
+	trust_zone!: string
+	policy!: string
+	federates_with: [...string]
 }
 
 #AttestationPolicy: {
-	name: string
-	kind: int
-	namespace: string
-	podkey: string
-	podvalue: string
+	name!: string
+	#APKubernetes
+}
+
+#APKubernetes: {
+	kubernetes!: {
+		namespace_selector?: #APLabelSelector
+		pod_selector?: #APLabelSelector
+	}
+}
+
+#APLabelSelector: {
+	match_labels?:
+		[string]: string
+	match_expressions?: [...#APMatchExpression]
+}
+
+#APMatchExpression: {
+	key!: string
+	operator!: string
+	values!: [...string]
 }
 
 #Federation: {
-	left: string
-	right: string
+	left!: string
+	right!: string
 }
 
 #Config: {
 	plugins: [...#Plugin]
-	trustzones: [...#TrustZone]
-	attestationpolicies: [...#AttestationPolicy]
+	trust_zones: [...#TrustZone]
+	attestation_policies: [...#AttestationPolicy]
 }
 
 #Config

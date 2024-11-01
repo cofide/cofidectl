@@ -9,6 +9,7 @@ import (
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust_zone_proto.TrustZone{
@@ -62,15 +63,30 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 
 var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPolicy = map[string]*attestation_policy_proto.AttestationPolicy{
 	"ap1": {
-		Name:      "ap1",
-		Kind:      2,
-		Namespace: "ns1",
+		Name: "ap1",
+		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
+			Kubernetes: &attestation_policy_proto.APKubernetes{
+				NamespaceSelector: &attestation_policy_proto.APLabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": "ns1"},
+				},
+			},
+		},
 	},
 	"ap2": {
-		Name:     "ap2",
-		Kind:     1,
-		PodKey:   "foo",
-		PodValue: "bar",
+		Name: "ap2",
+		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
+			Kubernetes: &attestation_policy_proto.APKubernetes{
+				PodSelector: &attestation_policy_proto.APLabelSelector{
+					MatchExpressions: []*attestation_policy_proto.APMatchExpression{
+						{
+							Key:      "foo",
+							Operator: string(metav1.LabelSelectorOpIn),
+							Values:   []string{"bar"},
+						},
+					},
+				},
+			},
+		},
 	},
 }
 

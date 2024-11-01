@@ -1,8 +1,9 @@
 package config
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestValidator_ValidateValid(t *testing.T) {
@@ -49,33 +50,33 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 		},
 		{
 			name:    "trust zones not a list",
-			data:    "trustzones: \"not-a-list\"",
-			wantErr: "trustzones: conflicting values \"not-a-list\" and [...#TrustZone]",
+			data:    "trust_zones: \"not-a-list\"",
+			wantErr: "trust_zones: conflicting values \"not-a-list\" and [...#TrustZone]",
 		},
 		{
 			name:    "attestation policies not a list",
-			data:    "attestationpolicies: \"not-a-list\"",
-			wantErr: "attestationpolicies: conflicting values \"not-a-list\" and [...#AttestationPolicy]",
+			data:    "attestation_policies: \"not-a-list\"",
+			wantErr: "attestation_policies: conflicting values \"not-a-list\" and [...#AttestationPolicy]",
 		},
 		{
 			name:    "unexpected trust zone field",
-			data:    "trustzones: [foo: bar]",
-			wantErr: "trustzones.0.foo: field not allowed",
+			data:    "trust_zones: [foo: bar]",
+			wantErr: "trust_zones.0.foo: field not allowed",
 		},
 		{
 			name:    "unexpected attestation policy field",
-			data:    "attestationpolicies: [foo: bar]",
-			wantErr: "attestationpolicies.0.foo: field not allowed",
+			data:    "attestation_policies: [foo: bar]",
+			wantErr: "attestation_policies.0.foo: field not allowed",
 		},
 		{
 			name:    "missing trust zone field",
 			data:    string(readTestConfig(t, "missing_trust_zone_field.yaml")),
-			wantErr: "trustzones.0.name: incomplete value string",
+			wantErr: "trust_zones.0.name: field is required but not present",
 		},
 		{
 			name:    "missing attestation policy field",
 			data:    string(readTestConfig(t, "missing_attestation_policy_field.yaml")),
-			wantErr: "attestationpolicies.0.namespace: incomplete value string",
+			wantErr: "attestation_policies.0.kubernetes: field is required but not present",
 		},
 	}
 	for _, tt := range tests {
@@ -83,8 +84,8 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			v := NewValidator()
 			if err := v.Validate([]byte(tt.data)); err == nil {
 				t.Fatal("Validator.Validate() did not return error")
-			} else if !strings.Contains(err.Error(), tt.wantErr) {
-				t.Errorf("Validator.Validate() error string = %v, wantErr %v", err.Error(), tt.wantErr)
+			} else {
+				assert.Contains(t, err.Error(), tt.wantErr)
 			}
 		})
 	}

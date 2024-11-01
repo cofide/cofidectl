@@ -1,7 +1,9 @@
 package config
 
 import (
+	"buf.build/go/protoyaml"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	config_proto "github.com/cofide/cofide-api-sdk/gen/proto/config/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 )
 
@@ -18,6 +20,43 @@ func NewConfig() *Config {
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 	}
+}
+
+func newConfigFromProto(proto *config_proto.Config) *Config {
+	return &Config{
+		Plugins:             proto.Plugins,
+		TrustZones:          proto.TrustZones,
+		AttestationPolicies: proto.AttestationPolicies,
+	}
+}
+
+func (c *Config) toProto() *config_proto.Config {
+	return &config_proto.Config{
+		Plugins:             c.Plugins,
+		TrustZones:          c.TrustZones,
+		AttestationPolicies: c.AttestationPolicies,
+	}
+}
+
+func (c *Config) marshalYAML() ([]byte, error) {
+	// Convert the Config to the config_proto.Config message to allow marshalling with protoyaml.
+	proto := c.toProto()
+	options := protoyaml.MarshalOptions{UseProtoNames: true}
+	return options.Marshal((*config_proto.Config)(proto))
+
+}
+
+func unmarshalYAML(data []byte) (*Config, error) {
+	proto := config_proto.Config{
+		Plugins:             []string{},
+		TrustZones:          []*trust_zone_proto.TrustZone{},
+		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+	}
+	err := protoyaml.Unmarshal(data, &proto)
+	if err != nil {
+		return nil, err
+	}
+	return newConfigFromProto(&proto), nil
 }
 
 func (c *Config) GetTrustZoneByName(name string) (*trust_zone_proto.TrustZone, bool) {

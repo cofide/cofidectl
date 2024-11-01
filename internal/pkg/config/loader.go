@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
-	"gopkg.in/yaml.v3"
 )
 
 // Loader provides an interface to read and write a `Config`.
@@ -44,7 +42,7 @@ func (fl *FileLoader) Read() (*Config, error) {
 }
 
 func (fl *FileLoader) Write(config *Config) error {
-	data, err := yaml.Marshal(config)
+	data, err := config.marshalYAML()
 	if err != nil {
 		return fmt.Errorf("error marshalling configuration to YAML: %w", err)
 	}
@@ -93,7 +91,7 @@ func (ml *MemoryLoader) Read() (*Config, error) {
 }
 
 func (ml *MemoryLoader) Write(config *Config) error {
-	data, err := yaml.Marshal(config)
+	data, err := config.marshalYAML()
 	if err != nil {
 		return fmt.Errorf("error marshalling configuration to YAML: %w", err)
 	}
@@ -107,8 +105,8 @@ func validatedRead(data []byte, validator *Validator) (*Config, error) {
 		return nil, err
 	}
 
-	config := NewConfig()
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	config, err := unmarshalYAML(data)
+	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling configuration from YAML: %s", err)
 	}
 	return config, nil

@@ -1,17 +1,14 @@
 package attestationpolicy
 
 import (
-	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
-	"github.com/gobeam/stringy"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type AttestationPolicyCommand struct {
@@ -62,124 +59,166 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 				return err
 			}
 
-			data := make([][]string, len(attestationPolicies))
-			for i, policy := range attestationPolicies {
-				kind, err := attestationpolicy.GetAttestationPolicyKindString(policy.Kind)
-				if err != nil {
-					return err
-				}
-				data[i] = []string{
-					policy.Name,
-					kind,
-					policy.Namespace,
-					policy.PodKey,
-					policy.PodValue,
-				}
-			}
-
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Kind", "Namespace", "Pod Key", "Pod Value"})
-			table.SetBorder(false)
-			table.AppendBulk(data)
-			table.Render()
-			return nil
+			return renderPolicies(attestationPolicies)
 		},
 	}
 
 	return cmd
 }
 
+// renderPolicies writes a table showing information about a list of attestation policies.
+func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) error {
+	data := make([][]string, len(policies))
+	for i, policy := range policies {
+		switch p := policy.Policy.(type) {
+		case *attestation_policy_proto.AttestationPolicy_Kubernetes:
+			kubernetes := p.Kubernetes
+			namespaceSelector := formatLabelSelector(kubernetes.NamespaceSelector)
+			podSelector := formatLabelSelector(kubernetes.PodSelector)
+			data[i] = []string{
+				policy.Name,
+				"kubernetes",
+				namespaceSelector,
+				podSelector,
+			}
+		default:
+			return fmt.Errorf("unexpected attestation policy type %T", policy)
+		}
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Kind", "Namespace Labels", "Pod Labels"})
+	table.SetBorder(false)
+	table.AppendBulk(data)
+	table.Render()
+	return nil
+}
+
+// formatLabelSelector formats a Kubernetes label selector as a string.
+func formatLabelSelector(selector *attestation_policy_proto.APLabelSelector) string {
+	k8sSelector := apLabelSelectorToK8sLS(selector)
+	if k8sSelector == nil {
+		return ""
+	}
+	return metav1.FormatLabelSelector(k8sSelector)
+}
+
+// apLabelSelectorToK8sLS converts an `APLabelSelector` to a Kubernetes `LabelSelector`.
+func apLabelSelectorToK8sLS(selector *attestation_policy_proto.APLabelSelector) *metav1.LabelSelector {
+	if selector == nil {
+		return nil
+	}
+
+	k8sSelector := &metav1.LabelSelector{
+		MatchLabels:      selector.MatchLabels,
+		MatchExpressions: make([]metav1.LabelSelectorRequirement, 0, len(selector.MatchExpressions)),
+	}
+	for _, expression := range selector.MatchExpressions {
+		expression := metav1.LabelSelectorRequirement{
+			Key:      expression.Key,
+			Operator: metav1.LabelSelectorOperator(expression.Operator),
+			Values:   expression.Values,
+		}
+		k8sSelector.MatchExpressions = append(k8sSelector.MatchExpressions, expression)
+	}
+	return k8sSelector
+}
+
 var attestationPolicyAddCmdDesc = `
-This command will add a new attestation policy to the Cofide configuration state.
+This command consists of multiple sub-commands to add new attestation policies to the Cofide configuration state.
 `
 
-type Opts struct {
-	kind                  string
-	attestationPolicyOpts AttestationPolicyOpts
-}
-
-type AttestationPolicyOpts struct {
-	Name string
-
-	// annotated
-	PodKey   string
-	PodValue string
-
-	// namespace
-	Namespace string
-}
-
 func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
-	opts := Opts{}
 	cmd := &cobra.Command{
-		Use:   "add [KIND]",
-		Short: "Add a new attestation policy",
+		Use:   "add kubernetes [ARGS]",
+		Short: "Add attestation policies",
 		Long:  attestationPolicyAddCmdDesc,
-		Args:  cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			str := stringy.New(args[0])
-			opts.kind = str.KebabCase().ToLower()
+		Args:  cobra.NoArgs,
+	}
 
-			if !validateOpts(opts) {
-				return errors.New("unset flags for attestation policy")
-			}
+	cmd.AddCommand(c.GetAddK8sCommand())
+	return cmd
+}
 
-			return nil
-		},
+var attestationPolicyAddK8sCmdDesc = `
+This command will add a new Kubernetes attestation policy to the Cofide configuration state.
+`
+
+type AddK8sOpts struct {
+	name      string
+	namespace string
+	podLabel  string
+}
+
+func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
+	opts := AddK8sOpts{}
+	cmd := &cobra.Command{
+		Use:   "kubernetes [ARGS]",
+		Short: "Add a new kubernetes attestation policy",
+		Long:  attestationPolicyAddK8sCmdDesc,
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := c.source.Validate(); err != nil {
 				return err
 			}
 
-			kind, err := attestationpolicy.GetAttestationPolicyKind(opts.kind)
-			if err != nil {
-				return err
+			kubernetes := &attestation_policy_proto.APKubernetes{}
+			if opts.namespace != "" {
+				kubernetes.NamespaceSelector = &attestation_policy_proto.APLabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": opts.namespace},
+				}
 			}
-
+			if opts.podLabel != "" {
+				selector, err := parseLabelSelector(opts.podLabel)
+				if err != nil {
+					return err
+				}
+				kubernetes.PodSelector = selector
+			}
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
-				Kind:      kind,
-				Name:      opts.attestationPolicyOpts.Name,
-				Namespace: opts.attestationPolicyOpts.Namespace,
-				PodKey:    opts.attestationPolicyOpts.PodKey,
-				PodValue:  opts.attestationPolicyOpts.PodValue,
+				Name: opts.name,
+				Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
+					Kubernetes: kubernetes,
+				},
 			}
 			return c.source.AddAttestationPolicy(newAttestationPolicy)
 		},
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.attestationPolicyOpts.Name, "name", "", "Name to use for the attestation policy")
-	f.StringVar(&opts.attestationPolicyOpts.Namespace, "namespace", "", "Namespace to use in Namespace attestation policy")
-	f.StringVar(&opts.attestationPolicyOpts.PodKey, "annotation-key", "", "Key of Pod annotation to use in Annotated attestation policy")
-	f.StringVar(&opts.attestationPolicyOpts.PodValue, "annotation-value", "", "Value of Pod annotation to use in Annotated attestation policy")
+	f.StringVar(&opts.name, "name", "", "Name to use for the attestation policy")
+	f.StringVar(&opts.namespace, "namespace", "", "Namespace name selector")
+	f.StringVar(&opts.podLabel, "pod-label", "", "Pod label selector in Kubernetes label selector format")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("name"))
 
 	return cmd
 }
 
-func validateOpts(opts Opts) bool {
-	if opts.kind == "namespace" && opts.attestationPolicyOpts.Namespace == "" {
-		slog.Error("flag \"namespace\" must be provided for Namespace attestation policy kind")
-		return false
+// parseLabelSelector parses a Kubernetes label selector from a string.
+// See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors.
+func parseLabelSelector(selector string) (*attestation_policy_proto.APLabelSelector, error) {
+	k8sSelector, err := metav1.ParseToLabelSelector(selector)
+	if err != nil {
+		return nil, fmt.Errorf("--pod-label argument \"%s\" invalid: %w", selector, err)
 	}
-
-	if opts.kind == "annotated" && (opts.attestationPolicyOpts.PodKey == "" || opts.attestationPolicyOpts.PodValue == "") {
-		slog.Error("flags \"annotation-key\" and \"annotation-value\" must be provided for annotated attestation policy kind")
-		return false
-	}
-
-	return true
+	return apLabelSelectorFromK8sLS(k8sSelector), nil
 }
 
-func GetAttestationPolicyKind(s string) (attestation_policy_proto.AttestationPolicyKind, error) {
-	switch s {
-	case "annotated":
-		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
-	case "namespace":
-		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
+// apLabelSelectorFromK8sLS converts a Kubernetes `LabelSelector` to an `APLabelSelector`.
+func apLabelSelectorFromK8sLS(k8sSelector *metav1.LabelSelector) *attestation_policy_proto.APLabelSelector {
+	selector := &attestation_policy_proto.APLabelSelector{
+		MatchLabels:      k8sSelector.MatchLabels,
+		MatchExpressions: make([]*attestation_policy_proto.APMatchExpression, 0, len(k8sSelector.MatchExpressions)),
 	}
 
-	// TODO: Update error message.
-	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf("unknown attestation policy kind %s", s)
+	for _, expression := range k8sSelector.MatchExpressions {
+		expression := &attestation_policy_proto.APMatchExpression{
+			Key:      expression.Key,
+			Operator: string(expression.Operator),
+			Values:   expression.Values,
+		}
+		selector.MatchExpressions = append(selector.MatchExpressions, expression)
+	}
+	return selector
 }

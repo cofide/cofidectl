@@ -1,13 +1,13 @@
-trustzones:
-    - trustdomain: td1
-      kubernetescluster: local1
-      kubernetescontext: kind-local1
-      trustprovider:
+trust_zones:
+    - trust_domain: td1
+      kubernetes_cluster: local1
+      kubernetes_context: kind-local1
+      trust_provider:
         name: ""
         kind: kubernetes
-      bundleendpointurl: 127.0.0.1
+      bundle_endpoint_url: 127.0.0.1
       bundle: ""
       federations:
         - left: tz1
           right: tz2
-      attestationpolicies: []
+      attestation_policies: []

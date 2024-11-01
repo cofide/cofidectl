@@ -1,48 +1,47 @@
-plugins:
-    - test-plugin
-trustzones:
+trust_zones:
     - name: tz1
-      trustdomain: td1
-      kubernetescluster: local1
-      kubernetescontext: kind-local1
-      trustprovider:
-        name: ""
+      trust_domain: td1
+      kubernetes_cluster: local1
+      kubernetes_context: kind-local1
+      trust_provider:
         kind: kubernetes
-      bundleendpointurl: 127.0.0.1
-      bundle: ""
+      bundle_endpoint_url: 127.0.0.1
       federations:
         - left: tz1
           right: tz2
-      attestationpolicies:
-        - trustzone: tz1
+      attestation_policies:
+        - trust_zone: tz1
           policy: ap1
-          federateswith:
+          federates_with:
             - tz2
     - name: tz2
-      trustdomain: td2
-      kubernetescluster: local2
-      kubernetescontext: kind-local2
-      trustprovider:
-        name: ""
+      trust_domain: td2
+      kubernetes_cluster: local2
+      kubernetes_context: kind-local2
+      trust_provider:
         kind: kubernetes
-      bundleendpointurl: 127.0.0.2
-      bundle: ""
+      bundle_endpoint_url: 127.0.0.2
       federations:
         - left: tz2
           right: tz1
-      attestationpolicies:
-        - trustzone: tz2
+      attestation_policies:
+        - trust_zone: tz2
           policy: ap2
-          federateswith:
+          federates_with:
             - tz1
-attestationpolicies:
+attestation_policies:
     - name: ap1
-      kind: 2
-      podkey: ""
-      podvalue: ""
-      namespace: ns1
+      kubernetes:
+        namespace_selector:
+            match_labels:
+                kubernetes.io/metadata.name: ns1
     - name: ap2
-      kind: 1
-      podkey: foo
-      podvalue: bar
-      namespace: ""
+      kubernetes:
+        pod_selector:
+            match_expressions:
+                - key: foo
+                  operator: In
+                  values:
+                    - bar
+plugins:
+    - test-plugin
