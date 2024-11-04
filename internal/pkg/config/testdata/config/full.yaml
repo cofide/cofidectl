@@ -1,0 +1,48 @@
+plugins:
+    - test-plugin
+trustzones:
+    - name: tz1
+      trustdomain: td1
+      kubernetescluster: local1
+      kubernetescontext: kind-local1
+      trustprovider:
+        name: ""
+        kind: kubernetes
+      bundleendpointurl: 127.0.0.1
+      bundle: ""
+      federations:
+        - left: tz1
+          right: tz2
+      attestationpolicies:
+        - trustzone: tz1
+          policy: ap1
+          federateswith:
+            - tz2
+    - name: tz2
+      trustdomain: td2
+      kubernetescluster: local2
+      kubernetescontext: kind-local2
+      trustprovider:
+        name: ""
+        kind: kubernetes
+      bundleendpointurl: 127.0.0.2
+      bundle: ""
+      federations:
+        - left: tz2
+          right: tz1
+      attestationpolicies:
+        - trustzone: tz2
+          policy: ap2
+          federateswith:
+            - tz1
+attestationpolicies:
+    - name: ap1
+      kind: 2
+      podkey: ""
+      podvalue: ""
+      namespace: ns1
+    - name: ap2
+      kind: 1
+      podkey: foo
+      podvalue: bar
+      namespace: ""

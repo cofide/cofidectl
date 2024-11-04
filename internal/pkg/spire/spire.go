@@ -57,15 +57,8 @@ func GetServerStatus(ctx context.Context, client *kubeutil.Client) (*ServerStatu
 		return nil, err
 	}
 
-	containers, err := getServerContainers(pods)
-	if err != nil {
-		return nil, err
-	}
-
-	scms, err := getSCMContainers(pods)
-	if err != nil {
-		return nil, err
-	}
+	containers := getServerContainers(pods)
+	scms := getSCMContainers(pods)
 
 	status := &ServerStatus{
 		Replicas:      int(*statefulset.Spec.Replicas),
@@ -91,7 +84,7 @@ func getPodsForStatefulSet(ctx context.Context, client *kubeutil.Client, statefu
 }
 
 // getServerContainers queries the pods in a SPIRE server statefulset and returns a slice of `ServerContainers`.
-func getServerContainers(pods *v1.PodList) ([]ServerContainer, error) {
+func getServerContainers(pods *v1.PodList) []ServerContainer {
 	serverContainers := []ServerContainer{}
 	for _, pod := range pods.Items {
 		for _, container := range pod.Status.ContainerStatuses {
@@ -103,11 +96,11 @@ func getServerContainers(pods *v1.PodList) ([]ServerContainer, error) {
 			}
 		}
 	}
-	return serverContainers, nil
+	return serverContainers
 }
 
 // getSCMContainers queries the pods in a SPIRE server statefulset and returns a slice of `SCMContainers`.
-func getSCMContainers(pods *v1.PodList) ([]SCMContainer, error) {
+func getSCMContainers(pods *v1.PodList) []SCMContainer {
 	controllerManagers := []SCMContainer{}
 	for _, pod := range pods.Items {
 		for _, container := range pod.Status.ContainerStatuses {
@@ -119,7 +112,7 @@ func getSCMContainers(pods *v1.PodList) ([]SCMContainer, error) {
 			}
 		}
 	}
-	return controllerManagers, nil
+	return controllerManagers
 }
 
 // AgentStatus contains status information about a running cluster of SPIRE agents.

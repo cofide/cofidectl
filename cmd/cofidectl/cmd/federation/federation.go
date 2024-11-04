@@ -3,8 +3,6 @@ package federation
 import (
 	"os"
 
-	"helm.sh/helm/v3/cmd/helm/require"
-
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 
@@ -96,7 +94,7 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		Use:   "add",
 		Short: "Add a new federation",
 		Long:  federationAddCmdDesc,
-		Args:  require.NoArgs,
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := c.source.Validate(); err != nil {
 				return err
