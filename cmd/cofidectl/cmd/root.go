@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/apbinding"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/attestationpolicy"
 	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/federation"
@@ -40,18 +41,20 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 
 	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 
-	initCmd := NewInitCommand(r.cmdCtx)
-	upCmd := NewUpCommand(r.cmdCtx)
-	downCmd := NewDownCommand(r.cmdCtx)
-	tzCmd := trustzone.NewTrustZoneCommand(r.cmdCtx)
-	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.cmdCtx)
-	fedCmd := federation.NewFederationCommand(r.cmdCtx)
-	wlCmd := workload.NewWorkloadCommand(r.cmdCtx)
+	initCmd := NewInitCommand(r.source)
+	upCmd := NewUpCommand(r.source)
+	downCmd := NewDownCommand(r.source)
+	tzCmd := trustzone.NewTrustZoneCommand(r.source)
+	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
+	apbCmd := apbinding.NewAPBindingCommand(r.source)
+	fedCmd := federation.NewFederationCommand(r.source)
+	wlCmd := workload.NewWorkloadCommand(r.source)
 
 	cmd.AddCommand(
 		initCmd.GetRootCommand(),
 		tzCmd.GetRootCommand(),
 		apCmd.GetRootCommand(),
+		apbCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
 		wlCmd.GetRootCommand(),
 		upCmd.UpCmd(),

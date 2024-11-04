@@ -9,6 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
 
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
@@ -85,13 +86,13 @@ func TestFileLoaderNonEmptyConfig(t *testing.T) {
 			TrustProvider: &trust_provider_proto.TrustProvider{},
 			// NOTE: The zero value for these slices is nil, but the YAML unmarshaller creates empty slices
 			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+			AttestationPolicies: []*ap_binding_proto.APBinding{},
 		},
 		{
 			Name:                "tz2",
 			TrustProvider:       &trust_provider_proto.TrustProvider{},
 			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+			AttestationPolicies: []*ap_binding_proto.APBinding{},
 		},
 	}
 	config.AttestationPolicies = []*attestation_policy_proto.AttestationPolicy{
@@ -212,13 +213,13 @@ func TestMemoryLoaderNonEmptyConfig(t *testing.T) {
 			TrustProvider: &trust_provider_proto.TrustProvider{},
 			// NOTE: The zero value for these slices is nil, but the YAML unmarshaller creates empty slices
 			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+			AttestationPolicies: []*ap_binding_proto.APBinding{},
 		},
 		{
 			Name:                "tz2",
 			TrustProvider:       &trust_provider_proto.TrustProvider{},
 			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+			AttestationPolicies: []*ap_binding_proto.APBinding{},
 		},
 	}
 	config.AttestationPolicies = []*attestation_policy_proto.AttestationPolicy{
@@ -252,13 +253,13 @@ func TestMemoryLoaderInitialConfig(t *testing.T) {
 			TrustProvider: &trust_provider_proto.TrustProvider{},
 			// NOTE: The zero value for these slices is nil, but the YAML unmarshaller creates empty slices
 			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+			AttestationPolicies: []*ap_binding_proto.APBinding{},
 		},
 		{
 			Name:                "tz2",
 			TrustProvider:       &trust_provider_proto.TrustProvider{},
 			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+			AttestationPolicies: []*ap_binding_proto.APBinding{},
 		},
 	}
 	config.AttestationPolicies = []*attestation_policy_proto.AttestationPolicy{

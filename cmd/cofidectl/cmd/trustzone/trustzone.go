@@ -37,7 +37,7 @@ This command consists of multiple sub-commands to administer Cofide trust zones.
 
 func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "trust-zone add|list [ARGS]",
+		Use:   "trust-zone add|list|status [ARGS]",
 		Short: "Add, list or interact with trust zones",
 		Long:  trustZoneRootCmdDesc,
 		Args:  cobra.NoArgs,
@@ -233,10 +233,29 @@ func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string
 		return err
 	}
 
-	return renderStatus(server, agents)
+	return renderStatus(trustZone, server, agents)
 }
 
-func renderStatus(server *spire.ServerStatus, agents *spire.AgentStatus) error {
+func renderStatus(trustZone *trust_zone_proto.TrustZone, server *spire.ServerStatus, agents *spire.AgentStatus) error {
+	trustZoneData := [][]string{
+		{
+			"Trust Zone",
+			trustZone.Name,
+		},
+		{
+			"SPIRE Servers ready",
+			fmt.Sprintf("%d/%d", server.ReadyReplicas, server.Replicas),
+		},
+		{
+			"SPIRE Agents ready",
+			fmt.Sprintf("%d/%d", agents.Ready, agents.Expected),
+		},
+		{
+			"Bundle Endpoint",
+			trustZone.BundleEndpointUrl,
+		},
+	}
+
 	serverData := make([][]string, 0)
 	for _, container := range server.Containers {
 		serverData = append(serverData, []string{
@@ -272,35 +291,35 @@ func renderStatus(server *spire.ServerStatus, agents *spire.AgentStatus) error {
 		})
 	}
 
-	fmt.Printf("SPIRE Servers (%d/%d ready)\n", server.ReadyReplicas, server.Replicas)
-	fmt.Println()
+	fmt.Printf("Trust Zone\n\n")
 	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Item", "Value"})
+	table.SetBorder(false)
+	table.AppendBulk(trustZoneData)
+	table.Render()
+
+	fmt.Printf("\nSPIRE Servers\n\n")
+	table = tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Pod", "Ready"})
 	table.SetBorder(false)
 	table.AppendBulk(serverData)
 	table.Render()
 
-	fmt.Println()
-	fmt.Printf("SPIRE Controller Managers (%d/%d ready)\n", server.ReadyReplicas, server.Replicas)
-	fmt.Println()
+	fmt.Printf("\nSPIRE Controller Managers\n\n")
 	table = tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Pod", "Ready"})
 	table.SetBorder(false)
 	table.AppendBulk(scmData)
 	table.Render()
 
-	fmt.Println()
-	fmt.Printf("SPIRE Agents (%d/%d ready)\n", agents.Ready, agents.Expected)
-	fmt.Println()
+	fmt.Printf("\nSPIRE Agents\n\n")
 	table = tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Pod", "Status", "Attestation type", "Expiration time", "Can re-attest"})
 	table.SetBorder(false)
 	table.AppendBulk(agentData)
 	table.Render()
 
-	fmt.Println()
-	fmt.Println("SPIRE Agents SPIFFE IDs")
-	fmt.Println()
+	fmt.Printf("\nSPIRE Agents SPIFFE IDs\n\n")
 	table = tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Pod", "SPIFFE ID"})
 	table.SetBorder(false)

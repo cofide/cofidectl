@@ -72,8 +72,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	// add attestation policies as ClusterSPIFFEIDs to be reconcilced by spire-controller-manager
 	if len(g.trustZone.AttestationPolicies) > 0 {
 		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = false
-		for _, ap := range g.trustZone.AttestationPolicies {
-			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."%s"`, ap.Name)] = attestationpolicy.NewAttestationPolicy(ap).GetHelmConfig()
+		for _, binding := range g.trustZone.AttestationPolicies {
+			policy, err := g.source.GetAttestationPolicy(binding.Policy)
+			if err != nil {
+				return nil, err
+			}
+			clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+			if err != nil {
+				return nil, err
+			}
+			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."%s"`, policy.Name)] = clusterSPIFFEIDs
 		}
 	} else {
 		// defaults to true
@@ -82,13 +90,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 
 	// add federations as clusterFederatedTrustDomains to be reconcilced by spire-controller-manager
 	if len(g.trustZone.Federations) > 0 {
-		spireServerValues[`"spire-server"."federation"."enabled"`] = true
 		for _, fed := range g.trustZone.Federations {
 			tz, err := g.source.GetTrustZone(fed.Right)
 			if err != nil {
 				return nil, err
 			}
-			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.Right)] = federation.NewFederation(tz).GetHelmConfig()
+			if tz.BundleEndpointUrl != "" {
+				spireServerValues[`"spire-server"."federation"."enabled"`] = true
+				config := federation.NewFederation(tz).GetHelmConfig()
+				spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.Right)] = config
+			}
 		}
 	}
 

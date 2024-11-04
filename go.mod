@@ -4,7 +4,8 @@ go 1.22.6
 
 require (
 	cuelang.org/go v0.10.0
-	github.com/cofide/cofide-api-sdk v0.1.0
+	github.com/cofide/cofide-api-sdk v0.1.1-0.20241031103059-0784faa49dae
+	github.com/fatih/color v1.13.0
 	github.com/gobeam/stringy v0.0.7
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-hclog v0.14.1
@@ -56,7 +57,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
-	github.com/fatih/color v1.13.0
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect

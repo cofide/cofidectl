@@ -9,12 +9,18 @@
 	bundleendpointurl: string
 	bundle: string
 	federations: [...#Federation]
-	attestationpolicies: [...#AttestationPolicy]
+	attestationpolicies: [...#APBinding]
 }
 
 #TrustProvider: {
 	name: string
 	kind: string
+}
+
+#APBinding: {
+	trustzone: string
+	policy: string
+	federateswith: [...string]
 }
 
 #AttestationPolicy: {
