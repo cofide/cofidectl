@@ -1,81 +1,41 @@
 package workload
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"log/slog"
-	"strings"
+	"time"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
-	"github.com/spiffe/spire-api-sdk/proto/spire/api/types"
+	"github.com/cofide/cofidectl/internal/pkg/spire"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/kubectl/pkg/scheme"
 )
 
-const (
-	k8sSelectorType         = "k8s"
-	k8sPodUIDSelectorPrefix = "pod-uid:"
-)
-
-type RegisteredWorkload struct {
-	Name      string
-	Namespace string
-	SPIFFEID  string
-	Status    string
-	Type      string
+type Workload struct {
+	Name             string
+	Namespace        string
+	SPIFFEID         string
+	Status           string
+	Type             string
+	NumSecrets       int
+	NumSecretsAtRisk int
 }
 
-type registrationEntry struct {
-	Selectors []*types.Selector `json:"selectors"`
-	SPIFFEID  *types.SPIFFEID   `json:"spiffe_id"`
+type WorkloadSecretMetadata struct {
+	AtRisk bool
+	Age    time.Duration
 }
 
-type registrationEntries struct {
-	Entries []registrationEntry
-}
-
-func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]RegisteredWorkload, error) {
+// GetRegisteredWorkloads will find all workloads that are registered
+func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Workload, error) {
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, kubeContext)
 	if err != nil {
 		return nil, err
 	}
 
-	registrationEntries, err := getRegistrationEntries(context.Background(), client)
+	registeredEntries, err := spire.GetRegistrationEntries(context.Background(), client)
 	if err != nil {
 		return nil, err
-	}
-
-	registrationEntriesMap := make(map[string]string)
-
-	for _, registrationEntry := range registrationEntries {
-		var podUID string
-
-		spiffeID := fmt.Sprintf("spiffe://%s%s", registrationEntry.SPIFFEID.TrustDomain, registrationEntry.SPIFFEID.Path)
-
-		selectors := registrationEntry.Selectors
-		if len(selectors) == 0 {
-			continue
-		}
-
-		for _, selector := range selectors {
-			if selector.Type == k8sSelectorType {
-				if !strings.HasPrefix(selector.Value, k8sPodUIDSelectorPrefix) {
-					slog.Warn(fmt.Sprintf("failed to find the k8s:pod-uid selector value for workload with workload id: %s", spiffeID))
-					continue
-				}
-				podUID = strings.TrimPrefix(selector.Value, k8sPodUIDSelectorPrefix)
-			}
-		}
-
-		if podUID == "" {
-			continue
-		}
-
-		registrationEntriesMap[podUID] = spiffeID
 	}
 
 	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
@@ -83,15 +43,15 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 		return nil, err
 	}
 
-	registeredWorkloads := []RegisteredWorkload{}
+	registeredWorkloads := []Workload{}
 
 	for _, pod := range pods.Items {
-		spiffeID, ok := registrationEntriesMap[string(pod.UID)]
+		registeredEntry, ok := registeredEntries[string(pod.UID)]
 		if ok {
-			registeredWorkload := &RegisteredWorkload{
+			registeredWorkload := &Workload{
 				Name:      pod.Name,
 				Namespace: pod.Namespace,
-				SPIFFEID:  spiffeID,
+				SPIFFEID:  registeredEntry.Id.String(),
 				Status:    string(pod.Status.Phase),
 				Type:      "Pod",
 			}
@@ -103,49 +63,131 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Registered
 	return registeredWorkloads, nil
 }
 
-func getRegistrationEntries(ctx context.Context, client *kubeutil.Client) ([]registrationEntry, error) {
-	podExecOpts := &v1.PodExecOptions{
-		Command:   []string{"/opt/spire/bin/spire-server", "entry", "show", "-output", "json"},
-		Container: "spire-server",
-		Stdin:     true,
-		Stdout:    true,
-		Stderr:    true,
+// GetUnregisteredWorkloads will discover workloads in a Kubernetes cluster that are not (yet) registered
+func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDiscovery bool) ([]Workload, error) {
+	// Includes the initial Kubernetes namespaces.
+	ignoredNamespaces := map[string]int{
+		"kube-node-lease":    1,
+		"kube-public":        2,
+		"kube-system":        3,
+		"local-path-storage": 4,
+		"spire":              5,
 	}
 
-	request := client.Clientset.CoreV1().
-		RESTClient().
-		Post().
-		Namespace("spire").
-		Resource("pods").
-		Name("spire-server-0").
-		SubResource("exec").
-		VersionedParams(podExecOpts, scheme.ParameterCodec)
-
-	exec, err := remotecommand.NewSPDYExecutor(client.RestConfig, "POST", request.URL())
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
 	if err != nil {
 		return nil, err
 	}
 
-	stdin := &bytes.Buffer{}
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-
-	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdin:  stdin,
-		Stdout: stdout,
-		Stderr: stderr,
-	})
+	registeredEntries, err := spire.GetRegistrationEntries(context.Background(), client)
 	if err != nil {
 		return nil, err
 	}
 
-	parsedRegistrationEntries := &registrationEntries{}
-	err = json.Unmarshal(stdout.Bytes(), parsedRegistrationEntries)
+	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	registrationEntries := parsedRegistrationEntries.Entries
+	var secretsMap map[string]WorkloadSecretMetadata
+	var secrets *v1.SecretList
+	if secretDiscovery {
+		secrets, err = client.Clientset.CoreV1().Secrets("").List(context.Background(), metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		secretsMap = analyseSecrets(secrets)
+	}
 
-	return registrationEntries, nil
+	unregisteredWorkloads := []Workload{}
+
+	for _, pod := range pods.Items {
+		_, ok := ignoredNamespaces[pod.Namespace]
+		if ok {
+			continue
+		}
+
+		_, ok = registeredEntries[string(pod.UID)]
+		if !ok {
+			unregisteredWorkload := &Workload{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+				Status:    string(pod.Status.Phase),
+				Type:      "Pod",
+			}
+
+			// Add related secrets (metadata) if secret discovery is enabled
+			if secretDiscovery {
+				associateSecrets(&pod, unregisteredWorkload, secretsMap)
+			}
+
+			unregisteredWorkloads = append(unregisteredWorkloads, *unregisteredWorkload)
+		}
+	}
+
+	return unregisteredWorkloads, nil
+}
+
+func isAtRisk(creationTS time.Time) (time.Duration, bool) {
+	// Consider secrets older than 30 days as long-lived and a source for potential risk
+	age := time.Since(creationTS)
+	if age > 30*24*time.Hour {
+		return age, true
+	}
+	return age, false
+}
+
+func analyseSecrets(secrets *v1.SecretList) map[string]WorkloadSecretMetadata {
+	// Analyse the metadata for all secrets and determine the age
+	workloadSecrets := make(map[string]WorkloadSecretMetadata)
+	for _, secret := range secrets.Items {
+		key := fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
+		age, atRisk := isAtRisk(secret.CreationTimestamp.Time)
+		workloadSecrets[key] = WorkloadSecretMetadata{
+			AtRisk: atRisk,
+			Age:    age,
+		}
+	}
+	return workloadSecrets
+}
+
+func associateSecrets(pod *v1.Pod, workload *Workload, secrets map[string]WorkloadSecretMetadata) {
+	// Check secrets mounted in pod volumes
+	for _, volume := range pod.Spec.Volumes {
+		if volume.Secret != nil {
+			key := fmt.Sprintf("%s/%s", pod.Namespace, volume.Secret.SecretName)
+			if secret, exists := secrets[key]; exists {
+				workload.NumSecrets++
+				if secret.AtRisk {
+					workload.NumSecretsAtRisk++
+				}
+			}
+		}
+	}
+
+	// Check secrets used in environment variables
+	for _, container := range pod.Spec.Containers {
+		for _, env := range container.EnvFrom {
+			if env.SecretRef != nil {
+				key := fmt.Sprintf("%s/%s", pod.Namespace, env.SecretRef.Name)
+				if secret, exists := secrets[key]; exists {
+					workload.NumSecrets++
+					if secret.AtRisk {
+						workload.NumSecretsAtRisk++
+					}
+				}
+			}
+		}
+		for _, env := range container.Env {
+			if env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil {
+				key := fmt.Sprintf("%s/%s", pod.Namespace, env.ValueFrom.SecretKeyRef.Name)
+				if secret, exists := secrets[key]; exists {
+					workload.NumSecrets++
+					if secret.AtRisk {
+						workload.NumSecretsAtRisk++
+					}
+				}
+			}
+		}
+	}
 }
