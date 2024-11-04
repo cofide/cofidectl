@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/apbinding"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/attestationpolicy"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/federation"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
@@ -47,6 +48,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	downCmd := NewDownCommand(r.source)
 	tzCmd := trustzone.NewTrustZoneCommand(r.source)
 	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
+	apbCmd := apbinding.NewAPBindingCommand(r.source)
 	fedCmd := federation.NewFederationCommand(r.source)
 	wlCmd := workload.NewWorkloadCommand(r.source)
 
@@ -54,6 +56,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		initCmd.GetRootCommand(),
 		tzCmd.GetRootCommand(),
 		apCmd.GetRootCommand(),
+		apbCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
 		wlCmd.GetRootCommand(),
 		upCmd.UpCmd(),
