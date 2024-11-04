@@ -14,8 +14,10 @@ import (
 )
 
 const (
-	k8sPsatSelectorType  = "k8s_psat"
-	agentPodNameSelector = "agent_pod_name:"
+	k8sPsatSelectorType     = "k8s_psat"
+	agentPodNameSelector    = "agent_pod_name:"
+	k8sSelectorType         = "k8s"
+	k8sPodUIDSelectorPrefix = "pod-uid:"
 )
 
 // execInServerContainer executes a command in the SPIRE server container.
@@ -94,4 +96,22 @@ func getPodNameSelector(agent agentJson) string {
 		}
 	}
 	return "unknown"
+}
+
+type entryListJson struct {
+	Entries []entryJson `json:"entries"`
+}
+
+type entryJson struct {
+	Selectors []*types.Selector `json:"selectors"`
+	Id        *types.SPIFFEID   `json:"spiffe_id"`
+}
+
+func parseEntryList(output []byte) (*entryListJson, error) {
+	entries := &entryListJson{}
+	err := json.Unmarshal(output, entries)
+	if err != nil {
+		return nil, err
+	}
+	return entries, nil
 }
