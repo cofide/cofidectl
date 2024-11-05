@@ -1,4 +1,6 @@
-// Package proto provides utilities for cofide-api-sdk protobuf types.
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package proto
 
 import (

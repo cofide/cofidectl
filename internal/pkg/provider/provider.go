@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package provider
 
 // WorkloadIdentityProvider is the interface to drive downstream workload identity methodologies for the Cofide stack
