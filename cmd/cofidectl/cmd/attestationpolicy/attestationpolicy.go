@@ -181,7 +181,12 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 					Kubernetes: kubernetes,
 				},
 			}
-			return c.source.AddAttestationPolicy(newAttestationPolicy)
+			err := c.source.AddAttestationPolicy(newAttestationPolicy)
+			cobra.CheckErr(err)
+			if opts.namespace == "" && opts.podLabel == "" {
+				fmt.Println("This attestation policy will provide identity to all workloads in this trust domain")
+			}
+			return nil
 		},
 	}
 
