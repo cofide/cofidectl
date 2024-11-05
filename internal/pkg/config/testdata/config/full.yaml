@@ -43,5 +43,29 @@ attestation_policies:
                   operator: In
                   values:
                     - bar
+    - name: ap3
+      kubernetes:
+        namespace_selector:
+            match_labels:
+                kubernetes.io/metadata.name: ns3
+        pod_selector:
+            match_labels:
+                label1: value1
+                label2: value2
+            match_expressions:
+                - key: foo
+                  operator: In
+                  values:
+                    - bar
+                    - baz
+                - key: foo
+                  operator: NotIn
+                  values:
+                    - qux
+                    - quux
+                - key: bar
+                  operator: Exists
+                - key: baz
+                  operator: DoesNotExist
 plugins:
     - test-plugin

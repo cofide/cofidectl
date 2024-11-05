@@ -44,7 +44,7 @@
 #APMatchExpression: {
 	key!: string
 	operator!: string
-	values!: [...string]
+	values: [...string]
 }
 
 #Federation: {

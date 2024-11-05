@@ -88,6 +88,39 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 			},
 		},
 	},
+	"ap3": {
+		Name: "ap3",
+		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
+			Kubernetes: &attestation_policy_proto.APKubernetes{
+				NamespaceSelector: &attestation_policy_proto.APLabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": "ns3"},
+				},
+				PodSelector: &attestation_policy_proto.APLabelSelector{
+					MatchLabels: map[string]string{"label1": "value1", "label2": "value2"},
+					MatchExpressions: []*attestation_policy_proto.APMatchExpression{
+						{
+							Key:      "foo",
+							Operator: string(metav1.LabelSelectorOpIn),
+							Values:   []string{"bar", "baz"},
+						},
+						{
+							Key:      "foo",
+							Operator: string(metav1.LabelSelectorOpNotIn),
+							Values:   []string{"qux", "quux"},
+						},
+						{
+							Key:      "bar",
+							Operator: string(metav1.LabelSelectorOpExists),
+						},
+						{
+							Key:      "baz",
+							Operator: string(metav1.LabelSelectorOpDoesNotExist),
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 func TrustZone(name string) *trust_zone_proto.TrustZone {

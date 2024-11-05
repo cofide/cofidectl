@@ -34,6 +34,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
+					fixtures.AttestationPolicy("ap3"),
 				},
 			},
 			wantFile: "full.yaml",
@@ -79,6 +80,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
+					fixtures.AttestationPolicy("ap3"),
 				},
 			},
 		},
