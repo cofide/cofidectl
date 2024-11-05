@@ -41,14 +41,14 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 
 	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 
-	initCmd := NewInitCommand(r.source)
-	upCmd := NewUpCommand(r.source)
-	downCmd := NewDownCommand(r.source)
-	tzCmd := trustzone.NewTrustZoneCommand(r.source)
-	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
-	apbCmd := apbinding.NewAPBindingCommand(r.source)
-	fedCmd := federation.NewFederationCommand(r.source)
-	wlCmd := workload.NewWorkloadCommand(r.source)
+	initCmd := NewInitCommand(r.cmdCtx)
+	upCmd := NewUpCommand(r.cmdCtx)
+	downCmd := NewDownCommand(r.cmdCtx)
+	tzCmd := trustzone.NewTrustZoneCommand(r.cmdCtx)
+	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.cmdCtx)
+	apbCmd := apbinding.NewAPBindingCommand(r.cmdCtx)
+	fedCmd := federation.NewFederationCommand(r.cmdCtx)
+	wlCmd := workload.NewWorkloadCommand(r.cmdCtx)
 
 	cmd.AddCommand(
 		initCmd.GetRootCommand(),

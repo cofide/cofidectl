@@ -153,7 +153,7 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 				PodKey:    opts.attestationPolicyOpts.PodKey,
 				PodValue:  opts.attestationPolicyOpts.PodValue,
 			}
-			return c.source.AddAttestationPolicy(newAttestationPolicy)
+			return ds.AddAttestationPolicy(newAttestationPolicy)
 		},
 	}
 

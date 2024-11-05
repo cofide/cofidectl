@@ -57,17 +57,17 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 		Long:  workloadListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := w.source.Validate(); err != nil {
-				return err
-			}
-
 			var err error
-			var trustZones []*trust_zone_proto.TrustZone
-
 			ds, err := w.cmdCtx.PluginManager.GetPlugin()
 			if err != nil {
 				return err
 			}
+
+			if err := ds.Validate(); err != nil {
+				return err
+			}
+
+			var trustZones []*trust_zone_proto.TrustZone
 
 			if opts.trustZone != "" {
 				trustZone, err := ds.GetTrustZone(opts.trustZone)
@@ -154,22 +154,27 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 		Long:  workloadDiscoverCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := w.source.Validate(); err != nil {
+			var err error
+			ds, err := w.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
 				return err
 			}
 
-			var err error
+			if err := ds.Validate(); err != nil {
+				return err
+			}
+
 			var trustZones []*trust_zone_proto.TrustZone
 
 			if opts.trustZone != "" {
-				trustZone, err := w.source.GetTrustZone(opts.trustZone)
+				trustZone, err := ds.GetTrustZone(opts.trustZone)
 				if err != nil {
 					return err
 				}
 
 				trustZones = append(trustZones, trustZone)
 			} else {
-				trustZones, err = w.source.ListTrustZones()
+				trustZones, err = ds.ListTrustZones()
 				if err != nil {
 					return err
 				}

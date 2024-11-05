@@ -26,6 +26,26 @@ func NewManager(configLoader config.Loader) *PluginManager {
 	}
 }
 
+func (l *PluginManager) Init(pluginName string) (cofidectl_plugin.DataSource, error) {
+	//first check that the config exists
+	//if it doesn't create it
+	if exists, _ := l.configLoader.Exists(); !exists {
+
+	}
+
+	cfg, err := l.configLoader.Read()
+	if err != nil {
+		return nil, fmt.Errorf("could not open local config")
+	}
+	cfg.Plugins = append(cfg.Plugins, pluginName)
+	err = l.configLoader.Write(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("could not init plugin")
+	}
+
+	return nil, nil
+}
+
 func (l *PluginManager) GetPlugin() (cofidectl_plugin.DataSource, error) {
 	exists, err := l.configLoader.Exists()
 	if err != nil {

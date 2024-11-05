@@ -6,18 +6,21 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type APBindingCommand struct {
+	cmdCtx *cmd_context.CommandContext
 	source cofidectl_plugin.DataSource
 }
 
-func NewAPBindingCommand(source cofidectl_plugin.DataSource) *APBindingCommand {
+func NewAPBindingCommand(cmdCtx *cmd_context.CommandContext) *APBindingCommand {
 	return &APBindingCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -58,7 +61,11 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 		Long:  apBindingListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
+				return err
+			}
+			if err := ds.Validate(); err != nil {
 				return err
 			}
 			bindings, err := c.list(opts)
