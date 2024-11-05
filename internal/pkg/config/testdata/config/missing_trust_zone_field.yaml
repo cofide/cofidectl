@@ -8,6 +8,6 @@ trust_zones:
       bundle_endpoint_url: 127.0.0.1
       bundle: ""
       federations:
-        - left: tz1
-          right: tz2
+        - from: tz1
+          to: tz2
       attestation_policies: []

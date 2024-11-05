@@ -7,8 +7,8 @@ trust_zones:
         kind: kubernetes
       bundle_endpoint_url: 127.0.0.1
       federations:
-        - left: tz1
-          right: tz2
+        - from: tz1
+          to: tz2
       attestation_policies:
         - trust_zone: tz1
           policy: ap1
@@ -22,8 +22,8 @@ trust_zones:
         kind: kubernetes
       bundle_endpoint_url: 127.0.0.2
       federations:
-        - left: tz2
-          right: tz1
+        - from: tz2
+          to: tz1
       attestation_policies:
         - trust_zone: tz2
           policy: ap2

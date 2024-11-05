@@ -24,8 +24,8 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl: "127.0.0.1",
 		Federations: []*federation_proto.Federation{
 			{
-				Left:  "tz1",
-				Right: "tz2",
+				From: "tz1",
+				To:   "tz2",
 			},
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
@@ -47,8 +47,8 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl: "127.0.0.2",
 		Federations: []*federation_proto.Federation{
 			{
-				Left:  "tz2",
-				Right: "tz1",
+				From: "tz2",
+				To:   "tz1",
 			},
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
