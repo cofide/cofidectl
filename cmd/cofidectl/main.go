@@ -31,7 +31,6 @@ func Run() error {
 
 	cmdCtx := &context.CommandContext{
 		PluginManager: pluginManager,
-		ConfigLoader:  configLoader,
 	}
 
 	rootCmd, err := cmd.NewRootCommand(cmdCtx).GetRootCommand()
