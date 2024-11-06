@@ -35,7 +35,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	serverConfig := tp.ServerConfig
 
 	globalValues := map[string]interface{}{
-		"global.spire.clusterName":              g.trustZone.KubernetesCluster,
+		"global.spire.clusterName":              g.trustZone.GetKubernetesCluster(),
 		"global.spire.trustDomain":              g.trustZone.TrustDomain,
 		"global.spire.recommendations.create":   true,
 		"global.installAndUpgradeHooks.enabled": false,
@@ -95,7 +95,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			if tz.BundleEndpointUrl != "" {
+			if tz.GetBundleEndpointUrl() != "" {
 				spireServerValues[`"spire-server"."federation"."enabled"`] = true
 				config := federation.NewFederation(tz).GetHelmConfig()
 				spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.To)] = config

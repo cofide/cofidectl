@@ -16,12 +16,12 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 	"tz1": {
 		Name:              "tz1",
 		TrustDomain:       "td1",
-		KubernetesCluster: "local1",
-		KubernetesContext: "kind-local1",
+		KubernetesCluster: stringPtr("local1"),
+		KubernetesContext: stringPtr("kind-local1"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: "kubernetes",
+			Kind: stringPtr("kubernetes"),
 		},
-		BundleEndpointUrl: "127.0.0.1",
+		BundleEndpointUrl: stringPtr("127.0.0.1"),
 		Federations: []*federation_proto.Federation{
 			{
 				From: "tz1",
@@ -39,12 +39,12 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 	"tz2": {
 		Name:              "tz2",
 		TrustDomain:       "td2",
-		KubernetesCluster: "local2",
-		KubernetesContext: "kind-local2",
+		KubernetesCluster: stringPtr("local2"),
+		KubernetesContext: stringPtr("kind-local2"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: "kubernetes",
+			Kind: stringPtr("kubernetes"),
 		},
-		BundleEndpointUrl: "127.0.0.2",
+		BundleEndpointUrl: stringPtr("127.0.0.2"),
 		Federations: []*federation_proto.Federation{
 			{
 				From: "tz2",
@@ -145,4 +145,8 @@ func AttestationPolicy(name string) *attestation_policy_proto.AttestationPolicy 
 		panic(fmt.Sprintf("failed to clone attestation policy: %s", err))
 	}
 	return ap
+}
+
+func stringPtr(s string) *string {
+	return &s
 }

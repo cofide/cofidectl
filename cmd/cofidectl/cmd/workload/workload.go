@@ -106,7 +106,7 @@ func renderRegisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetRegisteredWorkloads(kubeConfig, trustZone.KubernetesContext)
+		registeredWorkloads, err := workload.GetRegisteredWorkloads(kubeConfig, trustZone.GetKubernetesContext())
 		if err != nil {
 			return err
 		}
@@ -199,7 +199,7 @@ func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_pro
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.KubernetesContext, includeSecrets)
+		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.GetKubernetesContext(), includeSecrets)
 		if err != nil {
 			return err
 		}

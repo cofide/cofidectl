@@ -113,25 +113,26 @@ func (u *UpCommand) watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) 
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Suffix = fmt.Sprintf(" Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.KubernetesCluster)
+		s.Suffix = fmt.Sprintf(" Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
 		s.Start()
 
-		clusterIP, err := watchSPIREPodAndService(trustZone.KubernetesContext)
+		clusterIP, err := watchSPIREPodAndService(trustZone.GetKubernetesContext())
 		if err != nil {
 			s.Stop()
-			return fmt.Errorf("error in context %s: %v", trustZone.KubernetesContext, err)
+			return fmt.Errorf("error in context %s: %v", trustZone.GetKubernetesContext(), err)
 		}
 
-		trustZone.BundleEndpointUrl = fmt.Sprintf("https://%s:8443", clusterIP)
+		bundleEndpointUrl := fmt.Sprintf("https://%s:8443", clusterIP)
+		trustZone.BundleEndpointUrl = &bundleEndpointUrl
 
 		// obtain the bundle
-		bundle, err := getBundle(trustZone.KubernetesContext)
+		bundle, err := getBundle(trustZone.GetKubernetesContext())
 		if err != nil {
 			s.Stop()
-			return fmt.Errorf("error obtaining bundle in context %s: %v", trustZone.KubernetesContext, err)
+			return fmt.Errorf("error obtaining bundle in context %s: %v", trustZone.GetKubernetesContext(), err)
 		}
 
-		trustZone.Bundle = bundle
+		trustZone.Bundle = &bundle
 
 		if err := u.source.UpdateTrustZone(trustZone); err != nil {
 			return fmt.Errorf("failed to update trust zone %s: %w", trustZone.Name, err)
@@ -139,7 +140,7 @@ func (u *UpCommand) watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) 
 
 		s.Stop()
 		green := color.New(color.FgGreen).SprintFunc()
-		fmt.Printf("%s All SPIRE server pods and services are ready for %s in cluster %s\n\n", green("✅"), trustZone.Name, trustZone.KubernetesCluster)
+		fmt.Printf("%s All SPIRE server pods and services are ready for %s in cluster %s\n\n", green("✅"), trustZone.Name, trustZone.GetKubernetesCluster())
 	}
 
 	if err := u.applyPostInstallHelmConfig(trustZones); err != nil {

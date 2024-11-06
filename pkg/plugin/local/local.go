@@ -169,7 +169,13 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 }
 
 func validateTrustProviderUpdate(tzName string, current, new *trust_provider_proto.TrustProvider) error {
-	if new.Kind != current.Kind {
+	if current == nil {
+		return fmt.Errorf("no trust provider in existing trust zone %s", tzName)
+	}
+	if new == nil {
+		return fmt.Errorf("cannot remove trust provider for trust zone %s", tzName)
+	}
+	if new.GetKind() != current.GetKind() {
 		return fmt.Errorf("cannot update trust provider kind for existing trust zone %s", tzName)
 	}
 	return nil
