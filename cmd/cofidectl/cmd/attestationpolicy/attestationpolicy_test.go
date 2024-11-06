@@ -3,7 +3,7 @@ package attestationpolicy
 import (
 	"testing"
 
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"

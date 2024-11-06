@@ -3,7 +3,7 @@ package federation
 import (
 	"os"
 
-	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 
 	"github.com/olekukonko/tablewriter"

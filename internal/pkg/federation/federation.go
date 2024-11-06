@@ -3,7 +3,7 @@ package federation
 import (
 	"fmt"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 )
 
 type Federation struct {

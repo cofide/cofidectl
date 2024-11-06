@@ -6,7 +6,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"

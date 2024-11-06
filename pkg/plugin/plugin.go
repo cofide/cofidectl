@@ -3,7 +3,7 @@ package plugin
 import (
 	"context"
 
-	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/proto/cofidectl_plugin/v1"
+	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 )

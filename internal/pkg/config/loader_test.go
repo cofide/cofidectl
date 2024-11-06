@@ -9,8 +9,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
 
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 )
 

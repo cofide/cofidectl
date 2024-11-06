@@ -9,7 +9,7 @@ import (
 
 	"github.com/briandowns/spinner"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/fatih/color"
 	v1 "k8s.io/api/core/v1"

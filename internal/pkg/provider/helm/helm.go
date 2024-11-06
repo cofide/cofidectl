@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
 
 	"helm.sh/helm/v3/pkg/action"

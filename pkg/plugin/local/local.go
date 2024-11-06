@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"slices"
 
-	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
-	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
+	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
 )
