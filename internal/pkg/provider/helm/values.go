@@ -9,7 +9,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -38,7 +38,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	serverConfig := tp.ServerConfig
 
 	globalValues := map[string]interface{}{
-		"global.spire.clusterName":              g.trustZone.KubernetesCluster,
+		"global.spire.clusterName":              g.trustZone.GetKubernetesCluster(),
 		"global.spire.trustDomain":              g.trustZone.TrustDomain,
 		"global.spire.recommendations.create":   true,
 		"global.installAndUpgradeHooks.enabled": false,
@@ -98,7 +98,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			if tz.BundleEndpointUrl != "" {
+			if tz.GetBundleEndpointUrl() != "" {
 				spireServerValues[`"spire-server"."federation"."enabled"`] = true
 				config := federation.NewFederation(tz).GetHelmConfig()
 				spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.To)] = config

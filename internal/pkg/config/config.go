@@ -5,9 +5,9 @@ package config
 
 import (
 	"buf.build/go/protoyaml"
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	config_proto "github.com/cofide/cofide-api-sdk/gen/proto/config/v1"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	config_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/config/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 )
 
 // Config describes the cofide.yaml configuration file format.

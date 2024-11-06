@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/workload"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
@@ -109,7 +109,7 @@ func renderRegisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetRegisteredWorkloads(kubeConfig, trustZone.KubernetesContext)
+		registeredWorkloads, err := workload.GetRegisteredWorkloads(kubeConfig, trustZone.GetKubernetesContext())
 		if err != nil {
 			return err
 		}
@@ -202,7 +202,7 @@ func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_pro
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.KubernetesContext, includeSecrets)
+		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.GetKubernetesContext(), includeSecrets)
 		if err != nil {
 			return err
 		}
