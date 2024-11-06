@@ -87,12 +87,12 @@ func TestManager_GetPlugin_failure(t *testing.T) {
 		{
 			name:    "empty",
 			config:  config.Config{DataSource: ""},
-			wantErr: "only local and cofidectl-connect-plugin plugins are currently supported",
+			wantErr: "only local and cofidectl-connect plugins are currently supported",
 		},
 		{
 			name:    "invalid plugin",
 			config:  config.Config{DataSource: "invalid"},
-			wantErr: "only local and cofidectl-connect-plugin plugins are currently supported",
+			wantErr: "only local and cofidectl-connect plugins are currently supported",
 		},
 		{
 			name:    "connect plugin load failure",

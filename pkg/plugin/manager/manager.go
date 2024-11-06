@@ -17,7 +17,7 @@ import (
 
 const (
 	LocalPluginName   = "local"
-	ConnectPluginName = "cofidectl-connect-plugin"
+	ConnectPluginName = "cofidectl-connect"
 )
 
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.

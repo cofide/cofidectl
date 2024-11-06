@@ -4,8 +4,8 @@
 package plugin
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -35,16 +35,32 @@ func GetPluginDir() (string, error) {
 	return filepath.Join(usr.HomeDir, relativePluginDir), nil
 }
 
-// ExecuteSubCommand handles the execution of a subprocess with timeout and cleanup
-func ExecuteSubCommand(binary string, args []string) error {
-	cmd := &SubCommand{
+func PluginExists(name string) (bool, error) {
+	pluginDir, err := GetPluginDir()
+	if err != nil {
+		return false, err
+	}
+
+	pluginPath := filepath.Join(pluginDir, name)
+
+	if _, err := os.Stat(pluginPath); errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func NewSubCommand(binary string, args []string) *SubCommand {
+	return &SubCommand{
 		BinaryName: binary,
 		Args:       args,
 		Timeout:    defaultTimeout,
 	}
-	return cmd.Execute()
 }
 
+// Execute handles the execution of a subprocess with timeout and cleanup
 func (s *SubCommand) Execute() error {
 	pluginDir, err := GetPluginDir()
 	if err != nil {
@@ -81,9 +97,8 @@ func (s *SubCommand) Execute() error {
 		}
 	}()
 
-	var buf bytes.Buffer
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
 	err = cmd.Run()
 	signal.Stop(sigChan)
@@ -94,9 +109,6 @@ func (s *SubCommand) Execute() error {
 		}
 		return fmt.Errorf("error executing %s: %w", s.BinaryName, err)
 	}
-
-	output := buf.String()
-	fmt.Println(output)
 
 	return nil
 }
