@@ -1,5 +1,2 @@
-attestationpolicies:
+attestation_policies:
     - name: ap1
-      kind: 2
-      podkey: ""
-      podvalue: ""

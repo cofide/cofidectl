@@ -7,25 +7,25 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/testing/protocmp"
-	"gopkg.in/yaml.v3"
 )
 
 func TestConfig_YAMLMarshall(t *testing.T) {
 	// Ensure that the YAML representation of Config is as expected.
 	tests := []struct {
 		name     string
-		config   Config
+		config   *Config
 		wantFile string
 	}{
 		{
 			name:     "default",
-			config:   Config{},
+			config:   &Config{},
 			wantFile: "default.yaml",
 		},
 		{
 			name: "full",
-			config: Config{
+			config: &Config{
 				Plugins: []string{"test-plugin"},
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
@@ -34,6 +34,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
+					fixtures.AttestationPolicy("ap3"),
 				},
 			},
 			wantFile: "full.yaml",
@@ -41,14 +42,12 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := yaml.Marshal(&tt.config)
+			got, err := tt.config.marshalYAML()
 			if err != nil {
 				t.Fatalf("error marshalling configuration to YAML: %v", err)
 			}
 			want := readTestConfig(t, tt.wantFile)
-			if diff := cmp.Diff(want, got); diff != "" {
-				t.Errorf("yaml.Marshall(config) mismatch (-want,+got):\n%s", diff)
-			}
+			assert.Equal(t, string(want), string(got))
 		})
 	}
 }
@@ -58,12 +57,13 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 	tests := []struct {
 		name string
 		file string
-		want Config
+		want *Config
 	}{
 		{
 			name: "default",
 			file: "default.yaml",
-			want: Config{
+			want: &Config{
+				Plugins:             []string{},
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 			},
@@ -71,7 +71,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 		{
 			name: "full",
 			file: "full.yaml",
-			want: Config{
+			want: &Config{
 				Plugins: []string{"test-plugin"},
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
@@ -80,19 +80,19 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
+					fixtures.AttestationPolicy("ap3"),
 				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var got Config
 			yamlConfig := readTestConfig(t, tt.file)
-			err := yaml.Unmarshal([]byte(yamlConfig), &got)
+			got, err := unmarshalYAML(yamlConfig)
 			if err != nil {
 				t.Fatalf("error unmarshalling configuration from YAML: %v", err)
 			}
-			if diff := cmp.Diff(&got, &tt.want, protocmp.Transform()); diff != "" {
+			if diff := cmp.Diff(got, tt.want, protocmp.Transform()); diff != "" {
 				t.Errorf("yaml.Unmarshall() mismatch (-want,+got):\n%s", diff)
 			}
 		})

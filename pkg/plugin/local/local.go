@@ -155,7 +155,7 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 	if new.TrustDomain != current.TrustDomain {
 		return fmt.Errorf("cannot update trust domain for existing trust zone %s", current.Name)
 	}
-	if err := validateTrustProviderUpdate(current.TrustProvider, new.TrustProvider); err != nil {
+	if err := validateTrustProviderUpdate(current.Name, current.TrustProvider, new.TrustProvider); err != nil {
 		return err
 	}
 	// The following should be updated though other means.
@@ -168,12 +168,9 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 	return nil
 }
 
-func validateTrustProviderUpdate(current, new *trust_provider_proto.TrustProvider) error {
-	if new.Name != current.Name {
-		return fmt.Errorf("cannot update trust provider name for existing trust zone %s", current.Name)
-	}
+func validateTrustProviderUpdate(tzName string, current, new *trust_provider_proto.TrustProvider) error {
 	if new.Kind != current.Kind {
-		return fmt.Errorf("cannot update trust provider kind for existing trust zone %s", current.Name)
+		return fmt.Errorf("cannot update trust provider kind for existing trust zone %s", tzName)
 	}
 	return nil
 }
