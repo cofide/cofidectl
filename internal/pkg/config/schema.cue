@@ -48,8 +48,8 @@
 }
 
 #Federation: {
-	left!: string
-	right!: string
+	from!: string
+	to!: string
 }
 
 #Config: {

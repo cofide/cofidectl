@@ -217,7 +217,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) er
 
 	remoteTzs := map[string]bool{}
 	for _, federation := range localTrustZone.Federations {
-		remoteTzs[federation.Right] = true
+		remoteTzs[federation.To] = true
 	}
 	for _, remoteTz := range binding.FederatesWith {
 		if remoteTz == binding.TrustZone {
@@ -262,23 +262,23 @@ func (lds *LocalDataSource) ListAPBindingsByTrustZone(name string) ([]*ap_bindin
 }
 
 func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) error {
-	leftTrustZone, ok := lds.config.GetTrustZoneByName(federationProto.Left)
+	fromTrustZone, ok := lds.config.GetTrustZoneByName(federationProto.From)
 	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.Left)
+		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.From)
 	}
 
-	_, ok = lds.config.GetTrustZoneByName(federationProto.Right)
+	_, ok = lds.config.GetTrustZoneByName(federationProto.To)
 	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.Right)
+		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.To)
 	}
 
-	if federationProto.Left == federationProto.Right {
-		return fmt.Errorf("cannot federate trust zone %s with itself", federationProto.Left)
+	if federationProto.From == federationProto.To {
+		return fmt.Errorf("cannot federate trust zone %s with itself", federationProto.From)
 	}
 
-	for _, federation := range leftTrustZone.Federations {
-		if federation.Right == federationProto.Right {
-			return fmt.Errorf("federation already exists between %s and %s", federationProto.Left, federationProto.Right)
+	for _, federation := range fromTrustZone.Federations {
+		if federation.To == federationProto.To {
+			return fmt.Errorf("federation already exists between %s and %s", federationProto.From, federationProto.To)
 		}
 	}
 
@@ -287,7 +287,7 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		return err
 	}
 
-	leftTrustZone.Federations = append(leftTrustZone.Federations, federationProto)
+	fromTrustZone.Federations = append(fromTrustZone.Federations, federationProto)
 
 	if err := lds.updateDataFile(); err != nil {
 		return fmt.Errorf("failed to add federation to local config: %s", err)

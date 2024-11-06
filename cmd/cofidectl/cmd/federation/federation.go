@@ -61,14 +61,14 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			data := make([][]string, len(federations))
 			for i, federation := range federations {
 				data[i] = []string{
-					federation.Left,
-					federation.Right,
+					federation.From,
+					federation.To,
 					"Healthy", // TODO
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Source Trust Zone", "Destination Trust Zone", "Status"})
+			table.SetHeader([]string{"From Trust Zone", "To Trust Zone", "Status"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -84,8 +84,8 @@ This command will add a new federation to the Cofide configuration state.
 `
 
 type Opts struct {
-	left  string
-	right string
+	from string
+	to   string
 }
 
 func (c *FederationCommand) GetAddCommand() *cobra.Command {
@@ -101,19 +101,19 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 			}
 
 			newFederation := &federation_proto.Federation{
-				Left:  opts.left,
-				Right: opts.right,
+				From: opts.from,
+				To:   opts.to,
 			}
 			return c.source.AddFederation(newFederation)
 		},
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.left, "left", "", "Trust zone to federate")
-	f.StringVar(&opts.right, "right", "", "Trust zone to federate")
+	f.StringVar(&opts.from, "from", "", "Trust zone to federate from")
+	f.StringVar(&opts.to, "to", "", "Trust zone to federate to")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("left"))
-	cobra.CheckErr(cmd.MarkFlagRequired("right"))
+	cobra.CheckErr(cmd.MarkFlagRequired("from"))
+	cobra.CheckErr(cmd.MarkFlagRequired("to"))
 
 	return cmd
 }
