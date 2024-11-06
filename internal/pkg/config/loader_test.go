@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package config
 
 import (
@@ -9,11 +12,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
 
-	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
-	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 )
 
 func TestFileLoaderImplementsLoader(t *testing.T) {
@@ -81,23 +82,12 @@ func TestFileLoaderNonEmptyConfig(t *testing.T) {
 	config := NewConfig()
 	config.Plugins = []string{"plugin1", "plugin2"}
 	config.TrustZones = []*trust_zone_proto.TrustZone{
-		{
-			Name:          "tz1",
-			TrustProvider: &trust_provider_proto.TrustProvider{},
-			// NOTE: The zero value for these slices is nil, but the YAML unmarshaller creates empty slices
-			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*ap_binding_proto.APBinding{},
-		},
-		{
-			Name:                "tz2",
-			TrustProvider:       &trust_provider_proto.TrustProvider{},
-			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*ap_binding_proto.APBinding{},
-		},
+		fixtures.TrustZone("tz1"),
+		fixtures.TrustZone("tz2"),
 	}
 	config.AttestationPolicies = []*attestation_policy_proto.AttestationPolicy{
-		{Name: "ap1"},
-		{Name: "ap2"},
+		fixtures.AttestationPolicy("ap1"),
+		fixtures.AttestationPolicy("ap2"),
 	}
 
 	err := loader.Write(config)
@@ -121,7 +111,7 @@ func TestFileLoaderReadInvalid(t *testing.T) {
 	tempFile := filepath.Join(t.TempDir(), "config.yaml")
 	loader := NewFileLoader(tempFile)
 
-	if err := os.WriteFile(tempFile, []byte(`plugins: "not-a-list"`), 0600); err != nil {
+	if err := os.WriteFile(tempFile, []byte(`plugins: "not-a-list"`), 0o600); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
 
@@ -208,23 +198,12 @@ func TestMemoryLoaderNonEmptyConfig(t *testing.T) {
 	config := NewConfig()
 	config.Plugins = []string{"plugin1", "plugin2"}
 	config.TrustZones = []*trust_zone_proto.TrustZone{
-		{
-			Name:          "tz1",
-			TrustProvider: &trust_provider_proto.TrustProvider{},
-			// NOTE: The zero value for these slices is nil, but the YAML unmarshaller creates empty slices
-			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*ap_binding_proto.APBinding{},
-		},
-		{
-			Name:                "tz2",
-			TrustProvider:       &trust_provider_proto.TrustProvider{},
-			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*ap_binding_proto.APBinding{},
-		},
+		fixtures.TrustZone("tz1"),
+		fixtures.TrustZone("tz2"),
 	}
 	config.AttestationPolicies = []*attestation_policy_proto.AttestationPolicy{
-		{Name: "ap1"},
-		{Name: "ap2"},
+		fixtures.AttestationPolicy("ap1"),
+		fixtures.AttestationPolicy("ap2"),
 	}
 
 	err = loader.Write(config)
@@ -248,23 +227,12 @@ func TestMemoryLoaderInitialConfig(t *testing.T) {
 	config := NewConfig()
 	config.Plugins = []string{"plugin1", "plugin2"}
 	config.TrustZones = []*trust_zone_proto.TrustZone{
-		{
-			Name:          "tz1",
-			TrustProvider: &trust_provider_proto.TrustProvider{},
-			// NOTE: The zero value for these slices is nil, but the YAML unmarshaller creates empty slices
-			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*ap_binding_proto.APBinding{},
-		},
-		{
-			Name:                "tz2",
-			TrustProvider:       &trust_provider_proto.TrustProvider{},
-			Federations:         []*federation_proto.Federation{},
-			AttestationPolicies: []*ap_binding_proto.APBinding{},
-		},
+		fixtures.TrustZone("tz1"),
+		fixtures.TrustZone("tz2"),
 	}
 	config.AttestationPolicies = []*attestation_policy_proto.AttestationPolicy{
-		{Name: "ap1"},
-		{Name: "ap2"},
+		fixtures.AttestationPolicy("ap1"),
+		fixtures.AttestationPolicy("ap2"),
 	}
 
 	loader, err := NewMemoryLoader(config)

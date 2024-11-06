@@ -1,4 +1,6 @@
-// Package proto provides utilities for cofide-api-sdk protobuf types.
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package proto
 
 import (
@@ -51,10 +53,10 @@ func APBindingsEqual(apb1, apb2 *ap_binding_proto.APBinding) bool {
 
 func CloneFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error) {
 	if clone, ok := proto.Clone(federation).(*federation_proto.Federation); !ok {
-		return nil, fmt.Errorf("bug: type assertion failed for federation %s-%s", federation.Left, federation.Right)
+		return nil, fmt.Errorf("bug: type assertion failed for federation %s-%s", federation.From, federation.To)
 	} else {
 		if clone == federation {
-			return nil, fmt.Errorf("bug: federation %s-%s clones are the same", federation.Left, federation.Right)
+			return nil, fmt.Errorf("bug: federation %s-%s clones are the same", federation.To, federation.To)
 		}
 		return clone, nil
 	}

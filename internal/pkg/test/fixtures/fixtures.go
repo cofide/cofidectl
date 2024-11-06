@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package fixtures
 
 import (
@@ -9,6 +12,7 @@ import (
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust_zone_proto.TrustZone{
@@ -23,8 +27,8 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl: "127.0.0.1",
 		Federations: []*federation_proto.Federation{
 			{
-				Left:  "tz1",
-				Right: "tz2",
+				From: "tz1",
+				To:   "tz2",
 			},
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
@@ -46,8 +50,8 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl: "127.0.0.2",
 		Federations: []*federation_proto.Federation{
 			{
-				Left:  "tz2",
-				Right: "tz1",
+				From: "tz2",
+				To:   "tz1",
 			},
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
@@ -62,15 +66,63 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 
 var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPolicy = map[string]*attestation_policy_proto.AttestationPolicy{
 	"ap1": {
-		Name:      "ap1",
-		Kind:      2,
-		Namespace: "ns1",
+		Name: "ap1",
+		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
+			Kubernetes: &attestation_policy_proto.APKubernetes{
+				NamespaceSelector: &attestation_policy_proto.APLabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": "ns1"},
+				},
+			},
+		},
 	},
 	"ap2": {
-		Name:     "ap2",
-		Kind:     1,
-		PodKey:   "foo",
-		PodValue: "bar",
+		Name: "ap2",
+		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
+			Kubernetes: &attestation_policy_proto.APKubernetes{
+				PodSelector: &attestation_policy_proto.APLabelSelector{
+					MatchExpressions: []*attestation_policy_proto.APMatchExpression{
+						{
+							Key:      "foo",
+							Operator: string(metav1.LabelSelectorOpIn),
+							Values:   []string{"bar"},
+						},
+					},
+				},
+			},
+		},
+	},
+	"ap3": {
+		Name: "ap3",
+		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
+			Kubernetes: &attestation_policy_proto.APKubernetes{
+				NamespaceSelector: &attestation_policy_proto.APLabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": "ns3"},
+				},
+				PodSelector: &attestation_policy_proto.APLabelSelector{
+					MatchLabels: map[string]string{"label1": "value1", "label2": "value2"},
+					MatchExpressions: []*attestation_policy_proto.APMatchExpression{
+						{
+							Key:      "foo",
+							Operator: string(metav1.LabelSelectorOpIn),
+							Values:   []string{"bar", "baz"},
+						},
+						{
+							Key:      "foo",
+							Operator: string(metav1.LabelSelectorOpNotIn),
+							Values:   []string{"qux", "quux"},
+						},
+						{
+							Key:      "bar",
+							Operator: string(metav1.LabelSelectorOpExists),
+						},
+						{
+							Key:      "baz",
+							Operator: string(metav1.LabelSelectorOpDoesNotExist),
+						},
+					},
+				},
+			},
+		},
 	},
 }
 
