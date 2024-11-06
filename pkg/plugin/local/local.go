@@ -63,7 +63,7 @@ func (lds *LocalDataSource) updateDataFile() error {
 	return lds.loader.Write(lds.config)
 }
 
-func (lds *LocalDataSource) CreateTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
+func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
 	if _, ok := lds.config.GetTrustZoneByName(trustZone.Name); ok {
 		return nil, fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
 	}

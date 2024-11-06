@@ -143,7 +143,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: opts.profile},
 			}
 
-			_, err = ds.CreateTrustZone(newTrustZone)
+			_, err = ds.AddTrustZone(newTrustZone)
 			if err != nil {
 				return fmt.Errorf("failed to create trust zone %s: %s", newTrustZone.Name, err)
 			}
