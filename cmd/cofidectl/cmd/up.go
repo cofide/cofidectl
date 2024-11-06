@@ -21,18 +21,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 	toolsWatch "k8s.io/client-go/tools/watch"
 
-	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
 )
 
 type UpCommand struct {
-	cmdCtx *cmd_context.CommandContext
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewUpCommand(cmdCtx *cmd_context.CommandContext) *UpCommand {
+func NewUpCommand(cmdCtx *cmdcontext.CommandContext) *UpCommand {
 	return &UpCommand{
 		cmdCtx: cmdCtx,
 	}
@@ -54,10 +53,6 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			if err := ds.Validate(); err != nil {
-				return err
-			}
-
 			trustZones, err := ds.ListTrustZones()
 			if err != nil {
 				return err
@@ -66,11 +61,15 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return fmt.Errorf("no trust zones have been configured")
 			}
 
-			if err := u.installSPIREStack(trustZones); err != nil {
+			if err := installSPIREStack(ds, trustZones); err != nil {
 				return err
 			}
 
-			if err := u.watchAndConfigure(trustZones); err != nil {
+			if err := watchAndConfigure(ds, trustZones); err != nil {
+				return err
+			}
+
+			if err := applyPostInstallHelmConfig(ds, trustZones); err != nil {
 				return err
 			}
 
@@ -80,14 +79,9 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 	return cmd
 }
 
-func (u *UpCommand) installSPIREStack(trustZones []*trust_zone_proto.TrustZone) error {
-	ds, err := u.cmdCtx.PluginManager.GetPlugin()
-	if err != nil {
-		return err
-	}
-
+func installSPIREStack(source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, ds)
+		generator := helm.NewHelmValuesGenerator(trustZone, source)
 		spireValues, err := generator.GenerateValues()
 		if err != nil {
 			return err
@@ -124,7 +118,7 @@ func (u *UpCommand) installSPIREStack(trustZones []*trust_zone_proto.TrustZone) 
 	return nil
 }
 
-func (u *UpCommand) watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) error {
+func watchAndConfigure(source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
@@ -148,7 +142,7 @@ func (u *UpCommand) watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) 
 
 		trustZone.Bundle = bundle
 
-		if err := u.source.UpdateTrustZone(trustZone); err != nil {
+		if err := source.UpdateTrustZone(trustZone); err != nil {
 			return fmt.Errorf("failed to update trust zone %s: %w", trustZone.Name, err)
 		}
 
@@ -156,11 +150,6 @@ func (u *UpCommand) watchAndConfigure(trustZones []*trust_zone_proto.TrustZone) 
 		green := color.New(color.FgGreen).SprintFunc()
 		fmt.Printf("%s All SPIRE server pods and services are ready for %s in cluster %s\n\n", green("✅"), trustZone.Name, trustZone.KubernetesCluster)
 	}
-
-	if err := u.applyPostInstallHelmConfig(trustZones); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -298,9 +287,9 @@ func createServiceWatcher(kubeContext string) (watch.Interface, error) {
 	return watcher, nil
 }
 
-func (u *UpCommand) applyPostInstallHelmConfig(trustZones []*trust_zone_proto.TrustZone) error {
+func applyPostInstallHelmConfig(source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, u.source)
+		generator := helm.NewHelmValuesGenerator(trustZone, source)
 
 		spireValues, err := generator.GenerateValues()
 		if err != nil {

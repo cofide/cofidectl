@@ -9,7 +9,7 @@ import (
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/apbinding"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/attestationpolicy"
-	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/federation"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/workload"
@@ -18,12 +18,12 @@ import (
 )
 
 type RootCommand struct {
-	cmdCtx *cmd_context.CommandContext
+	cmdCtx *cmdcontext.CommandContext
 }
 
 var kubeCfgFile string
 
-func NewRootCommand(cmdCtx *cmd_context.CommandContext) *RootCommand {
+func NewRootCommand(cmdCtx *cmdcontext.CommandContext) *RootCommand {
 	return &RootCommand{
 		cmdCtx: cmdCtx,
 	}

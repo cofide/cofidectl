@@ -1,4 +1,4 @@
-#Plugin: string
+#DataSource: string
 
 #TrustZone: {
 	name!: string
@@ -53,7 +53,7 @@
 }
 
 #Config: {
-	plugins: [...#Plugin]
+	data_source!: #DataSource
 	trust_zones: [...#TrustZone]
 	attestation_policies: [...#AttestationPolicy]
 }

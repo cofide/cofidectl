@@ -47,9 +47,9 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			wantErr: "foo: field not allowed",
 		},
 		{
-			name:    "plugins not a list",
-			data:    "plugins: \"not-a-list\"",
-			wantErr: "plugins: conflicting values \"not-a-list\" and [...#Plugin]",
+			name:    "data source not a string",
+			data:    "data_source: 123",
+			wantErr: "data_source: conflicting values 123 and string",
 		},
 		{
 			name:    "trust zones not a list",

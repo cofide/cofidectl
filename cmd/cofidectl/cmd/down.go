@@ -9,17 +9,17 @@ import (
 
 	"github.com/briandowns/spinner"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 type DownCommand struct {
-	cmdCtx *cmd_context.CommandContext
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewDownCommand(cmdCtx *cmd_context.CommandContext) *DownCommand {
+func NewDownCommand(cmdCtx *cmdcontext.CommandContext) *DownCommand {
 	return &DownCommand{
 		cmdCtx: cmdCtx}
 }
@@ -37,10 +37,6 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := d.cmdCtx.PluginManager.GetPlugin()
 			if err != nil {
-				return err
-			}
-
-			if err := ds.Validate(); err != nil {
 				return err
 			}
 

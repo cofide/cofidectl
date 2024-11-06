@@ -4,25 +4,22 @@
 package config
 
 import (
-	"fmt"
-
 	"buf.build/go/protoyaml"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
 	config_proto "github.com/cofide/cofide-api-sdk/gen/proto/config/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	"github.com/cofide/cofidectl/pkg/plugin"
 )
 
 // Config describes the cofide.yaml configuration file format.
 type Config struct {
-	Plugins             []string `yaml:"plugins,omitempty"`
+	DataSource          string
 	TrustZones          []*trust_zone_proto.TrustZone
 	AttestationPolicies []*attestation_policy_proto.AttestationPolicy
 }
 
 func NewConfig() *Config {
 	return &Config{
-		Plugins:             []string{},
+		DataSource:          "",
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 	}
@@ -30,7 +27,7 @@ func NewConfig() *Config {
 
 func newConfigFromProto(proto *config_proto.Config) *Config {
 	return &Config{
-		Plugins:             proto.Plugins,
+		DataSource:          proto.GetDataSource(),
 		TrustZones:          proto.TrustZones,
 		AttestationPolicies: proto.AttestationPolicies,
 	}
@@ -38,7 +35,7 @@ func newConfigFromProto(proto *config_proto.Config) *Config {
 
 func (c *Config) toProto() *config_proto.Config {
 	return &config_proto.Config{
-		Plugins:             c.Plugins,
+		DataSource:          &c.DataSource,
 		TrustZones:          c.TrustZones,
 		AttestationPolicies: c.AttestationPolicies,
 	}
@@ -54,7 +51,6 @@ func (c *Config) marshalYAML() ([]byte, error) {
 
 func unmarshalYAML(data []byte) (*Config, error) {
 	proto := config_proto.Config{
-		Plugins:             []string{},
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 	}
@@ -81,13 +77,4 @@ func (c *Config) GetAttestationPolicyByName(name string) (*attestation_policy_pr
 		}
 	}
 	return nil, false
-}
-
-func (c *Config) AddPlugin(name string) error {
-	if _, err := plugin.PluginExists(name); err != nil {
-		return fmt.Errorf("failed to find plugin %s in Cofide plugin path", name)
-	}
-	c.Plugins = append(c.Plugins, name)
-
-	return nil
 }

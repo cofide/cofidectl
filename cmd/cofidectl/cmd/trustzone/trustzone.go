@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strconv"
 
-	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/manifoldco/promptui"
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
@@ -19,16 +19,17 @@ import (
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 )
 
 type TrustZoneCommand struct {
-	cmdCtx *cmd_context.CommandContext
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewTrustZoneCommand(cmdCtx *cmd_context.CommandContext) *TrustZoneCommand {
+func NewTrustZoneCommand(cmdCtx *cmdcontext.CommandContext) *TrustZoneCommand {
 	return &TrustZoneCommand{
 		cmdCtx: cmdCtx,
 	}
@@ -68,10 +69,6 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetPlugin()
 			if err != nil {
-				return err
-			}
-
-			if err := ds.Validate(); err != nil {
 				return err
 			}
 
@@ -133,10 +130,6 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
-			if err := ds.Validate(); err != nil {
-				return err
-			}
-
 			err = c.getKubernetesContext(cmd, &opts)
 			if err != nil {
 				return err
@@ -189,27 +182,19 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 				return err
 			}
 
-			if err := ds.Validate(); err != nil {
-				return err
-			}
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
-			return c.status(cmd.Context(), kubeConfig, args[0])
+			return c.status(cmd.Context(), ds, kubeConfig, args[0])
 		},
 	}
 
 	return cmd
 }
 
-func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string) error {
-	ds, err := c.cmdCtx.PluginManager.GetPlugin()
-	if err != nil {
-		return err
-	}
-
-	trustZone, err := ds.GetTrustZone(tzName)
+func (c *TrustZoneCommand) status(ctx context.Context, source cofidectl_plugin.DataSource, kubeConfig, tzName string) error {
+	trustZone, err := source.GetTrustZone(tzName)
 	if err != nil {
 		return err
 	}

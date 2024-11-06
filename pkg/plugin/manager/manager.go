@@ -4,7 +4,6 @@
 package manager
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -14,6 +13,11 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
+)
+
+const (
+	LocalPluginName   = "local"
+	ConnectPluginName = "cofidectl-connect-plugin"
 )
 
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
@@ -29,68 +33,69 @@ func NewManager(configLoader config.Loader) *PluginManager {
 	}
 }
 
-func (l *PluginManager) Init(pluginName string) (cofidectl_plugin.DataSource, error) {
-	//first check that the config exists
-	//if it doesn't create it
-	if exists, _ := l.configLoader.Exists(); !exists {
-
-	}
-
-	cfg, err := l.configLoader.Read()
-	if err != nil {
-		return nil, fmt.Errorf("could not open local config")
-	}
-	cfg.Plugins = append(cfg.Plugins, pluginName)
-	err = l.configLoader.Write(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("could not init plugin")
-	}
-
-	return nil, nil
-}
-
-func (l *PluginManager) GetPlugin() (cofidectl_plugin.DataSource, error) {
-	exists, err := l.configLoader.Exists()
-	if err != nil {
-		return nil, err
-	}
-
-	var pluginNames []string
-	if exists {
-		cfg, err := l.configLoader.Read()
+func (pm *PluginManager) Init(pluginName string) (cofidectl_plugin.DataSource, error) {
+	if exists, _ := pm.configLoader.Exists(); exists {
+		// Check that existing plugin config matches.
+		cfg, err := pm.configLoader.Read()
 		if err != nil {
 			return nil, err
 		}
-		pluginNames = cfg.Plugins
-	}
-
-	// If the Connect plugin is enabled use it in place of the local data source
-	for _, plugin := range pluginNames {
-		if plugin == "cofidectl-connect-plugin" {
-			logger := hclog.New(&hclog.LoggerOptions{
-				Name:   "plugin",
-				Output: os.Stdout,
-				Level:  hclog.Error,
-			})
-
-			ds, err := l.loadConnectPlugin(logger)
-			if err != nil {
-				return nil, err
-			}
-
-			return ds, nil
-		} else {
-			return nil, errors.New("only the cofidectl-connect-plugin is currently supported")
+		if cfg.DataSource != pluginName {
+			return nil, fmt.Errorf("existing config file uses a different plugin: %s vs %s", cfg.DataSource, pluginName)
+		}
+		fmt.Println("the config file already exists")
+	} else {
+		cfg := config.NewConfig()
+		cfg.DataSource = pluginName
+		if err := pm.configLoader.Write(cfg); err != nil {
+			return nil, err
 		}
 	}
 
-	// If no plugins have been loaded, fall back to the local data source plugin.
-	lds, err := local.NewLocalDataSource(l.configLoader)
+	return pm.GetPlugin()
+}
+
+func (pm *PluginManager) GetPlugin() (cofidectl_plugin.DataSource, error) {
+	exists, err := pm.configLoader.Exists()
 	if err != nil {
 		return nil, err
 	}
 
-	return lds, nil
+	if !exists {
+		return nil, fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
+	}
+
+	cfg, err := pm.configLoader.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	var ds cofidectl_plugin.DataSource
+	switch cfg.DataSource {
+	case ConnectPluginName:
+		logger := hclog.New(&hclog.LoggerOptions{
+			Name:   "plugin",
+			Output: os.Stdout,
+			Level:  hclog.Error,
+		})
+
+		ds, err = pm.loadConnectPlugin(logger)
+		if err != nil {
+			return nil, err
+		}
+	case LocalPluginName:
+		ds, err = local.NewLocalDataSource(pm.configLoader)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("only %s and %s plugins are currently supported", LocalPluginName, ConnectPluginName)
+	}
+
+	if err := ds.Validate(); err != nil {
+		return nil, err
+	}
+	return ds, nil
 }
 
 func loadConnectPlugin(logger hclog.Logger) (cofidectl_plugin.DataSource, error) {

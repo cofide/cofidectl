@@ -7,17 +7,17 @@ import (
 	"os"
 
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
-	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type FederationCommand struct {
-	cmdCtx *cmd_context.CommandContext
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewFederationCommand(cmdCtx *cmd_context.CommandContext) *FederationCommand {
+func NewFederationCommand(cmdCtx *cmdcontext.CommandContext) *FederationCommand {
 	return &FederationCommand{
 		cmdCtx: cmdCtx,
 	}
@@ -54,10 +54,6 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetPlugin()
 			if err != nil {
-				return err
-			}
-
-			if err := ds.Validate(); err != nil {
 				return err
 			}
 
@@ -106,10 +102,6 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetPlugin()
 			if err != nil {
-				return err
-			}
-
-			if err := ds.Validate(); err != nil {
 				return err
 			}
 

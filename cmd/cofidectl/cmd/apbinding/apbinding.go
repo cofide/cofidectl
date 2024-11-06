@@ -9,7 +9,7 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 
 	"github.com/olekukonko/tablewriter"
@@ -17,11 +17,10 @@ import (
 )
 
 type APBindingCommand struct {
-	cmdCtx *cmd_context.CommandContext
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewAPBindingCommand(cmdCtx *cmd_context.CommandContext) *APBindingCommand {
+func NewAPBindingCommand(cmdCtx *cmdcontext.CommandContext) *APBindingCommand {
 	return &APBindingCommand{
 		cmdCtx: cmdCtx,
 	}
@@ -68,11 +67,11 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := ds.Validate(); err != nil {
+
+			bindings, err := c.list(ds, opts)
+			if err != nil {
 				return err
 			}
-			bindings, err := c.list(opts)
-			cobra.CheckErr(err)
 			renderList(bindings)
 			return nil
 		},
@@ -85,19 +84,19 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *APBindingCommand) list(opts ListOpts) ([]*ap_binding_proto.APBinding, error) {
+func (c *APBindingCommand) list(source cofidectl_plugin.DataSource, opts ListOpts) ([]*ap_binding_proto.APBinding, error) {
 	var err error
 	var trustZones []*trust_zone_proto.TrustZone
 
 	if opts.trustZone != "" {
-		trustZone, err := c.source.GetTrustZone(opts.trustZone)
+		trustZone, err := source.GetTrustZone(opts.trustZone)
 		if err != nil {
 			return nil, err
 		}
 
 		trustZones = append(trustZones, trustZone)
 	} else {
-		trustZones, err = c.source.ListTrustZones()
+		trustZones, err = source.ListTrustZones()
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +148,8 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 		Long:  apBindingAddCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			if err != nil {
 				return err
 			}
 
@@ -158,7 +158,7 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 				Policy:        opts.attestationPolicy,
 				FederatesWith: opts.federatesWith,
 			}
-			return c.source.AddAPBinding(binding)
+			return ds.AddAPBinding(binding)
 		},
 	}
 

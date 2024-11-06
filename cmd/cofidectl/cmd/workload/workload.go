@@ -8,17 +8,17 @@ import (
 	"os"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
-	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/internal/pkg/workload"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type WorkloadCommand struct {
-	cmdCtx *cmd_context.CommandContext
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewWorkloadCommand(cmdCtx *cmd_context.CommandContext) *WorkloadCommand {
+func NewWorkloadCommand(cmdCtx *cmdcontext.CommandContext) *WorkloadCommand {
 	return &WorkloadCommand{
 		cmdCtx: cmdCtx,
 	}
@@ -63,10 +63,6 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 			var err error
 			ds, err := w.cmdCtx.PluginManager.GetPlugin()
 			if err != nil {
-				return err
-			}
-
-			if err := ds.Validate(); err != nil {
 				return err
 			}
 
@@ -160,10 +156,6 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 			var err error
 			ds, err := w.cmdCtx.PluginManager.GetPlugin()
 			if err != nil {
-				return err
-			}
-
-			if err := ds.Validate(); err != nil {
 				return err
 			}
 

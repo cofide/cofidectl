@@ -22,14 +22,16 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 		wantFile string
 	}{
 		{
-			name:     "default",
-			config:   &Config{},
+			name: "default",
+			config: &Config{
+				DataSource: "local",
+			},
 			wantFile: "default.yaml",
 		},
 		{
 			name: "full",
 			config: &Config{
-				Plugins: []string{"test-plugin"},
+				DataSource: "fake-plugin",
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
@@ -66,7 +68,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 			name: "default",
 			file: "default.yaml",
 			want: &Config{
-				Plugins:             []string{},
+				DataSource:          "local",
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 			},
@@ -75,7 +77,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 			name: "full",
 			file: "full.yaml",
 			want: &Config{
-				Plugins: []string{"test-plugin"},
+				DataSource: "fake-plugin",
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),

@@ -8,17 +8,17 @@ import (
 	"os"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	cmd_context "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type AttestationPolicyCommand struct {
-	cmdCtx *cmd_context.CommandContext
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewAttestationPolicyCommand(cmdCtx *cmd_context.CommandContext) *AttestationPolicyCommand {
+func NewAttestationPolicyCommand(cmdCtx *cmdcontext.CommandContext) *AttestationPolicyCommand {
 	return &AttestationPolicyCommand{
 		cmdCtx: cmdCtx,
 	}
@@ -55,10 +55,6 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetPlugin()
 			if err != nil {
-				return err
-			}
-
-			if err := ds.Validate(); err != nil {
 				return err
 			}
 
@@ -171,10 +167,6 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 				return err
 			}
 
-			if err := ds.Validate(); err != nil {
-				return err
-			}
-
 			kubernetes := &attestation_policy_proto.APKubernetes{}
 			if opts.namespace != "" {
 				kubernetes.NamespaceSelector = &attestation_policy_proto.APLabelSelector{
@@ -195,7 +187,9 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 				},
 			}
 			err = ds.AddAttestationPolicy(newAttestationPolicy)
-			cobra.CheckErr(err)
+			if err != nil {
+				return err
+			}
 			if opts.namespace == "" && opts.podLabel == "" {
 				fmt.Println("This attestation policy will provide identity to all workloads in this trust domain")
 			}

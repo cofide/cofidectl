@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
-	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/manager"
@@ -29,7 +29,7 @@ func Run() error {
 		return plugin.ExecuteSubCommand(connectPlugin, os.Args[2:])
 	}
 
-	cmdCtx := &context.CommandContext{
+	cmdCtx := &cmdcontext.CommandContext{
 		PluginManager: pluginManager,
 	}
 

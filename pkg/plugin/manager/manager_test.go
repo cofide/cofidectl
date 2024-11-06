@@ -26,15 +26,15 @@ func newFakeConnectDataSource(t *testing.T, configLoader config.Loader) *fakeCon
 	return &fakeConnectDataSource{LocalDataSource: *lds}
 }
 
-func TestPluginManager_GetPlugin_success(t *testing.T) {
+func TestManager_GetPlugin_success(t *testing.T) {
 	tests := []struct {
 		name   string
 		config config.Config
 		want   func(config.Loader) cofidectl_plugin.DataSource
 	}{
 		{
-			name:   "empty",
-			config: config.Config{Plugins: []string{}},
+			name:   "local",
+			config: config.Config{DataSource: LocalPluginName},
 			want: func(cl config.Loader) cofidectl_plugin.DataSource {
 				lds, err := local.NewLocalDataSource(cl)
 				if err != nil {
@@ -45,7 +45,7 @@ func TestPluginManager_GetPlugin_success(t *testing.T) {
 		},
 		{
 			name:   "connect",
-			config: config.Config{Plugins: []string{"cofidectl-connect-plugin"}},
+			config: config.Config{DataSource: ConnectPluginName},
 			want: func(cl config.Loader) cofidectl_plugin.DataSource {
 				fcds := newFakeConnectDataSource(t, cl)
 				return fcds
@@ -67,31 +67,36 @@ func TestPluginManager_GetPlugin_success(t *testing.T) {
 
 			got, err := l.GetPlugin()
 			if err != nil {
-				t.Fatalf("Loader.GetPlugins() error = %v", err)
+				t.Fatalf("Manager.GetPlugin() error = %v", err)
 			}
 
 			want := tt.want(configLoader)
 			if !reflect.DeepEqual(got, want) {
-				t.Errorf("Loader.GetPlugins() = %v, want %v", got, want)
+				t.Errorf("Manager.GetPlugin() = %v, want %v", got, want)
 			}
 		})
 	}
 }
 
-func TestLoader_GetPlugins_failure(t *testing.T) {
+func TestManager_GetPlugin_failure(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  config.Config
 		wantErr string
 	}{
 		{
+			name:    "empty",
+			config:  config.Config{DataSource: ""},
+			wantErr: "only local and cofidectl-connect-plugin plugins are currently supported",
+		},
+		{
 			name:    "invalid plugin",
-			config:  config.Config{Plugins: []string{"invalid"}},
-			wantErr: "only the cofidectl-connect-plugin is currently supported",
+			config:  config.Config{DataSource: "invalid"},
+			wantErr: "only local and cofidectl-connect-plugin plugins are currently supported",
 		},
 		{
 			name:    "connect plugin load failure",
-			config:  config.Config{Plugins: []string{"cofidectl-connect-plugin"}},
+			config:  config.Config{DataSource: ConnectPluginName},
 			wantErr: "failed to create connect plugin",
 		},
 	}
@@ -110,11 +115,11 @@ func TestLoader_GetPlugins_failure(t *testing.T) {
 
 			_, err = l.GetPlugin()
 			if err == nil {
-				t.Fatalf("Loader.GetPlugins() did not return error")
+				t.Fatalf("Manager.GetPlugin() did not return error")
 			}
 
 			if err.Error() != tt.wantErr {
-				t.Fatalf("Loader.GetPlugins() error message = %s, wantErrString %s", err.Error(), tt.wantErr)
+				t.Fatalf("Manager.GetPlugin() error message = %s, wantErrString %s", err.Error(), tt.wantErr)
 			}
 		})
 	}

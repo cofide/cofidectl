@@ -19,7 +19,6 @@ import (
 type LocalDataSource struct {
 	loader config.Loader
 	config *config.Config
-	loaded bool
 }
 
 func NewLocalDataSource(loader config.Loader) (*LocalDataSource, error) {
@@ -29,42 +28,15 @@ func NewLocalDataSource(loader config.Loader) (*LocalDataSource, error) {
 		config: cfg,
 	}
 
-	dataFileExists, err := lds.loader.Exists()
+	err := lds.loadState()
 	if err != nil {
 		return nil, err
-	}
-
-	if dataFileExists {
-		err = lds.loadState()
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return lds, nil
 }
 
-func (lds *LocalDataSource) Init() error {
-	if !lds.loaded {
-		if err := lds.createDataFile(); err != nil {
-			return err
-		}
-	} else {
-		fmt.Println("the config file already exists.")
-	}
-
-	if err := lds.loadState(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (lds *LocalDataSource) Validate() error {
-	if !lds.loaded {
-		return fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
-	}
-
 	return nil
 }
 
@@ -84,20 +56,10 @@ func (lds *LocalDataSource) loadState() error {
 	}
 
 	lds.config = config
-	lds.loaded = true
 	return nil
 }
 
-func (lds *LocalDataSource) createDataFile() error {
-	fmt.Println("initialising local config file")
-	return lds.loader.Write(config.NewConfig())
-}
-
 func (lds *LocalDataSource) updateDataFile() error {
-	if !lds.loaded {
-		return fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
-	}
-
 	return lds.loader.Write(lds.config)
 }
 
