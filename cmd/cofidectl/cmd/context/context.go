@@ -5,24 +5,25 @@ package context
 
 import (
 	"context"
+	"errors"
 
 	"github.com/cofide/cofidectl/pkg/plugin/manager"
 )
 
 type CommandContext struct {
 	Ctx           context.Context
-	cancel        func()
+	cancel        context.CancelCauseFunc
 	PluginManager *manager.PluginManager
 }
 
 func NewCommandContext(pluginManager *manager.PluginManager) *CommandContext {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	return &CommandContext{Ctx: ctx, cancel: cancel, PluginManager: pluginManager}
 }
 
 func (cc *CommandContext) Shutdown() {
 	if cc.cancel != nil {
-		cc.cancel()
+		cc.cancel(errors.New("shutting down"))
 		cc.cancel = nil
 	}
 	cc.PluginManager.Shutdown()
