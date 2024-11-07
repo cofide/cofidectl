@@ -26,6 +26,7 @@ const (
 type PluginManager struct {
 	configLoader   config.Loader
 	loadGrpcPlugin func(hclog.Logger, string) (cofidectl_plugin.DataSource, error)
+	source         cofidectl_plugin.DataSource
 }
 
 func NewManager(configLoader config.Loader) *PluginManager {
@@ -54,10 +55,22 @@ func (pm *PluginManager) Init(pluginName string) (cofidectl_plugin.DataSource, e
 		}
 	}
 
-	return pm.GetDataSource()
+	return pm.loadDataSource()
 }
 
 func (pm *PluginManager) GetDataSource() (cofidectl_plugin.DataSource, error) {
+	if pm.source != nil {
+		return pm.source, nil
+	}
+
+	return pm.loadDataSource()
+}
+
+func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
+	if pm.source != nil {
+		return nil, errors.New("data source has already been loaded")
+	}
+
 	exists, err := pm.configLoader.Exists()
 	if err != nil {
 		return nil, err
@@ -99,6 +112,7 @@ func (pm *PluginManager) GetDataSource() (cofidectl_plugin.DataSource, error) {
 	if err := ds.Validate(); err != nil {
 		return nil, err
 	}
+	pm.source = ds
 	return ds, nil
 }
 

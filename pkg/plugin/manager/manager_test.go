@@ -5,13 +5,14 @@ package manager
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeGrpcDataSource struct {
@@ -20,9 +21,7 @@ type fakeGrpcDataSource struct {
 
 func newFakeGrpcDataSource(t *testing.T, configLoader config.Loader) *fakeGrpcDataSource {
 	lds, err := local.NewLocalDataSource(configLoader)
-	if err != nil {
-		t.Fatalf("NewLocalDataSource() error = %v", err)
-	}
+	assert.Nil(t, err)
 	return &fakeGrpcDataSource{LocalDataSource: *lds}
 }
 
@@ -37,9 +36,7 @@ func TestManager_GetDataSource_success(t *testing.T) {
 			config: config.Config{DataSource: LocalPluginName},
 			want: func(cl config.Loader) cofidectl_plugin.DataSource {
 				lds, err := local.NewLocalDataSource(cl)
-				if err != nil {
-					t.Fatalf("NewLocalDataSource() error = %v", err)
-				}
+				assert.Nil(t, err)
 				return lds
 			},
 		},
@@ -55,9 +52,7 @@ func TestManager_GetDataSource_success(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
-			if err != nil {
-				t.Fatalf("NewMemoryLoader() error = %v", err)
-			}
+			require.Nil(t, err)
 
 			l := NewManager(configLoader)
 			// Mock out the Connect plugin loader function.
@@ -66,14 +61,14 @@ func TestManager_GetDataSource_success(t *testing.T) {
 			}
 
 			got, err := l.GetDataSource()
-			if err != nil {
-				t.Fatalf("Manager.GetDataSource() error = %v", err)
-			}
+			require.Nil(t, err)
 
 			want := tt.want(configLoader)
-			if !reflect.DeepEqual(got, want) {
-				t.Errorf("Manager.GetDataSource() = %v, want %v", got, want)
-			}
+			assert.Equal(t, want, got)
+
+			got2, err := l.GetDataSource()
+			require.Nil(t, err)
+			assert.Same(t, got, got2, "second GetDataSource() should return a cached copy")
 		})
 	}
 }
@@ -98,9 +93,7 @@ func TestManager_GetDataSource_failure(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
-			if err != nil {
-				t.Fatalf("NewMemoryLoader() error = %v", err)
-			}
+			require.Nil(t, err)
 
 			l := NewManager(configLoader)
 			// Mock out the Connect plugin loader function, and inject a load failure.
@@ -109,13 +102,9 @@ func TestManager_GetDataSource_failure(t *testing.T) {
 			}
 
 			_, err = l.GetDataSource()
-			if err == nil {
-				t.Fatalf("Manager.GetDataSource() did not return error")
-			}
-
-			if err.Error() != tt.wantErr {
-				t.Fatalf("Manager.GetDataSource() error message = %s, wantErrString %s", err.Error(), tt.wantErr)
-			}
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.wantErr)
+			assert.Nil(t, l.source, "failed GetDataSource should not cache")
 		})
 	}
 }
