@@ -6,7 +6,7 @@ package trustprovider
 import (
 	"fmt"
 
-	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
+	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 )
 
 const (

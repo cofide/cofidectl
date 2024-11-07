@@ -6,7 +6,7 @@ package federation
 import (
 	"os"
 
-	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 
 	"github.com/olekukonko/tablewriter"

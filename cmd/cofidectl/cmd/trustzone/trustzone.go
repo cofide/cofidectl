@@ -14,8 +14,8 @@ import (
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/manifoldco/promptui"
 
-	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
@@ -82,7 +82,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 				data[i] = []string{
 					trustZone.Name,
 					trustZone.TrustDomain,
-					trustZone.KubernetesCluster,
+					trustZone.GetKubernetesCluster(),
 				}
 			}
 
@@ -138,9 +138,9 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:              opts.name,
 				TrustDomain:       opts.trust_domain,
-				KubernetesCluster: opts.kubernetes_cluster,
-				KubernetesContext: opts.context,
-				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: opts.profile},
+				KubernetesCluster: &opts.kubernetes_cluster,
+				KubernetesContext: &opts.context,
+				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &opts.profile},
 			}
 
 			_, err = ds.AddTrustZone(newTrustZone)
@@ -199,7 +199,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source cofidectl_plugin.D
 		return err
 	}
 
-	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, trustZone.KubernetesContext)
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, trustZone.GetKubernetesContext())
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func renderStatus(trustZone *trust_zone_proto.TrustZone, server *spire.ServerSta
 		},
 		{
 			"Bundle Endpoint",
-			trustZone.BundleEndpointUrl,
+			trustZone.GetBundleEndpointUrl(),
 		},
 	}
 

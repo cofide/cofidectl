@@ -6,8 +6,8 @@ package attestationpolicy
 import (
 	"fmt"
 
-	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 )
 

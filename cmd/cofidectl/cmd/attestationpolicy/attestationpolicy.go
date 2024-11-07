@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"

@@ -6,11 +6,11 @@ package plugin
 import (
 	"context"
 
-	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/proto/ap_binding/v1"
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
-	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/proto/cofidectl_plugin/v1"
-	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 )
 
 // DataSourcePluginClientGRPC is used by clients (main application) to translate the

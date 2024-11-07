@@ -4,7 +4,9 @@
 package trustzone
 
 import (
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"fmt"
+
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 )
 
@@ -19,5 +21,9 @@ func NewTrustZone(trustZone *trust_zone_proto.TrustZone) *TrustZone {
 }
 
 func (tz *TrustZone) GetTrustProvider() (*trustprovider.TrustProvider, error) {
-	return trustprovider.NewTrustProvider(tz.TrustZoneProto.TrustProvider.Kind)
+	trustProviderProto := tz.TrustZoneProto.GetTrustProvider()
+	if trustProviderProto == nil {
+		return nil, fmt.Errorf("no trust provider for trust zone %s", tz.TrustZoneProto.Name)
+	}
+	return trustprovider.NewTrustProvider(trustProviderProto.GetKind())
 }
