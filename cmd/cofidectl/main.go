@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -22,6 +23,7 @@ import (
 const (
 	cofidectlPluginPrefix = "cofidectl-"
 	cofideConfigFile      = "cofide.yaml"
+	shutdownTimeoutSec    = 10
 )
 
 func main() {
@@ -78,7 +80,11 @@ func handleSignals(cmdCtx *cmdcontext.CommandContext) {
 	s := <-shutdown
 	fmt.Printf("Caught %s signal, exiting\n", s.String())
 	cmdCtx.Shutdown()
-	os.Exit(0)
+
+	// Wait for a while to allow for graceful completion of the main goroutine.
+	<-time.After(shutdownTimeoutSec * time.Second)
+	fmt.Println("Timed out waiting for shutdown")
+	os.Exit(1)
 }
 
 // getCliPlugin returns a `plugin.CliPlugin` for a CLI plugin if:
