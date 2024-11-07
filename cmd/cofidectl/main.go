@@ -4,8 +4,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -33,6 +36,8 @@ func main() {
 func run() error {
 	cmdCtx := getCommandContext()
 	defer cmdCtx.Shutdown()
+
+	go handleSignals(cmdCtx)
 
 	rootCmd, err := cmd.NewRootCommand(cmdCtx).GetRootCommand()
 	if err != nil {
@@ -66,6 +71,16 @@ func getCommandContext() *cmdcontext.CommandContext {
 	return &cmdcontext.CommandContext{
 		PluginManager: pluginManager,
 	}
+}
+
+// handleSignals waits for SIGINT or SIGTERM, then triggers a clean shutdown using the command context.
+func handleSignals(cmdCtx *cmdcontext.CommandContext) {
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	s := <-shutdown
+	fmt.Printf("Caught %s signal, exiting\n", s.String())
+	cmdCtx.Shutdown()
+	os.Exit(0)
 }
 
 // getPluginSubCommand returns a `plugin.SubCommand` for a CLI plugin if:
