@@ -54,10 +54,10 @@ func (pm *PluginManager) Init(pluginName string) (cofidectl_plugin.DataSource, e
 		}
 	}
 
-	return pm.GetPlugin()
+	return pm.GetDataSource()
 }
 
-func (pm *PluginManager) GetPlugin() (cofidectl_plugin.DataSource, error) {
+func (pm *PluginManager) GetDataSource() (cofidectl_plugin.DataSource, error) {
 	exists, err := pm.configLoader.Exists()
 	if err != nil {
 		return nil, err

@@ -26,7 +26,7 @@ func newFakeGrpcDataSource(t *testing.T, configLoader config.Loader) *fakeGrpcDa
 	return &fakeGrpcDataSource{LocalDataSource: *lds}
 }
 
-func TestManager_GetPlugin_success(t *testing.T) {
+func TestManager_GetDataSource_success(t *testing.T) {
 	tests := []struct {
 		name   string
 		config config.Config
@@ -65,20 +65,20 @@ func TestManager_GetPlugin_success(t *testing.T) {
 				return newFakeGrpcDataSource(t, configLoader), nil
 			}
 
-			got, err := l.GetPlugin()
+			got, err := l.GetDataSource()
 			if err != nil {
-				t.Fatalf("Manager.GetPlugin() error = %v", err)
+				t.Fatalf("Manager.GetDataSource() error = %v", err)
 			}
 
 			want := tt.want(configLoader)
 			if !reflect.DeepEqual(got, want) {
-				t.Errorf("Manager.GetPlugin() = %v, want %v", got, want)
+				t.Errorf("Manager.GetDataSource() = %v, want %v", got, want)
 			}
 		})
 	}
 }
 
-func TestManager_GetPlugin_failure(t *testing.T) {
+func TestManager_GetDataSource_failure(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  config.Config
@@ -108,13 +108,13 @@ func TestManager_GetPlugin_failure(t *testing.T) {
 				return nil, errors.New("failed to create connect plugin")
 			}
 
-			_, err = l.GetPlugin()
+			_, err = l.GetDataSource()
 			if err == nil {
-				t.Fatalf("Manager.GetPlugin() did not return error")
+				t.Fatalf("Manager.GetDataSource() did not return error")
 			}
 
 			if err.Error() != tt.wantErr {
-				t.Fatalf("Manager.GetPlugin() error message = %s, wantErrString %s", err.Error(), tt.wantErr)
+				t.Fatalf("Manager.GetDataSource() error message = %s, wantErrString %s", err.Error(), tt.wantErr)
 			}
 		})
 	}

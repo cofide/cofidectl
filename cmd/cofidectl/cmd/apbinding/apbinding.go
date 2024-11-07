@@ -63,7 +63,7 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 		Long:  apBindingListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}
@@ -148,7 +148,7 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 		Long:  apBindingAddCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}

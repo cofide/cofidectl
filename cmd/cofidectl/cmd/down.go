@@ -35,7 +35,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 		Long:  downCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := d.cmdCtx.PluginManager.GetPlugin()
+			ds, err := d.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}

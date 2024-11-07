@@ -52,7 +52,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 		Long:  federationListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}
@@ -100,7 +100,7 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		Long:  federationAddCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}

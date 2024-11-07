@@ -48,7 +48,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 		Long:  upCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := u.cmdCtx.PluginManager.GetPlugin()
+			ds, err := u.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}

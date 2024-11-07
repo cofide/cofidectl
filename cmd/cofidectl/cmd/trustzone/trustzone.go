@@ -67,7 +67,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 		Long:  trustZoneListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}
@@ -125,7 +125,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}
@@ -177,7 +177,7 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 		Long:  trustZoneStatusCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}

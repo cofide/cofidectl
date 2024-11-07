@@ -53,7 +53,7 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}
@@ -162,7 +162,7 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 		Long:  attestationPolicyAddK8sCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetPlugin()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
 			if err != nil {
 				return err
 			}
