@@ -36,20 +36,21 @@ func NewManager(configLoader config.Loader) *PluginManager {
 	}
 }
 
-func (pm *PluginManager) Init(pluginName string) (cofidectl_plugin.DataSource, error) {
+// Init initialises the configuration for the specified data source plugin.
+func (pm *PluginManager) Init(dsName string) (cofidectl_plugin.DataSource, error) {
 	if exists, _ := pm.configLoader.Exists(); exists {
 		// Check that existing plugin config matches.
 		cfg, err := pm.configLoader.Read()
 		if err != nil {
 			return nil, err
 		}
-		if cfg.DataSource != pluginName {
-			return nil, fmt.Errorf("existing config file uses a different plugin: %s vs %s", cfg.DataSource, pluginName)
+		if cfg.DataSource != dsName {
+			return nil, fmt.Errorf("existing config file uses a different plugin: %s vs %s", cfg.DataSource, dsName)
 		}
 		fmt.Println("the config file already exists")
 	} else {
 		cfg := config.NewConfig()
-		cfg.DataSource = pluginName
+		cfg.DataSource = dsName
 		if err := pm.configLoader.Write(cfg); err != nil {
 			return nil, err
 		}
