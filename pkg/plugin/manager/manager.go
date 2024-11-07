@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	LocalPluginName      = "local"
-	DataSourcePluginName = "data_source"
+	LocalPluginName = "local"
 )
 
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
@@ -123,13 +122,12 @@ func loadGrpcPlugin(logger hclog.Logger, pluginName string) (cofidectl_plugin.Da
 		return nil, err
 	}
 
-	dsServeArgs := []string{"data-source", "serve"}
-	cmd := exec.Command(pluginPath, dsServeArgs...)
+	cmd := exec.Command(pluginPath, cofidectl_plugin.DataSourcePluginArgs...)
 	client := go_plugin.NewClient(&go_plugin.ClientConfig{
 		Cmd:             cmd,
 		HandshakeConfig: cofidectl_plugin.HandshakeConfig,
 		Plugins: map[string]go_plugin.Plugin{
-			DataSourcePluginName: &cofidectl_plugin.DataSourcePlugin{},
+			cofidectl_plugin.DataSourcePluginName: &cofidectl_plugin.DataSourcePlugin{},
 		},
 		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
 		Logger:           logger,
@@ -145,7 +143,7 @@ func loadGrpcPlugin(logger hclog.Logger, pluginName string) (cofidectl_plugin.Da
 		return nil, fmt.Errorf("failed to ping the gRPC client: %w", err)
 	}
 
-	raw, err := grpcClient.Dispense(DataSourcePluginName)
+	raw, err := grpcClient.Dispense(cofidectl_plugin.DataSourcePluginName)
 	if err != nil {
 		client.Kill()
 		return nil, fmt.Errorf("failed to dispense an instance of the plugin: %w", err)
