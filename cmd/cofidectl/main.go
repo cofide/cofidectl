@@ -45,14 +45,14 @@ func run() error {
 		return err
 	}
 
-	// Check if there is a plugin sub-command to execute.
-	extCmd, ok, err := getPluginSubCommand(rootCmd, os.Args)
+	// Check if there is a CLI plugin to execute.
+	cliPlugin, ok, err := getCliPlugin(rootCmd, os.Args)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 	if ok {
-		if err := extCmd.Execute(); err != nil {
+		if err := cliPlugin.Execute(); err != nil {
 			log.Println(err)
 			return err
 		}
@@ -83,18 +83,18 @@ func handleSignals(cmdCtx *cmdcontext.CommandContext) {
 	os.Exit(0)
 }
 
-// getPluginSubCommand returns a `plugin.SubCommand` for a CLI plugin if:
+// getCliPlugin returns a `plugin.CliPlugin` for a CLI plugin if:
 // 1. the first CLI argument does not match a registered subcommand
-// 2. a cofidectl plugin exists with a name of cofidectl- followed by hte first CLI argument
-func getPluginSubCommand(rootCmd *cobra.Command, args []string) (*plugin.SubCommand, bool, error) {
+// 2. a cofidectl plugin exists with a name of cofidectl- followed by the first CLI argument
+func getCliPlugin(rootCmd *cobra.Command, args []string) (*plugin.CliPlugin, bool, error) {
 	if len(args) > 1 {
 		if _, _, err := rootCmd.Find(args[0:2]); err != nil {
 			pluginName := cofidectlPluginPrefix + args[1]
 			if exists, err := plugin.PluginExists(pluginName); err != nil {
 				return nil, false, err
 			} else if exists {
-				subcommand := plugin.NewSubCommand(pluginName, args[2:])
-				return subcommand, true, nil
+				cliPlugin := plugin.NewCliPlugin(pluginName, args[2:])
+				return cliPlugin, true, nil
 			}
 		}
 	}
