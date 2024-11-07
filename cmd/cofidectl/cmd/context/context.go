@@ -10,3 +10,7 @@ import (
 type CommandContext struct {
 	PluginManager *manager.PluginManager
 }
+
+func (cc *CommandContext) Shutdown() {
+	cc.PluginManager.Shutdown()
+}

@@ -24,8 +24,9 @@ const (
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
 type PluginManager struct {
 	configLoader   config.Loader
-	loadGrpcPlugin func(hclog.Logger, string) (cofidectl_plugin.DataSource, error)
+	loadGrpcPlugin func(hclog.Logger, string) (*go_plugin.Client, cofidectl_plugin.DataSource, error)
 	source         cofidectl_plugin.DataSource
+	client         *go_plugin.Client
 }
 
 func NewManager(configLoader config.Loader) *PluginManager {
@@ -90,6 +91,7 @@ func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
 	}
 
 	var ds cofidectl_plugin.DataSource
+	var client *go_plugin.Client
 	switch cfg.DataSource {
 	case LocalPluginName:
 		ds, err = local.NewLocalDataSource(pm.configLoader)
@@ -103,23 +105,27 @@ func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
 			Level:  hclog.Error,
 		})
 
-		ds, err = pm.loadGrpcPlugin(logger, cfg.DataSource)
+		client, ds, err = pm.loadGrpcPlugin(logger, cfg.DataSource)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if err := ds.Validate(); err != nil {
+		if client != nil {
+			client.Kill()
+		}
 		return nil, err
 	}
 	pm.source = ds
+	pm.client = client
 	return ds, nil
 }
 
-func loadGrpcPlugin(logger hclog.Logger, pluginName string) (cofidectl_plugin.DataSource, error) {
+func loadGrpcPlugin(logger hclog.Logger, pluginName string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
 	pluginPath, err := cofidectl_plugin.GetPluginPath(pluginName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	cmd := exec.Command(pluginPath, cofidectl_plugin.DataSourcePluginArgs...)
@@ -133,26 +139,40 @@ func loadGrpcPlugin(logger hclog.Logger, pluginName string) (cofidectl_plugin.Da
 		Logger:           logger,
 	})
 
+	source, err := startGrpcPlugin(client, pluginName)
+	if err != nil {
+		client.Kill()
+		return nil, nil, err
+	}
+	return client, source, nil
+}
+
+func startGrpcPlugin(client *go_plugin.Client, pluginName string) (cofidectl_plugin.DataSource, error) {
 	grpcClient, err := client.Client()
 	if err != nil {
 		return nil, fmt.Errorf("cannot create interface to plugin: %w", err)
 	}
 
 	if err = grpcClient.Ping(); err != nil {
-		client.Kill()
 		return nil, fmt.Errorf("failed to ping the gRPC client: %w", err)
 	}
 
 	raw, err := grpcClient.Dispense(cofidectl_plugin.DataSourcePluginName)
 	if err != nil {
-		client.Kill()
 		return nil, fmt.Errorf("failed to dispense an instance of the plugin: %w", err)
 	}
 
-	plugin, ok := raw.(cofidectl_plugin.DataSource)
+	source, ok := raw.(cofidectl_plugin.DataSource)
 	if !ok {
-		client.Kill()
 		return nil, fmt.Errorf("gRPC data source plugin %s does not implement plugin interface", pluginName)
 	}
-	return plugin, nil
+	return source, nil
+}
+
+func (pm *PluginManager) Shutdown() {
+	if pm.client != nil {
+		pm.client.Kill()
+		pm.client = nil
+	}
+	pm.source = nil
 }

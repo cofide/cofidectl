@@ -5,7 +5,6 @@ package helm
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -42,7 +41,7 @@ type HelmSPIREProvider struct {
 	trustZone        *trust_zone_proto.TrustZone
 }
 
-func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, spireCRDsValues map[string]interface{}) *HelmSPIREProvider {
+func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, spireCRDsValues map[string]interface{}) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = trustZone.GetKubernetesContext()
 
@@ -58,10 +57,10 @@ func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, sp
 	var err error
 	prov.cfg, err = prov.initActionConfig()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return prov
+	return prov, nil
 }
 
 // Execute creates a provider status channel and performs the Helm chart installations.
@@ -228,12 +227,12 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 		settings,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	cr, err := loader.Load(options)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	fmt.Printf("Installing %v...", cr.Name())
@@ -268,12 +267,12 @@ func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName s
 		settings,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	chart, err := loader.Load(options)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	fmt.Printf("Upgrading %v...", chart.Name())

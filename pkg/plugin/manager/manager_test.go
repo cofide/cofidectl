@@ -11,6 +11,7 @@ import (
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	hclog "github.com/hashicorp/go-hclog"
+	go_plugin "github.com/hashicorp/go-plugin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,13 +77,13 @@ func TestManager_Init_success(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(tt.config)
 			require.Nil(t, err)
 
-			l := NewManager(configLoader)
+			m := NewManager(configLoader)
 			// Mock out the Connect plugin loader function.
-			l.loadGrpcPlugin = func(logger hclog.Logger, _ string) (cofidectl_plugin.DataSource, error) {
-				return newFakeGrpcDataSource(t, configLoader), nil
+			m.loadGrpcPlugin = func(logger hclog.Logger, _ string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
+				return nil, newFakeGrpcDataSource(t, configLoader), nil
 			}
 
-			got, err := l.Init(tt.pluginName)
+			got, err := m.Init(tt.pluginName)
 			require.Nil(t, err)
 
 			want := tt.want(configLoader)
@@ -92,7 +93,7 @@ func TestManager_Init_success(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, config.DataSource, tt.pluginName)
 
-			got2, err := l.GetDataSource()
+			got2, err := m.GetDataSource()
 			require.Nil(t, err)
 			assert.Same(t, got, got2, "GetDataSource() should return a cached copy")
 		})
@@ -119,9 +120,9 @@ func TestManager_Init_failure(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(tt.config)
 			require.Nil(t, err)
 
-			l := NewManager(configLoader)
+			m := NewManager(configLoader)
 
-			_, err = l.Init(tt.pluginName)
+			_, err = m.Init(tt.pluginName)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.wantErrMessage)
 
@@ -129,7 +130,8 @@ func TestManager_Init_failure(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, config.DataSource, tt.config.DataSource, "config should not be updated")
 
-			assert.Nil(t, l.source, "cached data source should be nil")
+			assert.Nil(t, m.source, "cached data source should be nil")
+			assert.Nil(t, m.client, "cached client should be nil")
 		})
 	}
 }
@@ -163,19 +165,26 @@ func TestManager_GetDataSource_success(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
 			require.Nil(t, err)
 
-			l := NewManager(configLoader)
+			m := NewManager(configLoader)
+
 			// Mock out the Connect plugin loader function.
-			l.loadGrpcPlugin = func(logger hclog.Logger, _ string) (cofidectl_plugin.DataSource, error) {
-				return newFakeGrpcDataSource(t, configLoader), nil
+			var client *go_plugin.Client
+			if tt.config.DataSource != LocalPluginName {
+				client = &go_plugin.Client{}
+				m.loadGrpcPlugin = func(logger hclog.Logger, _ string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
+					ds := newFakeGrpcDataSource(t, configLoader)
+					return client, ds, nil
+				}
 			}
 
-			got, err := l.GetDataSource()
+			got, err := m.GetDataSource()
 			require.Nil(t, err)
 
 			want := tt.want(configLoader)
 			assert.Equal(t, want, got)
+			assert.Same(t, client, m.client)
 
-			got2, err := l.GetDataSource()
+			got2, err := m.GetDataSource()
 			require.Nil(t, err)
 			assert.Same(t, got, got2, "second GetDataSource() should return a cached copy")
 		})
@@ -204,16 +213,55 @@ func TestManager_GetDataSource_failure(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
 			require.Nil(t, err)
 
-			l := NewManager(configLoader)
+			m := NewManager(configLoader)
 			// Mock out the Connect plugin loader function, and inject a load failure.
-			l.loadGrpcPlugin = func(logger hclog.Logger, _ string) (cofidectl_plugin.DataSource, error) {
-				return nil, errors.New("failed to create connect plugin")
+			m.loadGrpcPlugin = func(logger hclog.Logger, _ string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
+				return nil, nil, errors.New("failed to create connect plugin")
 			}
 
-			_, err = l.GetDataSource()
+			_, err = m.GetDataSource()
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.wantErr)
-			assert.Nil(t, l.source, "failed GetDataSource should not cache")
+			assert.Nil(t, m.source, "failed GetDataSource should not cache")
+			assert.Nil(t, m.client, "failed GetDataSource should not cache")
+		})
+	}
+}
+
+func TestManager_Shutdown(t *testing.T) {
+	tests := []struct {
+		name   string
+		config config.Config
+		want   func(config.Loader) cofidectl_plugin.DataSource
+	}{
+		{
+			name:   "local",
+			config: config.Config{DataSource: LocalPluginName},
+		},
+		{
+			name:   "gRPC",
+			config: config.Config{DataSource: "fake-plugin"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configLoader, err := config.NewMemoryLoader(&tt.config)
+			require.Nil(t, err)
+
+			m := NewManager(configLoader)
+			// Mock out the Connect plugin loader function.
+			client := &go_plugin.Client{}
+			m.loadGrpcPlugin = func(logger hclog.Logger, _ string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
+				ds := newFakeGrpcDataSource(t, configLoader)
+				return client, ds, nil
+			}
+
+			_, err = m.GetDataSource()
+			require.Nil(t, err)
+
+			m.Shutdown()
+			assert.Nil(t, m.source)
+			assert.Nil(t, m.client)
 		})
 	}
 }

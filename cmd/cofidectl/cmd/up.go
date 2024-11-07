@@ -88,7 +88,10 @@ func installSPIREStack(source cofidectl_plugin.DataSource, trustZones []*trust_z
 		}
 
 		spireCRDsValues := map[string]interface{}{}
-		prov := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+		prov, err := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+		if err != nil {
+			return err
+		}
 
 		// Create a spinner to display whilst installation is underway
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
@@ -299,7 +302,10 @@ func applyPostInstallHelmConfig(source cofidectl_plugin.DataSource, trustZones [
 
 		spireCRDsValues := map[string]interface{}{}
 
-		prov := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+		prov, err := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+		if err != nil {
+			return err
+		}
 
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
 		s.Start()

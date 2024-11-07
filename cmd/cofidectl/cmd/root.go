@@ -40,7 +40,9 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	}
 
 	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
+	if err != nil {
+		return nil, err
+	}
 
 	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 

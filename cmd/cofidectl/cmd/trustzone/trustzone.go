@@ -204,7 +204,10 @@ func (c *TrustZoneCommand) status(ctx context.Context, source cofidectl_plugin.D
 		return err
 	}
 
-	prov := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+	prov, err := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+	if err != nil {
+		return err
+	}
 	if installed, err := prov.CheckIfAlreadyInstalled(); err != nil {
 		return err
 	} else if !installed {
@@ -323,11 +326,15 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *Opts) 
 		return err
 	}
 	client, err := kubeutil.NewKubeClient(kubeConfig)
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
 	kubeRepo := kubeutil.NewKubeRepository(client)
 	contexts, err := kubeRepo.GetContexts()
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
 	if opts.context != "" {
 		if checkContext(contexts, opts.context) {
@@ -336,11 +343,11 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *Opts) 
 		return fmt.Errorf("could not find kubectl context '%s'", opts.context)
 	}
 
-	opts.context = promptContext(contexts, client.CmdConfig.CurrentContext)
-	return nil
+	opts.context, err = promptContext(contexts, client.CmdConfig.CurrentContext)
+	return err
 }
 
-func promptContext(contexts []string, currentContext string) string {
+func promptContext(contexts []string, currentContext string) (string, error) {
 	curPos := 0
 	if currentContext != "" {
 		curPos = slices.Index(contexts, currentContext)
@@ -353,9 +360,11 @@ func promptContext(contexts []string, currentContext string) string {
 	}
 
 	_, result, err := prompt.Run()
-	cobra.CheckErr(err)
+	if err != nil {
+		return "", err
+	}
 
-	return result
+	return result, nil
 }
 
 func checkContext(contexts []string, context string) bool {

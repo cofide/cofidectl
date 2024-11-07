@@ -62,7 +62,10 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 
 func uninstallSPIREStack(trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		prov := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+		prov, err := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+		if err != nil {
+			return err
+		}
 
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
 		s.Start()
