@@ -109,7 +109,8 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 				From: opts.from,
 				To:   opts.to,
 			}
-			return ds.AddFederation(newFederation)
+			_, err = ds.AddFederation(newFederation)
+			return err
 		},
 	}
 

@@ -146,19 +146,19 @@ func validateTrustProviderUpdate(tzName string, current, new *trust_provider_pro
 	return nil
 }
 
-func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) error {
+func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error) {
 	if _, ok := lds.config.GetAttestationPolicyByName(policy.Name); ok {
-		return fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
+		return nil, fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
 	}
 	policy, err := proto.CloneAttestationPolicy(policy)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lds.config.AttestationPolicies = append(lds.config.AttestationPolicies, policy)
 	if err := lds.updateDataFile(); err != nil {
-		return fmt.Errorf("failed to add attestation policy to local config: %s", err)
+		return nil, fmt.Errorf("failed to add attestation policy to local config: %s", err)
 	}
-	return nil
+	return proto.CloneAttestationPolicy(policy)
 }
 
 func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error) {
@@ -169,20 +169,20 @@ func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy
 	}
 }
 
-func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) error {
+func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
 	localTrustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
 	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
 	}
 
 	_, ok = lds.config.GetAttestationPolicyByName(binding.Policy)
 	if !ok {
-		return fmt.Errorf("attestation policy %s does not exist in local config", binding.Policy)
+		return nil, fmt.Errorf("attestation policy %s does not exist in local config", binding.Policy)
 	}
 
 	for _, apb := range localTrustZone.AttestationPolicies {
 		if apb.Policy == binding.Policy {
-			return fmt.Errorf("attestation policy %s is already bound to trust zone %s", binding.Policy, binding.TrustZone)
+			return nil, fmt.Errorf("attestation policy %s is already bound to trust zone %s", binding.Policy, binding.TrustZone)
 		}
 	}
 
@@ -193,26 +193,26 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) er
 	for _, remoteTz := range binding.FederatesWith {
 		if remoteTz == binding.TrustZone {
 			// Is this a problem?
-			return fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.Policy, binding.TrustZone)
+			return nil, fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.Policy, binding.TrustZone)
 		}
 		if _, ok := remoteTzs[remoteTz]; !ok {
 			if _, ok := lds.config.GetTrustZoneByName(remoteTz); !ok {
-				return fmt.Errorf("attestation policy %s federates with unknown trust zone %s", binding.Policy, remoteTz)
+				return nil, fmt.Errorf("attestation policy %s federates with unknown trust zone %s", binding.Policy, remoteTz)
 			} else {
-				return fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", binding.Policy, remoteTz, binding.TrustZone)
+				return nil, fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", binding.Policy, remoteTz, binding.TrustZone)
 			}
 		}
 	}
 
 	binding, err := proto.CloneAPBinding(binding)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, binding)
 	if err := lds.updateDataFile(); err != nil {
-		return fmt.Errorf("failed to add attestation policy to local config: %w", err)
+		return nil, fmt.Errorf("failed to add attestation policy to local config: %w", err)
 	}
-	return nil
+	return proto.CloneAPBinding(binding)
 }
 
 func (lds *LocalDataSource) ListAPBindingsByTrustZone(name string) ([]*ap_binding_proto.APBinding, error) {
@@ -232,38 +232,38 @@ func (lds *LocalDataSource) ListAPBindingsByTrustZone(name string) ([]*ap_bindin
 	return bindings, nil
 }
 
-func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) error {
+func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) (*federation_proto.Federation, error) {
 	fromTrustZone, ok := lds.config.GetTrustZoneByName(federationProto.From)
 	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.From)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.From)
 	}
 
 	_, ok = lds.config.GetTrustZoneByName(federationProto.To)
 	if !ok {
-		return fmt.Errorf("failed to find trust zone %s in local config", federationProto.To)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.To)
 	}
 
 	if federationProto.From == federationProto.To {
-		return fmt.Errorf("cannot federate trust zone %s with itself", federationProto.From)
+		return nil, fmt.Errorf("cannot federate trust zone %s with itself", federationProto.From)
 	}
 
 	for _, federation := range fromTrustZone.Federations {
 		if federation.To == federationProto.To {
-			return fmt.Errorf("federation already exists between %s and %s", federationProto.From, federationProto.To)
+			return nil, fmt.Errorf("federation already exists between %s and %s", federationProto.From, federationProto.To)
 		}
 	}
 
 	federationProto, err := proto.CloneFederation(federationProto)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fromTrustZone.Federations = append(fromTrustZone.Federations, federationProto)
 
 	if err := lds.updateDataFile(); err != nil {
-		return fmt.Errorf("failed to add federation to local config: %s", err)
+		return nil, fmt.Errorf("failed to add federation to local config: %s", err)
 	}
-	return nil
+	return proto.CloneFederation(federationProto)
 }
 
 func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {

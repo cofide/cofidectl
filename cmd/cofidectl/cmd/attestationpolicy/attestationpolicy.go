@@ -186,7 +186,7 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 					Kubernetes: kubernetes,
 				},
 			}
-			err = ds.AddAttestationPolicy(newAttestationPolicy)
+			_, err = ds.AddAttestationPolicy(newAttestationPolicy)
 			if err != nil {
 				return err
 			}

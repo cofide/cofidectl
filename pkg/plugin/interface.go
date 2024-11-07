@@ -18,13 +18,13 @@ type DataSource interface {
 	AddTrustZone(*trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
 	UpdateTrustZone(*trust_zone_proto.TrustZone) error
 
-	AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) error
+	AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error)
 	GetAttestationPolicy(string) (*attestation_policy_proto.AttestationPolicy, error)
 	ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error)
 
-	AddAPBinding(*ap_binding_proto.APBinding) error
+	AddAPBinding(*ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error)
 
-	AddFederation(*federation_proto.Federation) error
+	AddFederation(*federation_proto.Federation) (*federation_proto.Federation, error)
 	ListFederations() ([]*federation_proto.Federation, error)
 	ListFederationsByTrustZone(string) ([]*federation_proto.Federation, error)
 }

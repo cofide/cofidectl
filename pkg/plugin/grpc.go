@@ -48,9 +48,9 @@ func (c *DataSourcePluginClientGRPC) UpdateTrustZone(*trust_zone_proto.TrustZone
 	return nil
 }
 
-func (c *DataSourcePluginClientGRPC) AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) error {
+func (c *DataSourcePluginClientGRPC) AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error) {
 	// Unimplemented.
-	return nil
+	return nil, nil
 }
 
 func (c *DataSourcePluginClientGRPC) GetAttestationPolicy(string) (*attestation_policy_proto.AttestationPolicy, error) {
@@ -63,14 +63,14 @@ func (c *DataSourcePluginClientGRPC) ListAttestationPolicies() ([]*attestation_p
 	return nil, nil
 }
 
-func (c *DataSourcePluginClientGRPC) AddAPBinding(*ap_binding_proto.APBinding) error {
+func (c *DataSourcePluginClientGRPC) AddAPBinding(*ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
 	// Unimplemented.
-	return nil
+	return nil, nil
 }
 
-func (c *DataSourcePluginClientGRPC) AddFederation(*federation_proto.Federation) error {
+func (c *DataSourcePluginClientGRPC) AddFederation(*federation_proto.Federation) (*federation_proto.Federation, error) {
 	// Unimplemented.
-	return nil
+	return nil, nil
 }
 
 func (c *DataSourcePluginClientGRPC) ListFederations() ([]*federation_proto.Federation, error) {

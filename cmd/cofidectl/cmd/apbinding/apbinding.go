@@ -158,7 +158,8 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 				Policy:        opts.attestationPolicy,
 				FederatesWith: opts.federatesWith,
 			}
-			return ds.AddAPBinding(binding)
+			_, err = ds.AddAPBinding(binding)
+			return err
 		},
 	}
 
