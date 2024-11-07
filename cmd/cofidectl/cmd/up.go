@@ -65,7 +65,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			if err := watchAndConfigure(ds, trustZones); err != nil {
+			if err := watchAndConfigure(cmd.Context(), ds, trustZones); err != nil {
 				return err
 			}
 
@@ -121,14 +121,14 @@ func installSPIREStack(source cofidectl_plugin.DataSource, trustZones []*trust_z
 	return nil
 }
 
-func watchAndConfigure(source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
+func watchAndConfigure(ctx context.Context, source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
 		s.Suffix = fmt.Sprintf(" Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
 		s.Start()
 
-		clusterIP, err := watchSPIREPodAndService(trustZone.GetKubernetesContext())
+		clusterIP, err := watchSPIREPodAndService(ctx, trustZone.GetKubernetesContext())
 		if err != nil {
 			s.Stop()
 			return fmt.Errorf("error in context %s: %v", trustZone.GetKubernetesContext(), err)
@@ -138,7 +138,7 @@ func watchAndConfigure(source cofidectl_plugin.DataSource, trustZones []*trust_z
 		trustZone.BundleEndpointUrl = &bundleEndpointUrl
 
 		// obtain the bundle
-		bundle, err := getBundle(trustZone.GetKubernetesContext())
+		bundle, err := getBundle(ctx, trustZone.GetKubernetesContext())
 		if err != nil {
 			s.Stop()
 			return fmt.Errorf("error obtaining bundle in context %s: %v", trustZone.GetKubernetesContext(), err)
@@ -157,14 +157,14 @@ func watchAndConfigure(source cofidectl_plugin.DataSource, trustZones []*trust_z
 	return nil
 }
 
-func watchSPIREPodAndService(kubeContext string) (string, error) {
-	podWatcher, err := createPodWatcher(kubeContext)
+func watchSPIREPodAndService(ctx context.Context, kubeContext string) (string, error) {
+	podWatcher, err := createPodWatcher(ctx, kubeContext)
 	if err != nil {
 		return "", err
 	}
 	defer podWatcher.Stop()
 
-	serviceWatcher, err := createServiceWatcher(kubeContext)
+	serviceWatcher, err := createServiceWatcher(ctx, kubeContext)
 	if err != nil {
 		return "", err
 	}
@@ -213,7 +213,7 @@ func watchSPIREPodAndService(kubeContext string) (string, error) {
 	}
 }
 
-func getBundle(kubeContext string) (string, error) {
+func getBundle(ctx context.Context, kubeContext string) (string, error) {
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
 	if err != nil {
 		return "", err
@@ -224,7 +224,7 @@ func getBundle(kubeContext string) (string, error) {
 	stderr := &bytes.Buffer{}
 
 	err = kubeutil.RunCommand(
-		context.TODO(),
+		ctx,
 		client.Clientset,
 		client.RestConfig,
 		"spire-server-0",
@@ -249,14 +249,14 @@ func getBundle(kubeContext string) (string, error) {
 	return bundle, nil
 }
 
-func createPodWatcher(kubeContext string) (watch.Interface, error) {
+func createPodWatcher(ctx context.Context, kubeContext string) (watch.Interface, error) {
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
 	if err != nil {
 		return nil, err
 	}
 	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64(120)
-		return client.Clientset.CoreV1().Pods("spire").Watch(context.Background(), metav1.ListOptions{
+		return client.Clientset.CoreV1().Pods("spire").Watch(ctx, metav1.ListOptions{
 			FieldSelector:  "metadata.name=spire-server-0",
 			TimeoutSeconds: &timeout,
 		})
@@ -270,14 +270,14 @@ func createPodWatcher(kubeContext string) (watch.Interface, error) {
 	return watcher, nil
 }
 
-func createServiceWatcher(kubeContext string) (watch.Interface, error) {
+func createServiceWatcher(ctx context.Context, kubeContext string) (watch.Interface, error) {
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
 	if err != nil {
 		return nil, err
 	}
 	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64(120)
-		return client.Clientset.CoreV1().Services("spire").Watch(context.Background(), metav1.ListOptions{
+		return client.Clientset.CoreV1().Services("spire").Watch(ctx, metav1.ListOptions{
 			FieldSelector:  "metadata.name=spire-server",
 			TimeoutSeconds: &timeout,
 		})

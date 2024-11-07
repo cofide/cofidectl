@@ -60,7 +60,7 @@ func run() error {
 	}
 
 	// Cobra logs any errors returned by commands, so don't log again.
-	return rootCmd.Execute()
+	return rootCmd.ExecuteContext(cmdCtx.Ctx)
 }
 
 // getCommandContext returns a command context wired up with a config loader and plugin manager.
@@ -68,9 +68,7 @@ func getCommandContext() *cmdcontext.CommandContext {
 	configLoader := config.NewFileLoader(cofideConfigFile)
 	pluginManager := manager.NewManager(configLoader)
 
-	return &cmdcontext.CommandContext{
-		PluginManager: pluginManager,
-	}
+	return cmdcontext.NewCommandContext(pluginManager)
 }
 
 // handleSignals waits for SIGINT or SIGTERM, then triggers a clean shutdown using the command context.

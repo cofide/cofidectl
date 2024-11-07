@@ -16,6 +16,7 @@ import (
 // DataSourcePluginClientGRPC is used by clients (main application) to translate the
 // DataSource interface of plugins to GRPC calls.
 type DataSourcePluginClientGRPC struct {
+	ctx    context.Context
 	client cofidectl_proto.DataSourcePluginServiceClient
 }
 
@@ -30,7 +31,7 @@ func (c *DataSourcePluginClientGRPC) GetTrustZone(name string) (*trust_zone_prot
 }
 
 func (c *DataSourcePluginClientGRPC) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-	resp, err := c.client.ListTrustZones(context.Background(), &cofidectl_proto.ListTrustZonesRequest{})
+	resp, err := c.client.ListTrustZones(c.ctx, &cofidectl_proto.ListTrustZonesRequest{})
 	if err != nil {
 		return nil, err
 	}

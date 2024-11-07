@@ -4,6 +4,7 @@
 package workload
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -91,7 +92,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderRegisteredWorkloads(kubeConfig, trustZones)
+			err = renderRegisteredWorkloads(cmd.Context(), kubeConfig, trustZones)
 			if err != nil {
 				return err
 			}
@@ -106,11 +107,11 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
-func renderRegisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
+func renderRegisteredWorkloads(ctx context.Context, kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetRegisteredWorkloads(kubeConfig, trustZone.GetKubernetesContext())
+		registeredWorkloads, err := workload.GetRegisteredWorkloads(ctx, kubeConfig, trustZone.GetKubernetesContext())
 		if err != nil {
 			return err
 		}
@@ -184,7 +185,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderUnregisteredWorkloads(kubeConfig, trustZones, opts.includeSecrets)
+			err = renderUnregisteredWorkloads(cmd.Context(), kubeConfig, trustZones, opts.includeSecrets)
 			if err != nil {
 				return err
 			}
@@ -200,11 +201,11 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 	return cmd
 }
 
-func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
+func renderUnregisteredWorkloads(ctx context.Context, kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.GetKubernetesContext(), includeSecrets)
+		registeredWorkloads, err := workload.GetUnregisteredWorkloads(ctx, kubeConfig, trustZone.GetKubernetesContext(), includeSecrets)
 		if err != nil {
 			return err
 		}
