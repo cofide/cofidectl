@@ -5,7 +5,7 @@ go 1.22.7
 require (
 	buf.build/go/protoyaml v0.2.0
 	cuelang.org/go v0.10.0
-	github.com/cofide/cofide-api-sdk v0.1.1-0.20241105120707-82ec03d1ecd9
+	github.com/cofide/cofide-api-sdk v0.1.1-0.20241107100710-a8c38c7a80f7
 	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-plugin v1.6.2
@@ -20,7 +20,7 @@ require (
 )
 
 // Uncomment the following for development with local Cofide API SDK changes:
-replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
+// replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240717164558-a6c49f84cc0f.2 // indirect
