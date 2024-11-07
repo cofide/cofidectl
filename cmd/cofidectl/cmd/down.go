@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -50,7 +51,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return nil
 			}
 
-			if err := uninstallSPIREStack(trustZones); err != nil {
+			if err := uninstallSPIREStack(cmd.Context(), trustZones); err != nil {
 				return err
 			}
 
@@ -60,9 +61,9 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 	return cmd
 }
 
-func uninstallSPIREStack(trustZones []*trust_zone_proto.TrustZone) error {
+func uninstallSPIREStack(ctx context.Context, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		prov, err := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+		prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
 		if err != nil {
 			return err
 		}

@@ -4,6 +4,7 @@
 package helm
 
 import (
+	"context"
 	"testing"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -15,7 +16,7 @@ func TestHelmSPIREProvider(t *testing.T) {
 	spireValues := map[string]interface{}{}
 	spireCRDsValues := map[string]interface{}{}
 
-	p, err := NewHelmSPIREProvider(trustZoneProto, spireValues, spireCRDsValues)
+	p, err := NewHelmSPIREProvider(context.Background(), trustZoneProto, spireValues, spireCRDsValues)
 	assert.Nil(t, err)
 	assert.Equal(t, p.SPIREVersion, "0.21.0")
 	assert.Equal(t, p.SPIRECRDsVersion, "0.4.0")

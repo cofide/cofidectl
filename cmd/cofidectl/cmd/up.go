@@ -61,7 +61,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return fmt.Errorf("no trust zones have been configured")
 			}
 
-			if err := installSPIREStack(ds, trustZones); err != nil {
+			if err := installSPIREStack(cmd.Context(), ds, trustZones); err != nil {
 				return err
 			}
 
@@ -69,7 +69,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			if err := applyPostInstallHelmConfig(ds, trustZones); err != nil {
+			if err := applyPostInstallHelmConfig(cmd.Context(), ds, trustZones); err != nil {
 				return err
 			}
 
@@ -79,7 +79,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 	return cmd
 }
 
-func installSPIREStack(source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
+func installSPIREStack(ctx context.Context, source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
 		generator := helm.NewHelmValuesGenerator(trustZone, source)
 		spireValues, err := generator.GenerateValues()
@@ -88,7 +88,7 @@ func installSPIREStack(source cofidectl_plugin.DataSource, trustZones []*trust_z
 		}
 
 		spireCRDsValues := map[string]interface{}{}
-		prov, err := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+		prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, spireValues, spireCRDsValues)
 		if err != nil {
 			return err
 		}
@@ -291,7 +291,7 @@ func createServiceWatcher(ctx context.Context, kubeContext string) (watch.Interf
 	return watcher, nil
 }
 
-func applyPostInstallHelmConfig(source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
+func applyPostInstallHelmConfig(ctx context.Context, source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
 		generator := helm.NewHelmValuesGenerator(trustZone, source)
 
@@ -302,7 +302,7 @@ func applyPostInstallHelmConfig(source cofidectl_plugin.DataSource, trustZones [
 
 		spireCRDsValues := map[string]interface{}{}
 
-		prov, err := helm.NewHelmSPIREProvider(trustZone, spireValues, spireCRDsValues)
+		prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, spireValues, spireCRDsValues)
 		if err != nil {
 			return err
 		}

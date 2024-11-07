@@ -204,7 +204,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source cofidectl_plugin.D
 		return err
 	}
 
-	prov, err := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+	prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
 	if err != nil {
 		return err
 	}
