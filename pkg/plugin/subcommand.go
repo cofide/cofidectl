@@ -35,13 +35,20 @@ func GetPluginDir() (string, error) {
 	return filepath.Join(usr.HomeDir, relativePluginDir), nil
 }
 
-func PluginExists(name string) (bool, error) {
+func GetPluginPath(name string) (string, error) {
 	pluginDir, err := GetPluginDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(pluginDir, name), nil
+}
+
+func PluginExists(name string) (bool, error) {
+	pluginPath, err := GetPluginPath(name)
 	if err != nil {
 		return false, err
 	}
-
-	pluginPath := filepath.Join(pluginDir, name)
 
 	if _, err := os.Stat(pluginPath); errors.Is(err, os.ErrNotExist) {
 		return false, nil

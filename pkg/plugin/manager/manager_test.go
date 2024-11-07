@@ -14,16 +14,16 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 )
 
-type fakeConnectDataSource struct {
+type fakeGrpcDataSource struct {
 	local.LocalDataSource
 }
 
-func newFakeConnectDataSource(t *testing.T, configLoader config.Loader) *fakeConnectDataSource {
+func newFakeGrpcDataSource(t *testing.T, configLoader config.Loader) *fakeGrpcDataSource {
 	lds, err := local.NewLocalDataSource(configLoader)
 	if err != nil {
 		t.Fatalf("NewLocalDataSource() error = %v", err)
 	}
-	return &fakeConnectDataSource{LocalDataSource: *lds}
+	return &fakeGrpcDataSource{LocalDataSource: *lds}
 }
 
 func TestManager_GetPlugin_success(t *testing.T) {
@@ -44,10 +44,10 @@ func TestManager_GetPlugin_success(t *testing.T) {
 			},
 		},
 		{
-			name:   "connect",
-			config: config.Config{DataSource: ConnectPluginName},
+			name:   "gRPC",
+			config: config.Config{DataSource: "fake-plugin"},
 			want: func(cl config.Loader) cofidectl_plugin.DataSource {
-				fcds := newFakeConnectDataSource(t, cl)
+				fcds := newFakeGrpcDataSource(t, cl)
 				return fcds
 			},
 		},
@@ -61,8 +61,8 @@ func TestManager_GetPlugin_success(t *testing.T) {
 
 			l := NewManager(configLoader)
 			// Mock out the Connect plugin loader function.
-			l.loadConnectPlugin = func(logger hclog.Logger) (cofidectl_plugin.DataSource, error) {
-				return newFakeConnectDataSource(t, configLoader), nil
+			l.loadGrpcPlugin = func(logger hclog.Logger, _ string) (cofidectl_plugin.DataSource, error) {
+				return newFakeGrpcDataSource(t, configLoader), nil
 			}
 
 			got, err := l.GetPlugin()
@@ -87,16 +87,11 @@ func TestManager_GetPlugin_failure(t *testing.T) {
 		{
 			name:    "empty",
 			config:  config.Config{DataSource: ""},
-			wantErr: "only local and cofidectl-connect plugins are currently supported",
-		},
-		{
-			name:    "invalid plugin",
-			config:  config.Config{DataSource: "invalid"},
-			wantErr: "only local and cofidectl-connect plugins are currently supported",
+			wantErr: "plugin name cannot be empty",
 		},
 		{
 			name:    "connect plugin load failure",
-			config:  config.Config{DataSource: ConnectPluginName},
+			config:  config.Config{DataSource: "fake-plugin"},
 			wantErr: "failed to create connect plugin",
 		},
 	}
@@ -109,7 +104,7 @@ func TestManager_GetPlugin_failure(t *testing.T) {
 
 			l := NewManager(configLoader)
 			// Mock out the Connect plugin loader function, and inject a load failure.
-			l.loadConnectPlugin = func(logger hclog.Logger) (cofidectl_plugin.DataSource, error) {
+			l.loadGrpcPlugin = func(logger hclog.Logger, _ string) (cofidectl_plugin.DataSource, error) {
 				return nil, errors.New("failed to create connect plugin")
 			}
 

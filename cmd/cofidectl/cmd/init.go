@@ -13,6 +13,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	connectPluginName = "cofidectl-connect"
+)
+
 type InitCommand struct {
 	cmdCtx *context.CommandContext
 }
@@ -42,8 +46,8 @@ func (i *InitCommand) GetRootCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var pluginName string
 			if opts.enableConnect {
-				if ok, _ := plugin.PluginExists(manager.ConnectPluginName); ok {
-					pluginName = manager.ConnectPluginName
+				if ok, _ := plugin.PluginExists(connectPluginName); ok {
+					pluginName = connectPluginName
 				} else {
 					fmt.Println("👀 get in touch with us at hello@cofide.io to find out more")
 					os.Exit(1)
