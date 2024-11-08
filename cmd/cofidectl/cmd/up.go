@@ -10,11 +10,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/briandowns/spinner"
-
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	"github.com/cofide/cofidectl/internal/pkg/provider"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
-	"github.com/fatih/color"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -113,30 +111,13 @@ func installSPIREStack(ctx context.Context, source cofidectl_plugin.DataSource, 
 			return err
 		}
 
+		statusCh := prov.Execute()
+
 		// Create a spinner to display whilst installation is underway
-		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Start()
-		statusCh, err := prov.Execute()
-		if err != nil {
-			s.Stop()
-			return fmt.Errorf("failed to start installation: %w", err)
+		s := statusspinner.New()
+		if err := s.Watch(statusCh); err != nil {
+			return fmt.Errorf("installation failed: %w", err)
 		}
-
-		for status := range statusCh {
-			s.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
-
-			if status.Done {
-				s.Stop()
-				if status.Error != nil {
-					fmt.Printf("❌ %s: %s\n", status.Stage, status.Message)
-					return fmt.Errorf("installation failed: %w", status.Error)
-				}
-				green := color.New(color.FgGreen).SprintFunc()
-				fmt.Printf("%s %s: %s\n\n", green("✅"), status.Stage, status.Message)
-			}
-		}
-
-		s.Stop()
 	}
 	return nil
 }
@@ -144,37 +125,46 @@ func installSPIREStack(ctx context.Context, source cofidectl_plugin.DataSource, 
 func watchAndConfigure(ctx context.Context, source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
-		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Suffix = fmt.Sprintf(" Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
-		s.Start()
+		statusCh := make(chan provider.ProviderStatus)
 
-		clusterIP, err := watchSPIREPodAndService(ctx, trustZone.GetKubernetesContext())
-		if err != nil {
-			s.Stop()
-			return fmt.Errorf("error in context %s: %v", trustZone.GetKubernetesContext(), err)
+		go getBundleAndEndpoint(ctx, statusCh, source, trustZone)
+
+		s := statusspinner.New()
+		if err := s.Watch(statusCh); err != nil {
+			return fmt.Errorf("configuration failed: %w", err)
 		}
-
-		bundleEndpointUrl := fmt.Sprintf("https://%s:8443", clusterIP)
-		trustZone.BundleEndpointUrl = &bundleEndpointUrl
-
-		// obtain the bundle
-		bundle, err := getBundle(ctx, trustZone.GetKubernetesContext())
-		if err != nil {
-			s.Stop()
-			return fmt.Errorf("error obtaining bundle in context %s: %v", trustZone.GetKubernetesContext(), err)
-		}
-
-		trustZone.Bundle = &bundle
-
-		if err := source.UpdateTrustZone(trustZone); err != nil {
-			return fmt.Errorf("failed to update trust zone %s: %w", trustZone.Name, err)
-		}
-
-		s.Stop()
-		green := color.New(color.FgGreen).SprintFunc()
-		fmt.Printf("%s All SPIRE server pods and services are ready for %s in cluster %s\n\n", green("✅"), trustZone.Name, trustZone.GetKubernetesCluster())
 	}
 	return nil
+}
+
+func getBundleAndEndpoint(ctx context.Context, statusCh chan<- provider.ProviderStatus, source cofidectl_plugin.DataSource, trustZone *trust_zone_proto.TrustZone) {
+	defer close(statusCh)
+	statusCh <- provider.ProviderStatus{Stage: "Waiting", Message: fmt.Sprintf("Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())}
+
+	clusterIP, err := watchSPIREPodAndService(ctx, trustZone.GetKubernetesContext())
+	if err != nil {
+		statusCh <- provider.ProviderStatus{Stage: "Waiting", Message: fmt.Sprintf("Failed waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster()), Done: true, Error: err}
+		return
+	}
+
+	bundleEndpointUrl := fmt.Sprintf("https://%s:8443", clusterIP)
+	trustZone.BundleEndpointUrl = &bundleEndpointUrl
+
+	// obtain the bundle
+	bundle, err := getBundle(ctx, trustZone.GetKubernetesContext())
+	if err != nil {
+		statusCh <- provider.ProviderStatus{Stage: "Waiting", Message: fmt.Sprintf("Failed obtaining bundle for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster()), Done: true, Error: err}
+		return
+	}
+
+	trustZone.Bundle = &bundle
+
+	if err := source.UpdateTrustZone(trustZone); err != nil {
+		statusCh <- provider.ProviderStatus{Stage: "Waiting", Message: fmt.Sprintf("Failed updating trust zone %s", trustZone.Name), Done: true, Error: err}
+		return
+	}
+
+	statusCh <- provider.ProviderStatus{Stage: "Ready", Message: fmt.Sprintf("All SPIRE server pods and services are ready for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster()), Done: true}
 }
 
 func watchSPIREPodAndService(ctx context.Context, kubeContext string) (string, error) {
@@ -327,30 +317,12 @@ func applyPostInstallHelmConfig(ctx context.Context, source cofidectl_plugin.Dat
 			return err
 		}
 
-		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Start()
+		statusCh := prov.ExecuteUpgrade(true)
 
-		statusCh, err := prov.ExecuteUpgrade(true)
-		if err != nil {
-			s.Stop()
-			return fmt.Errorf("failed to start post-installation configuration: %w", err)
+		s := statusspinner.New()
+		if err := s.Watch(statusCh); err != nil {
+			return fmt.Errorf("post-installation configuration failed: %w", err)
 		}
-
-		for status := range statusCh {
-			s.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
-
-			if status.Done {
-				s.Stop()
-				if status.Error != nil {
-					fmt.Printf("❌ %s: %s\n", status.Stage, status.Message)
-					return fmt.Errorf("post-installation configuration failed: %w", status.Error)
-				}
-				green := color.New(color.FgGreen).SprintFunc()
-				fmt.Printf("%s %s: %s\n\n", green("✅"), status.Stage, status.Message)
-			}
-		}
-
-		s.Stop()
 	}
 
 	return nil

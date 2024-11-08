@@ -168,12 +168,12 @@ func lockPath(filePath string) string {
 }
 
 // Execute creates a provider status channel and performs the Helm chart installations.
-func (h *HelmSPIREProvider) Execute() (<-chan provider.ProviderStatus, error) {
+func (h *HelmSPIREProvider) Execute() <-chan provider.ProviderStatus {
 	statusCh := make(chan provider.ProviderStatus)
 
 	h.installChart(statusCh)
 
-	return statusCh, nil
+	return statusCh
 }
 
 // install installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
@@ -200,7 +200,7 @@ func (h *HelmSPIREProvider) installChart(statusCh chan provider.ProviderStatus) 
 	}()
 }
 
-func (h *HelmSPIREProvider) ExecuteUpgrade(postInstall bool) (<-chan provider.ProviderStatus, error) {
+func (h *HelmSPIREProvider) ExecuteUpgrade(postInstall bool) <-chan provider.ProviderStatus {
 	statusCh := make(chan provider.ProviderStatus)
 
 	// differentiate between a post-installation upgrade (ie configuration) and a full upgrade
@@ -210,7 +210,7 @@ func (h *HelmSPIREProvider) ExecuteUpgrade(postInstall bool) (<-chan provider.Pr
 		h.upgradeChart(statusCh)
 	}
 
-	return statusCh, nil
+	return statusCh
 }
 
 func (h *HelmSPIREProvider) postInstallUpgrade(statusCh chan provider.ProviderStatus) {
@@ -243,12 +243,12 @@ func (h *HelmSPIREProvider) upgradeChart(statusCh chan provider.ProviderStatus) 
 	}()
 }
 
-func (h *HelmSPIREProvider) ExecuteUninstall() (<-chan provider.ProviderStatus, error) {
+func (h *HelmSPIREProvider) ExecuteUninstall() <-chan provider.ProviderStatus {
 	statusCh := make(chan provider.ProviderStatus)
 
 	h.uninstall(statusCh)
 
-	return statusCh, nil
+	return statusCh
 }
 
 // uninstall uninstalls the Cofide-enabled SPIRE stack from the selected Kubernetes context
