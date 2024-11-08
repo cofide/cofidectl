@@ -22,6 +22,7 @@ import (
 	toolsWatch "k8s.io/client-go/tools/watch"
 
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
@@ -61,6 +62,10 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return fmt.Errorf("no trust zones have been configured")
 			}
 
+			if err := addSPIRERepository(cmd.Context()); err != nil {
+				return err
+			}
+
 			if err := installSPIREStack(cmd.Context(), ds, trustZones); err != nil {
 				return err
 			}
@@ -77,6 +82,21 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 		},
 	}
 	return cmd
+}
+
+func addSPIRERepository(ctx context.Context) error {
+	emptyValues := map[string]interface{}{}
+	prov, err := helm.NewHelmSPIREProvider(ctx, nil, emptyValues, emptyValues)
+	if err != nil {
+		return err
+	}
+
+	statusCh := prov.AddRepository()
+	s := statusspinner.New()
+	if err := s.Watch(statusCh); err != nil {
+		return fmt.Errorf("adding SPIRE Helm repository failed: %w", err)
+	}
+	return nil
 }
 
 func installSPIREStack(ctx context.Context, source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {

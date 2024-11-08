@@ -7,6 +7,7 @@ require (
 	cuelang.org/go v0.10.0
 	github.com/cofide/cofide-api-sdk v0.1.1-0.20241107100710-a8c38c7a80f7
 	github.com/fatih/color v1.13.0
+	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-plugin v1.6.2
 	github.com/manifoldco/promptui v0.9.0
