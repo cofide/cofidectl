@@ -32,3 +32,30 @@ jobs:
 
       - name: Test
         run: tests/integration/single-trust-zone/test.sh
+
+  federation:
+    name: federation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install just
+        uses: taiki-e/install-action@just
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build and run tests
+        run: just build
+
+      - name: Install kind
+        run: tests/integration/install-kind.sh
+
+      - name: Create kind clusters
+        run: tests/integration/federation/create-kind-clusters.sh
+
+      - name: Test
+        run: tests/integration/federation/test.sh
