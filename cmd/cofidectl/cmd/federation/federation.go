@@ -7,19 +7,19 @@ import (
 	"os"
 
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type FederationCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewFederationCommand(source cofidectl_plugin.DataSource) *FederationCommand {
+func NewFederationCommand(cmdCtx *cmdcontext.CommandContext) *FederationCommand {
 	return &FederationCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -52,11 +52,12 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 		Long:  federationListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
-			federations, err := c.source.ListFederations()
+			federations, err := ds.ListFederations()
 			if err != nil {
 				return err
 			}
@@ -99,7 +100,8 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		Long:  federationAddCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
@@ -107,7 +109,8 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 				From: opts.from,
 				To:   opts.to,
 			}
-			return c.source.AddFederation(newFederation)
+			_, err = ds.AddFederation(newFederation)
+			return err
 		},
 	}
 

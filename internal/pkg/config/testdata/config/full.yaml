@@ -1,3 +1,4 @@
+data_source: fake-plugin
 trust_zones:
     - name: tz1
       trust_domain: td1
@@ -67,5 +68,3 @@ attestation_policies:
                   operator: Exists
                 - key: baz
                   operator: DoesNotExist
-plugins:
-    - test-plugin

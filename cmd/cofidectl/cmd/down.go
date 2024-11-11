@@ -4,25 +4,25 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/briandowns/spinner"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 type DownCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewDownCommand(source cofidectl_plugin.DataSource) *DownCommand {
+func NewDownCommand(cmdCtx *cmdcontext.CommandContext) *DownCommand {
 	return &DownCommand{
-		source: source,
-	}
+		cmdCtx: cmdCtx}
 }
 
 var downCmdDesc = `
@@ -36,11 +36,12 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 		Long:  downCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := d.source.Validate(); err != nil {
+			ds, err := d.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
-			trustZones, err := d.source.ListTrustZones()
+			trustZones, err := ds.ListTrustZones()
 			if err != nil {
 				return err
 			}
@@ -50,7 +51,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return nil
 			}
 
-			if err := uninstallSPIREStack(trustZones); err != nil {
+			if err := uninstallSPIREStack(cmd.Context(), trustZones); err != nil {
 				return err
 			}
 
@@ -60,9 +61,12 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 	return cmd
 }
 
-func uninstallSPIREStack(trustZones []*trust_zone_proto.TrustZone) error {
+func uninstallSPIREStack(ctx context.Context, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		prov := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+		prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
+		if err != nil {
+			return err
+		}
 
 		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
 		s.Start()

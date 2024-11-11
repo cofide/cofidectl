@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/manifoldco/promptui"
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
@@ -25,12 +26,12 @@ import (
 )
 
 type TrustZoneCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewTrustZoneCommand(source cofidectl_plugin.DataSource) *TrustZoneCommand {
+func NewTrustZoneCommand(cmdCtx *cmdcontext.CommandContext) *TrustZoneCommand {
 	return &TrustZoneCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -66,11 +67,12 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 		Long:  trustZoneListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
-			trustZones, err := c.source.ListTrustZones()
+			trustZones, err := ds.ListTrustZones()
 			if err != nil {
 				return err
 			}
@@ -123,11 +125,12 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
-			err := c.getKubernetesContext(cmd, &opts)
+			err = c.getKubernetesContext(cmd, &opts)
 			if err != nil {
 				return err
 			}
@@ -139,7 +142,13 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				KubernetesContext: &opts.context,
 				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &opts.profile},
 			}
-			return c.source.AddTrustZone(newTrustZone)
+
+			_, err = ds.AddTrustZone(newTrustZone)
+			if err != nil {
+				return fmt.Errorf("failed to create trust zone %s: %s", newTrustZone.Name, err)
+			}
+
+			return nil
 		},
 	}
 
@@ -168,22 +177,24 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 		Long:  trustZoneStatusCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
+
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
-			return c.status(cmd.Context(), kubeConfig, args[0])
+			return c.status(cmd.Context(), ds, kubeConfig, args[0])
 		},
 	}
 
 	return cmd
 }
 
-func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string) error {
-	trustZone, err := c.source.GetTrustZone(tzName)
+func (c *TrustZoneCommand) status(ctx context.Context, source cofidectl_plugin.DataSource, kubeConfig, tzName string) error {
+	trustZone, err := source.GetTrustZone(tzName)
 	if err != nil {
 		return err
 	}
@@ -193,7 +204,10 @@ func (c *TrustZoneCommand) status(ctx context.Context, kubeConfig, tzName string
 		return err
 	}
 
-	prov := helm.NewHelmSPIREProvider(trustZone, nil, nil)
+	prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
+	if err != nil {
+		return err
+	}
 	if installed, err := prov.CheckIfAlreadyInstalled(); err != nil {
 		return err
 	} else if !installed {
@@ -312,11 +326,15 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *Opts) 
 		return err
 	}
 	client, err := kubeutil.NewKubeClient(kubeConfig)
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
 	kubeRepo := kubeutil.NewKubeRepository(client)
 	contexts, err := kubeRepo.GetContexts()
-	cobra.CheckErr(err)
+	if err != nil {
+		return err
+	}
 
 	if opts.context != "" {
 		if checkContext(contexts, opts.context) {
@@ -325,11 +343,11 @@ func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *Opts) 
 		return fmt.Errorf("could not find kubectl context '%s'", opts.context)
 	}
 
-	opts.context = promptContext(contexts, client.CmdConfig.CurrentContext)
-	return nil
+	opts.context, err = promptContext(contexts, client.CmdConfig.CurrentContext)
+	return err
 }
 
-func promptContext(contexts []string, currentContext string) string {
+func promptContext(contexts []string, currentContext string) (string, error) {
 	curPos := 0
 	if currentContext != "" {
 		curPos = slices.Index(contexts, currentContext)
@@ -342,9 +360,11 @@ func promptContext(contexts []string, currentContext string) string {
 	}
 
 	_, result, err := prompt.Run()
-	cobra.CheckErr(err)
+	if err != nil {
+		return "", err
+	}
 
-	return result
+	return result, nil
 }
 
 func checkContext(contexts []string, context string) bool {

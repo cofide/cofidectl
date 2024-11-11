@@ -4,23 +4,24 @@
 package workload
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/internal/pkg/workload"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type WorkloadCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewWorkloadCommand(source cofidectl_plugin.DataSource) *WorkloadCommand {
+func NewWorkloadCommand(cmdCtx *cmdcontext.CommandContext) *WorkloadCommand {
 	return &WorkloadCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -60,22 +61,23 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 		Long:  workloadListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := w.source.Validate(); err != nil {
+			var err error
+			ds, err := w.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
-			var err error
 			var trustZones []*trust_zone_proto.TrustZone
 
 			if opts.trustZone != "" {
-				trustZone, err := w.source.GetTrustZone(opts.trustZone)
+				trustZone, err := ds.GetTrustZone(opts.trustZone)
 				if err != nil {
 					return err
 				}
 
 				trustZones = append(trustZones, trustZone)
 			} else {
-				trustZones, err = w.source.ListTrustZones()
+				trustZones, err = ds.ListTrustZones()
 				if err != nil {
 					return err
 				}
@@ -90,7 +92,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderRegisteredWorkloads(kubeConfig, trustZones)
+			err = renderRegisteredWorkloads(cmd.Context(), kubeConfig, trustZones)
 			if err != nil {
 				return err
 			}
@@ -105,11 +107,11 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
-func renderRegisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
+func renderRegisteredWorkloads(ctx context.Context, kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetRegisteredWorkloads(kubeConfig, trustZone.GetKubernetesContext())
+		registeredWorkloads, err := workload.GetRegisteredWorkloads(ctx, kubeConfig, trustZone.GetKubernetesContext())
 		if err != nil {
 			return err
 		}
@@ -152,22 +154,23 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 		Long:  workloadDiscoverCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := w.source.Validate(); err != nil {
+			var err error
+			ds, err := w.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
-			var err error
 			var trustZones []*trust_zone_proto.TrustZone
 
 			if opts.trustZone != "" {
-				trustZone, err := w.source.GetTrustZone(opts.trustZone)
+				trustZone, err := ds.GetTrustZone(opts.trustZone)
 				if err != nil {
 					return err
 				}
 
 				trustZones = append(trustZones, trustZone)
 			} else {
-				trustZones, err = w.source.ListTrustZones()
+				trustZones, err = ds.ListTrustZones()
 				if err != nil {
 					return err
 				}
@@ -182,7 +185,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderUnregisteredWorkloads(kubeConfig, trustZones, opts.includeSecrets)
+			err = renderUnregisteredWorkloads(cmd.Context(), kubeConfig, trustZones, opts.includeSecrets)
 			if err != nil {
 				return err
 			}
@@ -198,11 +201,11 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 	return cmd
 }
 
-func renderUnregisteredWorkloads(kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
+func renderUnregisteredWorkloads(ctx context.Context, kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetUnregisteredWorkloads(kubeConfig, trustZone.GetKubernetesContext(), includeSecrets)
+		registeredWorkloads, err := workload.GetUnregisteredWorkloads(ctx, kubeConfig, trustZone.GetKubernetesContext(), includeSecrets)
 		if err != nil {
 			return err
 		}

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/testing/protocmp"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
@@ -80,7 +81,7 @@ func TestFileLoaderNonEmptyConfig(t *testing.T) {
 	loader := NewFileLoader(filepath.Join(tempDir, "config.yaml"))
 
 	config := NewConfig()
-	config.Plugins = []string{"plugin1", "plugin2"}
+	config.DataSource = "fake-plugin"
 	config.TrustZones = []*trust_zone_proto.TrustZone{
 		fixtures.TrustZone("tz1"),
 		fixtures.TrustZone("tz2"),
@@ -111,7 +112,7 @@ func TestFileLoaderReadInvalid(t *testing.T) {
 	tempFile := filepath.Join(t.TempDir(), "config.yaml")
 	loader := NewFileLoader(tempFile)
 
-	if err := os.WriteFile(tempFile, []byte(`plugins: "not-a-list"`), 0o600); err != nil {
+	if err := os.WriteFile(tempFile, []byte(`data_source: 123`), 0o600); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
 
@@ -120,11 +121,8 @@ func TestFileLoaderReadInvalid(t *testing.T) {
 		t.Fatalf("FileLoader.Read() did not return error")
 	}
 
-	wantErr := `error validating configuration YAML: plugins: conflicting values "not-a-list" and [...#Plugin] (mismatched types string and list)`
-
-	if gotErr.Error() != wantErr {
-		t.Fatalf("FileLoader.Read() err = %v, want %v", gotErr.Error(), wantErr)
-	}
+	wantErr := `error validating configuration YAML: data_source: conflicting values 123 and string (mismatched types int and string)`
+	assert.ErrorContains(t, gotErr, wantErr)
 }
 
 func TestMemoryLoaderImplementsLoader(t *testing.T) {
@@ -196,7 +194,7 @@ func TestMemoryLoaderNonEmptyConfig(t *testing.T) {
 	}
 
 	config := NewConfig()
-	config.Plugins = []string{"plugin1", "plugin2"}
+	config.DataSource = "fake-plugin"
 	config.TrustZones = []*trust_zone_proto.TrustZone{
 		fixtures.TrustZone("tz1"),
 		fixtures.TrustZone("tz2"),
@@ -225,7 +223,7 @@ func TestMemoryLoaderNonEmptyConfig(t *testing.T) {
 func TestMemoryLoaderInitialConfig(t *testing.T) {
 	// Creating a MemoryLoader with an initial Config should return an identical Config on Read.
 	config := NewConfig()
-	config.Plugins = []string{"plugin1", "plugin2"}
+	config.DataSource = "fake-plugin"
 	config.TrustZones = []*trust_zone_proto.TrustZone{
 		fixtures.TrustZone("tz1"),
 		fixtures.TrustZone("tz2"),
@@ -265,7 +263,7 @@ func TestMemoryLoaderReadInvalid(t *testing.T) {
 		t.Fatalf("NewMemoryLoader() returned error: %v", err)
 	}
 
-	loader.data = []byte(`plugins: "not-a-list"`)
+	loader.data = []byte(`data_source: 123`)
 	loader.exists = true
 
 	_, gotErr := loader.Read()
@@ -273,9 +271,6 @@ func TestMemoryLoaderReadInvalid(t *testing.T) {
 		t.Fatalf("MemoryLoader.Read() did not return error")
 	}
 
-	wantErr := `error validating configuration YAML: plugins: conflicting values "not-a-list" and [...#Plugin] (mismatched types string and list)`
-
-	if gotErr.Error() != wantErr {
-		t.Fatalf("MemoryLoader.Read() err = %v, want %v", gotErr.Error(), wantErr)
-	}
+	wantErr := `error validating configuration YAML: data_source: conflicting values 123 and string (mismatched types int and string)`
+	assert.ErrorContains(t, gotErr, wantErr)
 }

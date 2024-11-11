@@ -8,19 +8,19 @@ import (
 	"os"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type AttestationPolicyCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewAttestationPolicyCommand(source cofidectl_plugin.DataSource) *AttestationPolicyCommand {
+func NewAttestationPolicyCommand(cmdCtx *cmdcontext.CommandContext) *AttestationPolicyCommand {
 	return &AttestationPolicyCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -53,11 +53,12 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 		Long:  attestationPolicyListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
-			attestationPolicies, err := c.source.ListAttestationPolicies()
+			attestationPolicies, err := ds.ListAttestationPolicies()
 			if err != nil {
 				return err
 			}
@@ -161,7 +162,8 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 		Long:  attestationPolicyAddK8sCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := c.source.Validate(); err != nil {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
 				return err
 			}
 
@@ -184,8 +186,10 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 					Kubernetes: kubernetes,
 				},
 			}
-			err := c.source.AddAttestationPolicy(newAttestationPolicy)
-			cobra.CheckErr(err)
+			_, err = ds.AddAttestationPolicy(newAttestationPolicy)
+			if err != nil {
+				return err
+			}
 			if opts.namespace == "" && opts.podLabel == "" {
 				fmt.Println("This attestation policy will provide identity to all workloads in this trust domain")
 			}

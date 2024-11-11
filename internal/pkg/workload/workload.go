@@ -30,18 +30,18 @@ type WorkloadSecretMetadata struct {
 }
 
 // GetRegisteredWorkloads will find all workloads that are registered
-func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Workload, error) {
+func GetRegisteredWorkloads(ctx context.Context, kubeConfig string, kubeContext string) ([]Workload, error) {
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, kubeContext)
 	if err != nil {
 		return nil, err
 	}
 
-	registeredEntries, err := spire.GetRegistrationEntries(context.Background(), client)
+	registeredEntries, err := spire.GetRegistrationEntries(ctx, client)
 	if err != nil {
 		return nil, err
 	}
 
-	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	pods, err := client.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func GetRegisteredWorkloads(kubeConfig string, kubeContext string) ([]Workload, 
 }
 
 // GetUnregisteredWorkloads will discover workloads in a Kubernetes cluster that are not (yet) registered
-func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDiscovery bool) ([]Workload, error) {
+func GetUnregisteredWorkloads(ctx context.Context, kubeCfgFile string, kubeContext string, secretDiscovery bool) ([]Workload, error) {
 	// Includes the initial Kubernetes namespaces.
 	ignoredNamespaces := map[string]int{
 		"kube-node-lease":    1,
@@ -82,12 +82,12 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDisc
 		return nil, err
 	}
 
-	registeredEntries, err := spire.GetRegistrationEntries(context.Background(), client)
+	registeredEntries, err := spire.GetRegistrationEntries(ctx, client)
 	if err != nil {
 		return nil, err
 	}
 
-	pods, err := client.Clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	pods, err := client.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func GetUnregisteredWorkloads(kubeCfgFile string, kubeContext string, secretDisc
 	var secretsMap map[string]WorkloadSecretMetadata
 	var secrets *v1.SecretList
 	if secretDiscovery {
-		secrets, err = client.Clientset.CoreV1().Secrets("").List(context.Background(), metav1.ListOptions{})
+		secrets, err = client.Clientset.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}

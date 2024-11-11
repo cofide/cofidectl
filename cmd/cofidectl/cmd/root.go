@@ -9,25 +9,23 @@ import (
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/apbinding"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/attestationpolicy"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/federation"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/workload"
 
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
 )
 
 type RootCommand struct {
-	source cofidectl_plugin.DataSource
-	args   []string
+	cmdCtx *cmdcontext.CommandContext
 }
 
 var kubeCfgFile string
 
-func NewRootCommand(source cofidectl_plugin.DataSource, args []string) *RootCommand {
+func NewRootCommand(cmdCtx *cmdcontext.CommandContext) *RootCommand {
 	return &RootCommand{
-		source: source,
-		args:   args,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -42,18 +40,20 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	}
 
 	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
+	if err != nil {
+		return nil, err
+	}
 
 	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 
-	initCmd := NewInitCommand(r.source)
-	upCmd := NewUpCommand(r.source)
-	downCmd := NewDownCommand(r.source)
-	tzCmd := trustzone.NewTrustZoneCommand(r.source)
-	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.source)
-	apbCmd := apbinding.NewAPBindingCommand(r.source)
-	fedCmd := federation.NewFederationCommand(r.source)
-	wlCmd := workload.NewWorkloadCommand(r.source)
+	initCmd := NewInitCommand(r.cmdCtx)
+	upCmd := NewUpCommand(r.cmdCtx)
+	downCmd := NewDownCommand(r.cmdCtx)
+	tzCmd := trustzone.NewTrustZoneCommand(r.cmdCtx)
+	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.cmdCtx)
+	apbCmd := apbinding.NewAPBindingCommand(r.cmdCtx)
+	fedCmd := federation.NewFederationCommand(r.cmdCtx)
+	wlCmd := workload.NewWorkloadCommand(r.cmdCtx)
 
 	cmd.AddCommand(
 		initCmd.GetRootCommand(),

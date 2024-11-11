@@ -4,8 +4,8 @@
 package helm
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"os"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -33,6 +33,7 @@ const (
 // helm-charts-hardened Helm chart to install a SPIRE stack to a given Kubernetes context, making use of the Cofide
 // API concepts and abstractions
 type HelmSPIREProvider struct {
+	ctx              context.Context
 	settings         *cli.EnvSettings
 	cfg              *action.Configuration
 	SPIREVersion     string
@@ -42,11 +43,12 @@ type HelmSPIREProvider struct {
 	trustZone        *trust_zone_proto.TrustZone
 }
 
-func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, spireCRDsValues map[string]interface{}) *HelmSPIREProvider {
+func NewHelmSPIREProvider(ctx context.Context, trustZone *trust_zone_proto.TrustZone, spireValues, spireCRDsValues map[string]interface{}) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = trustZone.GetKubernetesContext()
 
 	prov := &HelmSPIREProvider{
+		ctx:              ctx,
 		settings:         settings,
 		SPIREVersion:     SPIREChartVersion,
 		SPIRECRDsVersion: SPIRECRDsChartVersion,
@@ -58,10 +60,10 @@ func NewHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, spireValues, sp
 	var err error
 	prov.cfg, err = prov.initActionConfig()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return prov
+	return prov, nil
 }
 
 // Execute creates a provider status channel and performs the Helm chart installations.
@@ -205,15 +207,15 @@ func newInstall(cfg *action.Configuration, chart string, version string) *action
 
 func (h *HelmSPIREProvider) installSPIRE() (*release.Release, error) {
 	client := newInstall(h.cfg, SPIREChartName, h.SPIREVersion)
-	return installChart(h.cfg, client, SPIREChartName, h.settings, h.spireValues)
+	return installChart(h.ctx, h.cfg, client, SPIREChartName, h.settings, h.spireValues)
 }
 
 func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
 	client := newInstall(h.cfg, SPIRECRDsChartName, h.SPIRECRDsVersion)
-	return installChart(h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
+	return installChart(h.ctx, h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
 }
 
-func installChart(cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
+func installChart(ctx context.Context, cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
@@ -228,16 +230,16 @@ func installChart(cfg *action.Configuration, client *action.Install, chartName s
 		settings,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	cr, err := loader.Load(options)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	fmt.Printf("Installing %v...", cr.Name())
-	return client.Run(cr, values)
+	return client.RunWithContext(ctx, cr, values)
 }
 
 func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
@@ -250,10 +252,10 @@ func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
 
 func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
 	client := newUpgrade(h.cfg, h.SPIREVersion)
-	return upgradeChart(h.cfg, client, SPIREChartName, h.settings, h.spireValues)
+	return upgradeChart(h.ctx, h.cfg, client, SPIREChartName, h.settings, h.spireValues)
 }
 
-func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
+func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
@@ -268,16 +270,16 @@ func upgradeChart(cfg *action.Configuration, client *action.Upgrade, chartName s
 		settings,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	chart, err := loader.Load(options)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	fmt.Printf("Upgrading %v...", chart.Name())
-	return client.Run(chartName, chart, values)
+	return client.RunWithContext(ctx, chartName, chart, values)
 }
 
 func newUninstall(cfg *action.Configuration) *action.Uninstall {

@@ -5,11 +5,23 @@ package plugin
 
 import (
 	"context"
+	"slices"
 
 	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 )
+
+// DataSourcePluginName is the name that should be used in the plugin map.
+const DataSourcePluginName = "data_source"
+
+// DataSourcePluginArgs contains the arguments passed to plugins when executing them as a data source.
+var DataSourcePluginArgs []string = []string{"data-source", "serve"}
+
+// IsDataSourceServeCmd returns whether the provided command line arguments indicate that a plugin should serve a data source.
+func IsDataSourceServeCmd(args []string) bool {
+	return slices.Equal(args, DataSourcePluginArgs)
+}
 
 // DataSourcePlugin implements the plugin.Plugin interface to provide the GRPC
 // server or client back to the plugin machinery. The server side should
@@ -21,7 +33,7 @@ type DataSourcePlugin struct {
 }
 
 func (dsp *DataSourcePlugin) GRPCClient(ctx context.Context, broker *go_plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	return &DataSourcePluginClientGRPC{client: cofidectl_proto.NewDataSourcePluginServiceClient(c)}, nil
+	return &DataSourcePluginClientGRPC{ctx: ctx, client: cofidectl_proto.NewDataSourcePluginServiceClient(c)}, nil
 }
 
 func (dsp *DataSourcePlugin) GRPCServer(broker *go_plugin.GRPCBroker, s *grpc.Server) error {
