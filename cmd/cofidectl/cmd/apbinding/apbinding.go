@@ -41,6 +41,7 @@ func (c *APBindingCommand) GetRootCommand() *cobra.Command {
 	cmd.AddCommand(
 		c.GetListCommand(),
 		c.GetAddCommand(),
+		c.GetDelCommand(),
 	)
 
 	return cmd
@@ -167,6 +168,45 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone name")
 	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "Attestation policy name")
 	f.StringSliceVar(&opts.federatesWith, "federates-with", nil, "Defines a trust zone to federate identity with. May be specified multiple times")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))
+
+	return cmd
+}
+
+var apBindingDelCmdDesc = `
+This command will unbind an attestation policy from a trust zone.`
+
+type DelOpts struct {
+	trustZone         string
+	attestationPolicy string
+}
+
+func (c *APBindingCommand) GetDelCommand() *cobra.Command {
+	opts := DelOpts{}
+	cmd := &cobra.Command{
+		Use:   "del [ARGS]",
+		Short: "Unbind an attestation policy from a trust zone",
+		Long:  apBindingDelCmdDesc,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
+				return err
+			}
+
+			binding := &ap_binding_proto.APBinding{
+				TrustZone: opts.trustZone,
+				Policy:    opts.attestationPolicy,
+			}
+			return ds.DestroyAPBinding(binding)
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone name")
+	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "Attestation policy name")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
 	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))

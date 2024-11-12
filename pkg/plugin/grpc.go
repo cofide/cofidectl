@@ -69,6 +69,11 @@ func (c *DataSourcePluginClientGRPC) AddAPBinding(*ap_binding_proto.APBinding) (
 	return nil, nil
 }
 
+func (c *DataSourcePluginClientGRPC) DestroyAPBinding(*ap_binding_proto.APBinding) error {
+	// Unimplemented.
+	return nil
+}
+
 func (c *DataSourcePluginClientGRPC) AddFederation(*federation_proto.Federation) (*federation_proto.Federation, error) {
 	// Unimplemented.
 	return nil, nil

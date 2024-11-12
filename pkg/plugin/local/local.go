@@ -215,6 +215,25 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 	return proto.CloneAPBinding(binding)
 }
 
+func (lds *LocalDataSource) DestroyAPBinding(binding *ap_binding_proto.APBinding) error {
+	trustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
+	if !ok {
+		return fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
+	}
+
+	for i, tzBinding := range trustZone.AttestationPolicies {
+		if tzBinding.Policy == binding.Policy {
+			trustZone.AttestationPolicies = append(trustZone.AttestationPolicies[:i], trustZone.AttestationPolicies[i+1:]...)
+			if err := lds.updateDataFile(); err != nil {
+				return fmt.Errorf("failed to remove attestation policy binding from local config: %w", err)
+			}
+			return nil
+		}
+	}
+
+	return fmt.Errorf("failed to find attestation policy binding for %s in trust zone %s", binding.Policy, binding.TrustZone)
+}
+
 func (lds *LocalDataSource) ListAPBindingsByTrustZone(name string) ([]*ap_binding_proto.APBinding, error) {
 	trustZone, ok := lds.config.GetTrustZoneByName(name)
 	if !ok {

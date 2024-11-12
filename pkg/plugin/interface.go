@@ -23,6 +23,7 @@ type DataSource interface {
 	ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error)
 
 	AddAPBinding(*ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error)
+	DestroyAPBinding(*ap_binding_proto.APBinding) error
 
 	AddFederation(*federation_proto.Federation) (*federation_proto.Federation, error)
 	ListFederations() ([]*federation_proto.Federation, error)

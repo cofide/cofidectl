@@ -21,7 +21,7 @@ require (
 )
 
 // Uncomment the following for development with local Cofide API SDK changes:
-// replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
+//replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240717164558-a6c49f84cc0f.2 // indirect
