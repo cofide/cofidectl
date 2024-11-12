@@ -6,13 +6,11 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/briandowns/spinner"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -68,29 +66,11 @@ func uninstallSPIREStack(ctx context.Context, trustZones []*trust_zone_proto.Tru
 			return err
 		}
 
-		s := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
-		s.Start()
-		statusCh, err := prov.ExecuteUninstall()
-		if err != nil {
-			s.Stop()
-			return fmt.Errorf("failed to start uninstallation: %w", err)
+		s := statusspinner.New()
+		statusCh := prov.ExecuteUninstall()
+		if err := s.Watch(statusCh); err != nil {
+			return fmt.Errorf("uninstallation failed: %w", err)
 		}
-
-		for status := range statusCh {
-			s.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
-
-			if status.Done {
-				s.Stop()
-				if status.Error != nil {
-					fmt.Printf("❌ %s: %s\n", status.Stage, status.Message)
-					return fmt.Errorf("uninstallation failed: %w", status.Error)
-				}
-				green := color.New(color.FgGreen).SprintFunc()
-				fmt.Printf("%s %s: %s\n\n", green("✅"), status.Stage, status.Message)
-			}
-		}
-
-		s.Stop()
 	}
 	return nil
 }

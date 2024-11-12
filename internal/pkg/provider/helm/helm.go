@@ -7,19 +7,26 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/provider"
 
+	"github.com/gofrs/flock"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/repo"
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
 const (
 	SPIRERepositoryName = "spire"
+	SPIRERepositoryUrl  = "https://spiffe.github.io/helm-charts-hardened/"
 
 	SPIREChartName        = "spire"
 	SPIREChartVersion     = "0.21.0"
@@ -66,13 +73,107 @@ func NewHelmSPIREProvider(ctx context.Context, trustZone *trust_zone_proto.Trust
 	return prov, nil
 }
 
+// AddRepository adds the SPIRE Helm repository to the local repositories.yaml.
+// The action is performed asynchronously and status is streamed through the returned status channel.
+// This function should be called once, not per-trust zone.
+func (h *HelmSPIREProvider) AddRepository() <-chan provider.ProviderStatus {
+	statusCh := make(chan provider.ProviderStatus)
+
+	go func() {
+		defer close(statusCh)
+		h.addRepository(statusCh)
+	}()
+
+	return statusCh
+}
+
+// addRepository adds the SPIRE Helm repository to the local repositories.yaml.
+// It attempts to lock the repositories.lock file while making changes.
+func (h *HelmSPIREProvider) addRepository(statusCh chan provider.ProviderStatus) {
+	statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Adding SPIRE Helm repo"}
+	lockCtx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
+	defer cancel()
+	err := runWithFileLock(lockCtx, h.settings.RepositoryConfig, func() error {
+		f, err := repo.LoadFile(h.settings.RepositoryConfig)
+		if err != nil {
+			if err := repo.NewFile().WriteFile(h.settings.RepositoryConfig, 0600); err != nil {
+				return fmt.Errorf("failed to create repositories file: %w", err)
+			}
+
+			f, err = repo.LoadFile(h.settings.RepositoryConfig)
+			if err != nil {
+				return fmt.Errorf("failed to load repositories file: %w", err)
+			}
+		}
+
+		entry := &repo.Entry{
+			Name: SPIRERepositoryName,
+			URL:  SPIRERepositoryUrl,
+		}
+
+		chartRepo, err := repo.NewChartRepository(entry, getter.All(h.settings))
+		if err != nil {
+			return fmt.Errorf("failed to create chart repo: %w", err)
+		}
+
+		chartRepo.CachePath = h.settings.RepositoryCache
+		if _, err = chartRepo.DownloadIndexFile(); err != nil {
+			return fmt.Errorf("failed to download index file: %w", err)
+		}
+
+		f.Update(entry)
+		if err = f.WriteFile(h.settings.RepositoryConfig, 0600); err != nil {
+			return fmt.Errorf("failed to write repositories file: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		statusCh <- provider.ProviderStatus{Stage: "Preparing", Message: "Failed to add SPIRE Helm repo", Done: true, Error: err}
+	} else {
+		statusCh <- provider.ProviderStatus{Stage: "Prepared", Message: "Added SPIRE Helm repo", Done: true}
+	}
+}
+
+// runWithFileLock attempts to lock a file, and if successful calls `f` with the lock held.
+func runWithFileLock(ctx context.Context, filePath string, f func() error) error {
+	err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
+	if err != nil && !os.IsExist(err) {
+		return fmt.Errorf("mkdirall: %w", err)
+	}
+
+	fileLock := flock.New(lockPath(filePath))
+
+	locked, err := fileLock.TryLockContext(ctx, time.Second)
+	if err == nil && locked {
+		defer func() {
+			_ = fileLock.Unlock()
+		}()
+	}
+	if err != nil {
+		return fmt.Errorf("try lock: %w", err)
+	}
+
+	return f()
+}
+
+func lockPath(filePath string) string {
+	repoFileExt := filepath.Ext(filePath)
+	if len(repoFileExt) > 0 && len(repoFileExt) < len(filePath) {
+		return strings.TrimSuffix(filePath, repoFileExt) + ".lock"
+	} else {
+		return filePath + ".lock"
+	}
+}
+
 // Execute creates a provider status channel and performs the Helm chart installations.
-func (h *HelmSPIREProvider) Execute() (<-chan provider.ProviderStatus, error) {
+func (h *HelmSPIREProvider) Execute() <-chan provider.ProviderStatus {
 	statusCh := make(chan provider.ProviderStatus)
 
 	h.installChart(statusCh)
 
-	return statusCh, nil
+	return statusCh
 }
 
 // install installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
@@ -99,7 +200,7 @@ func (h *HelmSPIREProvider) installChart(statusCh chan provider.ProviderStatus) 
 	}()
 }
 
-func (h *HelmSPIREProvider) ExecuteUpgrade(postInstall bool) (<-chan provider.ProviderStatus, error) {
+func (h *HelmSPIREProvider) ExecuteUpgrade(postInstall bool) <-chan provider.ProviderStatus {
 	statusCh := make(chan provider.ProviderStatus)
 
 	// differentiate between a post-installation upgrade (ie configuration) and a full upgrade
@@ -109,7 +210,7 @@ func (h *HelmSPIREProvider) ExecuteUpgrade(postInstall bool) (<-chan provider.Pr
 		h.upgradeChart(statusCh)
 	}
 
-	return statusCh, nil
+	return statusCh
 }
 
 func (h *HelmSPIREProvider) postInstallUpgrade(statusCh chan provider.ProviderStatus) {
@@ -142,12 +243,12 @@ func (h *HelmSPIREProvider) upgradeChart(statusCh chan provider.ProviderStatus) 
 	}()
 }
 
-func (h *HelmSPIREProvider) ExecuteUninstall() (<-chan provider.ProviderStatus, error) {
+func (h *HelmSPIREProvider) ExecuteUninstall() <-chan provider.ProviderStatus {
 	statusCh := make(chan provider.ProviderStatus)
 
 	h.uninstall(statusCh)
 
-	return statusCh, nil
+	return statusCh
 }
 
 // uninstall uninstalls the Cofide-enabled SPIRE stack from the selected Kubernetes context
