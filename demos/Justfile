@@ -1,10 +1,6 @@
 set export
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-# assume a local kind cluster for the demos unless otherwise configured
-export KO_DOCKER_REPO := env_var_or_default("KO_DOCKER_REPO", "kind.local")
-export KIND_CLUSTER_NAME := env_var_or_default("KIND_CLUSTER_NAME", "kind")
-
 namespace := "demo"
 
 # Check for demo script dependencies
@@ -31,18 +27,12 @@ ensure-namespace context:
         fi \
     fi
 
+# Clone the cofide-demos git repo.
 clone-demos-repo:
     if [ ! -d cofide-demos ]; then \
         git clone https://github.com/cofide/cofide-demos; \
     fi
 
-# Build all demo ping-pong applications
-build-demos: build-ping-pong
-
-# Build the ping-pong application
-build-ping-pong: clone-demos-repo
-    just -f cofide-demos/Justfile build-ping-pong
-
 # Deploy ping-pong server and client
-deploy-ping-pong client_context server_context="": build-ping-pong (ensure-namespace client_context) (ensure-namespace server_context)
+deploy-ping-pong client_context server_context="": clone-demos-repo (ensure-namespace client_context) (ensure-namespace server_context)
     ping-pong/deploy.sh {{namespace}} {{client_context}} {{server_context}}
