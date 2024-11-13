@@ -11,7 +11,7 @@ K8S_CLUSTER_CONTEXT=${K8S_CLUSTER_CONTEXT:-kind-$K8S_CLUSTER_NAME}
 TRUST_ZONE=${TRUST_ZONE:-tz1}
 TRUST_DOMAIN=${TRUST_DOMAIN:-td1}
 
-NAMESPACE_POLICY_NAMESPACE=${NAMESPACE_POLICY_NAMESPACE:-ns1}
+NAMESPACE_POLICY_NAMESPACE=${NAMESPACE_POLICY_NAMESPACE:-demo}
 POD_POLICY_POD_LABEL=${POD_POLICY_POD_LABEL:-"foo=bar"}
 
 function configure() {
@@ -45,7 +45,25 @@ function show_status() {
 }
 
 function run_tests() {
-  echo "TODO!"
+  just -f demos/Justfile deploy-ping-pong $K8S_CLUSTER_CONTEXT
+  if ! wait_for_pong; then
+    echo "Timed out waiting for pong from server"
+    echo "Client logs:"
+    kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client
+    echo "Server logs:"
+    kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-server
+    exit 1
+  fi
+}
+
+function wait_for_pong() {
+  kubectl --context $K8S_CLUSTER_CONTEXT wait -n demo --for=condition=Available --timeout 60s deployments/ping-pong-client
+  for i in $(seq 30); do
+    if kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client | grep pong; then
+      return
+    fi
+    sleep 2
+  done
 }
 
 function down() {

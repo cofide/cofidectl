@@ -27,6 +27,11 @@ jobs:
       - name: Install kind
         run: just install-kind
 
+      - name: Install ko
+        uses: ko-build/setup-ko@v0.6
+        env:
+          KO_DOCKER_REPO: kind.local
+
       - name: Create a kind cluster
         run: just create-kind-cluster
 
@@ -53,6 +58,11 @@ jobs:
 
       - name: Install kind
         run: just install-kind
+
+      - name: Install ko
+        uses: ko-build/setup-ko@v0.6
+        env:
+          KO_DOCKER_REPO: kind.local
 
       - name: Create kind clusters
         run: just create-kind-clusters 2
