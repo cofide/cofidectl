@@ -3,6 +3,9 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 
 namespace := "demo"
 
+# Set prompt_namespace=no to avoid prompting before namespace creation.
+prompt_namespace := 'yes'
+
 # Check for demo script dependencies
 check-deps:
     for cmd in ko kubectl; do \
@@ -17,13 +20,14 @@ ensure-namespace context:
     if [[ ! -z "{{context}}" ]]; then \
         if ! kubectl --context {{context}} get namespace "{{namespace}}" &> /dev/null; then \
             echo "Namespace {{namespace}} does not exist"; \
-            read -p "Create namespace? (y/n) " -r; \
-            if [[ $REPLY =~ ^[Yy]$ ]]; then \
-                kubectl --context {{context}} create namespace "{{namespace}}"; \
-            else \
-                echo "Aborting..."; \
-                exit 1; \
-            fi \
+            if [[ "{{prompt_namespace}}" != "no" ]]; then \
+                read -p "Create namespace? (y/n) " -r; \
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then \
+                    echo "Aborting..."; \
+                    exit 1; \
+                fi \
+            fi; \
+            kubectl --context {{context}} create namespace "{{namespace}}"; \
         fi \
     fi
 

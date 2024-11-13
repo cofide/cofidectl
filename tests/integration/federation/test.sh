@@ -57,7 +57,7 @@ function show_status() {
 }
 
 function run_tests() {
-  just -f demos/Justfile deploy-ping-pong $K8S_CLUSTER_1_CONTEXT $K8S_CLUSTER_2_CONTEXT
+  just -f demos/Justfile prompt_namespace=no deploy-ping-pong $K8S_CLUSTER_1_CONTEXT $K8S_CLUSTER_2_CONTEXT
   if ! wait_for_pong; then
     echo "Timed out waiting for pong from server"
     echo "Client logs:"
