@@ -26,7 +26,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 		want      Values
 	}{
 		{
-			name: "tz1 no apb or federation",
+			name: "tz1 no binding or federation",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
 				tz.AttestationPolicies = nil
@@ -255,28 +255,28 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			name: "invalid trust provider kind",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.TrustProvider.Kind = fixtures.StringPtr("invalid")
+				tz.TrustProvider.Kind = fixtures.StringPtr("invalid-tp")
 				return tz
 			}(),
-			wantErrString: "an unknown trust provider profile was specified: invalid",
+			wantErrString: "an unknown trust provider profile was specified: invalid-tp",
 		},
 		{
 			name: "unknown attestation policy",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.AttestationPolicies[0].Policy = "invalid"
+				tz.AttestationPolicies[0].Policy = "invalid-ap"
 				return tz
 			}(),
-			wantErrString: "failed to find attestation policy invalid in local config",
+			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
 		{
 			name: "unknown federated trust zone",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.Federations[0].To = "invalid"
+				tz.Federations[0].To = "invalid-tz"
 				return tz
 			}(),
-			wantErrString: "failed to find trust zone invalid in local config",
+			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
 	}
 	for _, tt := range tests {
