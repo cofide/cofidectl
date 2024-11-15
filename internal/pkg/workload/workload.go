@@ -54,7 +54,7 @@ func GetRegisteredWorkloads(ctx context.Context, kubeConfig string, kubeContext 
 			registeredWorkload := &Workload{
 				Name:      pod.Name,
 				Namespace: pod.Namespace,
-				SPIFFEID:  registeredEntry.Id.String(),
+				SPIFFEID:  registeredEntry.Id,
 				Status:    string(pod.Status.Phase),
 				Type:      "Pod",
 			}
