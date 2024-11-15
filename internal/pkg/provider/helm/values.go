@@ -45,6 +45,10 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		"global.deleteHooks.enabled":            false,
 	}
 
+	if issuer := g.trustZone.GetJwtIssuer(); issuer != "" {
+		globalValues["global.spire.jwtIssuer"] = issuer
+	}
+
 	spireAgentValues := map[string]interface{}{
 		`"spire-agent"."fullnameOverride"`: "spire-agent", // NOTE: https://github.com/cue-lang/cue/issues/358
 		`"spire-agent"."logLevel"`:         "DEBUG",
