@@ -29,7 +29,7 @@ func TestValidateOpts(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.domain, func(t *testing.T) {
-			err := validateOpts(Opts{trust_domain: tc.domain})
+			err := validateOpts(addOpts{trustDomain: tc.domain})
 			assert.Equal(t, tc.errExpected, err != nil)
 		})
 	}

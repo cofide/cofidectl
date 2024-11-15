@@ -10,6 +10,7 @@
 	bundle?: string
 	federations: [...#Federation]
 	attestation_policies: [...#APBinding]
+	jwt_issuer?: string
 }
 
 #TrustProvider: {

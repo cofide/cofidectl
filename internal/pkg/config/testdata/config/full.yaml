@@ -15,6 +15,7 @@ trust_zones:
           policy: ap1
           federates_with:
             - tz2
+      jwt_issuer: https://tz1.example.com
     - name: tz2
       trust_domain: td2
       kubernetes_cluster: local2
@@ -30,6 +31,7 @@ trust_zones:
           policy: ap2
           federates_with:
             - tz1
+      jwt_issuer: https://tz2.example.com
 attestation_policies:
     - name: ap1
       kubernetes:

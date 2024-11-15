@@ -33,6 +33,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				tz.Bundle = nil
 				tz.BundleEndpointUrl = nil
 				tz.Federations = nil
+				tz.JwtIssuer = nil
 				return tz
 			}(),
 			want: Values{
@@ -128,6 +129,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"spire": Values{
 						"clusterName": "local1",
+						"jwtIssuer":   "https://tz1.example.com",
 						"recommendations": Values{
 							"create": true,
 						},
