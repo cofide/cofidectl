@@ -58,7 +58,6 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	}
 
 	spireServerValues := map[string]interface{}{
-		`"spire-server"."federation"."enabled"`:        true,
 		`"spire-server"."service"."type"`:              "LoadBalancer",
 		`"spire-server"."caKeyType"`:                   "rsa-2048",
 		`"spire-server"."controllerManager"."enabled"`: true,
