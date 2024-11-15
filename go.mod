@@ -4,7 +4,7 @@ go 1.22.7
 
 require (
 	buf.build/go/protoyaml v0.2.0
-	cuelang.org/go v0.10.0
+	cuelang.org/go v0.10.1
 	github.com/cofide/cofide-api-sdk v0.2.0
 	github.com/fatih/color v1.13.0
 	github.com/gofrs/flock v0.12.1
