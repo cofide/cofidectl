@@ -16,7 +16,7 @@ require (
 	github.com/spiffe/spire-api-sdk v1.10.4
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.67.1
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.35.2
 	helm.sh/helm/v3 v3.16.1
 )
 
