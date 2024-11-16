@@ -1,0 +1,71 @@
+---
+name: integration
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  single-trust-zone:
+    name: single trust zone
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install just
+        uses: taiki-e/install-action@just
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build and run tests
+        run: just build
+
+      - name: Install kind
+        run: just install-kind
+
+      - name: Install ko
+        uses: ko-build/setup-ko@v0.6
+        env:
+          KO_DOCKER_REPO: kind.local
+
+      - name: Create a kind cluster
+        run: just create-kind-cluster
+
+      - name: Test
+        run: just integration-test single-trust-zone
+
+  federation:
+    name: federation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install just
+        uses: taiki-e/install-action@just
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build and run tests
+        run: just build
+
+      - name: Install kind
+        run: just install-kind
+
+      - name: Install ko
+        uses: ko-build/setup-ko@v0.6
+        env:
+          KO_DOCKER_REPO: kind.local
+
+      - name: Create kind clusters
+        run: just create-kind-clusters 2
+
+      - name: Test
+        run: just integration-test federation
