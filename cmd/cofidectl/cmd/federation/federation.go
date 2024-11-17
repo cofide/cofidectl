@@ -104,7 +104,7 @@ type bundles struct {
 }
 
 // checkFederationStatus builds a comparison map between two trust domains, retrieves there server CA bundle and any federated bundles available
-// locall from the SPIRE server, and then compares the bundles on each to verify SPIRE has the correct bundles on each side of the federation
+// locally from the SPIRE server, and then compares the bundles on each to verify SPIRE has the correct bundles on each side of the federation
 func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) string {
 	compare := make(map[*trust_zone_proto.TrustZone]bundles)
 
