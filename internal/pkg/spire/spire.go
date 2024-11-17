@@ -313,7 +313,10 @@ func parseFederatedBundles(stdout []byte) map[string]string {
 	bundles := make(map[string]string, 0)
 	split := strings.Split(string(stdout), "****************************************")
 	for c := range slices.Chunk(split[1:], 2) {
-		trustDomain := strings.TrimPrefix(string(c[0]), "\n* ")
+		trustDomain := strings.TrimSuffix(
+			strings.TrimPrefix(string(c[0]), "\n* "),
+			"\n",
+		)
 		bundles[trustDomain] = c[1]
 	}
 	return bundles
