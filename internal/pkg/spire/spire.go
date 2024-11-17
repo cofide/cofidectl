@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/cofide/cofidectl/internal/pkg/kube"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
@@ -279,4 +281,40 @@ func formatIdUrl(id *types.SPIFFEID) (string, error) {
 	} else {
 		return id.String(), nil
 	}
+}
+
+// GetServerCABundleAndFederatedBundles retrieves the server CA bundle (i.e. bundle of the host) and any available
+// federated bundles from the SPIRE server, in order to do a federation health check
+func GetServerCABundleAndFederatedBundles(ctx context.Context, client *kube.Client) (string, map[string]string, error) {
+	serverCABundle, err := getServerCABundle(ctx, client)
+	if err != nil {
+		return "", nil, err
+	}
+	federatedBundles, err := getFederatedBundles(ctx, client)
+	if err != nil {
+		return "", nil, err
+	}
+	return serverCABundle, federatedBundles, err
+}
+
+func getServerCABundle(ctx context.Context, client *kube.Client) (string, error) {
+	command := []string{"bundle", "show"}
+	stdout, _, err := execInServerContainer(ctx, client, command)
+	return string(stdout), err
+}
+
+func getFederatedBundles(ctx context.Context, client *kube.Client) (map[string]string, error) {
+	command := []string{"bundle", "list"}
+	stdout, _, err := execInServerContainer(ctx, client, command)
+	return parseFederatedBundles(stdout), err
+}
+
+func parseFederatedBundles(stdout []byte) map[string]string {
+	bundles := make(map[string]string, 0)
+	split := strings.Split(string(stdout), "****************************************")
+	for c := range slices.Chunk(split[1:], 2) {
+		trustDomain := strings.TrimPrefix(string(c[0]), "\n* ")
+		bundles[trustDomain] = c[1]
+	}
+	return bundles
 }
