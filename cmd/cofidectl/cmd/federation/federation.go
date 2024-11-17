@@ -62,6 +62,9 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			}
 
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
+			if err != nil {
+				return err
+			}
 
 			federations, err := ds.ListFederations()
 			if err != nil {
