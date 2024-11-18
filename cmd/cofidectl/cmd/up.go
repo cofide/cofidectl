@@ -69,6 +69,11 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
+			// Wait for spire-server to be ready again.
+			if err := watchAndConfigure(cmd.Context(), ds, trustZones); err != nil {
+				return err
+			}
+
 			return nil
 		},
 	}
