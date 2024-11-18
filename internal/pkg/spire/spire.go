@@ -11,6 +11,7 @@ import (
 	"time"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -222,7 +223,7 @@ func getPodsforDaemonSet(ctx context.Context, client *kubeutil.Client, daemonset
 
 // RegisteredEntry contains details of a workload registered with SPIRE
 type RegisteredEntry struct {
-	Id *types.SPIFFEID
+	Id string
 }
 
 func GetRegistrationEntries(ctx context.Context, client *kubeutil.Client) (map[string]*RegisteredEntry, error) {
@@ -261,7 +262,11 @@ func GetRegistrationEntries(ctx context.Context, client *kubeutil.Client) (map[s
 			continue
 		}
 
-		registrationEntriesMap[podUID] = &RegisteredEntry{registrationEntry.Id}
+		id, err := formatIdUrl(registrationEntry.Id)
+		if err != nil {
+			return nil, err
+		}
+		registrationEntriesMap[podUID] = &RegisteredEntry{Id: id}
 	}
 
 	return registrationEntriesMap, nil
@@ -396,4 +401,17 @@ func getServiceExternalIP(service *v1.Service) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to retrieve the service ingress information")
+}
+
+// formatIdUrl formats a SPIFFE ID as a URL string.
+func formatIdUrl(id *types.SPIFFEID) (string, error) {
+	trustDomain, err := spiffeid.TrustDomainFromString(id.TrustDomain)
+	if err != nil {
+		return "", err
+	}
+	if id, err := spiffeid.FromPath(trustDomain, id.Path); err != nil {
+		return "", err
+	} else {
+		return id.String(), nil
+	}
 }

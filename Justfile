@@ -6,3 +6,15 @@ test:
 
 lint *args:
     golangci-lint run --show-stats {{args}}
+
+install-kind:
+    tests/integration/install-kind.sh
+
+create-kind-cluster:
+    tests/integration/create-kind-cluster.sh
+
+create-kind-clusters num_clusters:
+    tests/integration/create-kind-clusters.sh {{num_clusters}}
+
+integration-test test:
+    tests/integration/{{test}}/test.sh
