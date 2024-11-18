@@ -37,7 +37,7 @@ func TestNewLocalDataSource(t *testing.T) {
 		{
 			name:       "non-existent config",
 			config:     nil,
-			wantConfig: config.NewConfig(),
+			wantConfig: nil,
 			wantErr:    true,
 		},
 		{
