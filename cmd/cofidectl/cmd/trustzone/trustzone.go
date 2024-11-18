@@ -106,16 +106,17 @@ var trustZoneAddCmdDesc = `
 This command will add a new trust zone to the Cofide configuration state.
 `
 
-type Opts struct {
-	name               string
-	trust_domain       string
-	kubernetes_cluster string
-	context            string
-	profile            string
+type addOpts struct {
+	name              string
+	trustDomain       string
+	kubernetesCluster string
+	context           string
+	profile           string
+	jwtIssuer         string
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
-	opts := Opts{}
+	opts := addOpts{}
 	cmd := &cobra.Command{
 		Use:   "add [NAME]",
 		Short: "Add a new trust zone",
@@ -141,10 +142,11 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:              opts.name,
-				TrustDomain:       opts.trust_domain,
-				KubernetesCluster: &opts.kubernetes_cluster,
+				TrustDomain:       opts.trustDomain,
+				KubernetesCluster: &opts.kubernetesCluster,
 				KubernetesContext: &opts.context,
 				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &opts.profile},
+				JwtIssuer:         &opts.jwtIssuer,
 			}
 
 			_, err = ds.AddTrustZone(newTrustZone)
@@ -157,10 +159,11 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trust_domain, "trust-domain", "", "Trust domain to use for this trust zone")
-	f.StringVar(&opts.kubernetes_cluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
+	f.StringVar(&opts.trustDomain, "trust-domain", "", "Trust domain to use for this trust zone")
+	f.StringVar(&opts.kubernetesCluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
 	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
+	f.StringVar(&opts.jwtIssuer, "jwt-issuer", "", "JWT issuer to use for this trust zone")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
 	cobra.CheckErr(cmd.MarkFlagRequired("kubernetes-cluster"))
@@ -324,7 +327,7 @@ func renderStatus(trustZone *trust_zone_proto.TrustZone, server *spire.ServerSta
 	return nil
 }
 
-func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *Opts) error {
+func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *addOpts) error {
 	kubeConfig, err := cmd.Flags().GetString("kube-config")
 	if err != nil {
 		return err
@@ -375,7 +378,7 @@ func checkContext(contexts []string, context string) bool {
 	return slices.Contains(contexts, context)
 }
 
-func validateOpts(opts Opts) error {
-	_, err := spiffeid.TrustDomainFromString(opts.trust_domain)
+func validateOpts(opts addOpts) error {
+	_, err := spiffeid.TrustDomainFromString(opts.trustDomain)
 	return err
 }

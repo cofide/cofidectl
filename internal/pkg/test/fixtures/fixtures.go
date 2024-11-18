@@ -38,6 +38,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				FederatesWith: []string{"tz2"},
 			},
 		},
+		JwtIssuer: StringPtr("https://tz1.example.com"),
 	},
 	"tz2": {
 		Name:              "tz2",
@@ -61,6 +62,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				FederatesWith: []string{"tz1"},
 			},
 		},
+		JwtIssuer: StringPtr("https://tz2.example.com"),
 	},
 }
 
