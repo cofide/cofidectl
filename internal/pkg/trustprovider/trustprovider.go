@@ -60,7 +60,7 @@ func (tp *TrustProvider) GetValues() error {
 			},
 		}
 	default:
-		return fmt.Errorf("an unknown profile was specified")
+		return fmt.Errorf("an unknown trust provider profile was specified: %s", tp.Kind)
 	}
 	return nil
 }

@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
@@ -35,18 +37,40 @@ func RunCommand(ctx context.Context, client kubernetes.Interface, config *restcl
 		SubResource("exec").
 		VersionedParams(opts, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewWebSocketExecutor(config, "POST", req.URL().String())
+	exec, err := createExecutor(req.URL(), config)
 	if err != nil {
-		return fmt.Errorf("new executor: %w", err)
+		return fmt.Errorf("failed to create executor: %w", err)
 	}
+
 	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  stdin,
 		Stdout: stdout,
 		Stderr: stderr,
 	})
 	if err != nil {
-		return fmt.Errorf("stream exec: %w", err)
+		return fmt.Errorf("failed to stream exec: %w", err)
 	}
 
 	return nil
+}
+
+// createExecutor returns the Executor or an error if one occurred.
+// Adapted from a function of the same name in kubectl: https://github.com/kubernetes/kubectl/blob/d0bc9691f3166ac2586b3c948f455f78987e34de/pkg/cmd/exec/exec.go#L137
+func createExecutor(url *url.URL, config *restclient.Config) (remotecommand.Executor, error) {
+	exec, err := remotecommand.NewSPDYExecutor(config, "POST", url)
+	if err != nil {
+		return nil, err
+	}
+	// WebSocketExecutor must be "GET" method as described in RFC 6455 Sec. 4.1 (page 17).
+	websocketExec, err := remotecommand.NewWebSocketExecutor(config, "GET", url.String())
+	if err != nil {
+		return nil, err
+	}
+	exec, err = remotecommand.NewFallbackExecutor(websocketExec, exec, func(err error) bool {
+		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return exec, nil
 }
