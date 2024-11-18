@@ -92,9 +92,6 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 						},
 					},
-					"federation": Values{
-						"enabled": true,
-					},
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{

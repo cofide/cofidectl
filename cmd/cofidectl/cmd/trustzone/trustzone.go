@@ -12,12 +12,13 @@ import (
 	"strconv"
 
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
 	"github.com/manifoldco/promptui"
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
-	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
+	helmprovider "github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/olekukonko/tablewriter"
@@ -47,10 +48,13 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 
+	helmCmd := helm.NewHelmCommand(c.cmdCtx)
+
 	cmd.AddCommand(
 		c.GetListCommand(),
 		c.GetAddCommand(),
 		c.GetStatusCommand(),
+		helmCmd.GetRootCommand(),
 	)
 
 	return cmd
@@ -207,7 +211,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source cofidectl_plugin.D
 		return err
 	}
 
-	prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
+	prov, err := helmprovider.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
 	if err != nil {
 		return err
 	}
