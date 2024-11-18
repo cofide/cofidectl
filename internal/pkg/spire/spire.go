@@ -17,6 +17,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/tools/cache"
+	toolsWatch "k8s.io/client-go/tools/watch"
 )
 
 const (
@@ -24,6 +27,7 @@ const (
 	serverStatefulsetName = "spire-server"
 	serverPodName         = "spire-server-0"
 	serverContainerName   = "spire-server"
+	serverServiceName     = "spire-server"
 	serverExecutable      = "/opt/spire/bin/spire-server"
 	scmContainerName      = "spire-controller-manager"
 	agentDaemonSetName    = "spire-agent"
@@ -266,6 +270,137 @@ func GetRegistrationEntries(ctx context.Context, client *kubeutil.Client) (map[s
 	}
 
 	return registrationEntriesMap, nil
+}
+
+// WaitForServerIP waits for a SPIRE server pod and service to become ready, then returns the external IP of the service.
+func WaitForServerIP(ctx context.Context, client *kubeutil.Client) (string, error) {
+	podWatcher, err := createPodWatcher(ctx, client)
+	if err != nil {
+		return "", err
+	}
+	defer podWatcher.Stop()
+
+	serviceWatcher, err := createServiceWatcher(ctx, client)
+	if err != nil {
+		return "", err
+	}
+	defer serviceWatcher.Stop()
+
+	podReady := false
+	var serviceIP string
+
+	timeout := time.After(5 * time.Minute)
+
+	for {
+		select {
+		case event, ok := <-podWatcher.ResultChan():
+			if !ok {
+				return "", fmt.Errorf("pod watcher channel closed")
+			}
+			if event.Type == watch.Added || event.Type == watch.Modified {
+				pod := event.Object.(*v1.Pod)
+				// FieldSelector should ensure this, but use belt & braces.
+				if pod.Name != serverPodName {
+					slog.Warn("Event received for unexpected pod", slog.String("pod", pod.Name))
+				} else if isPodReady(pod) {
+					podReady = true
+				}
+			}
+		case event, ok := <-serviceWatcher.ResultChan():
+			if !ok {
+				return "", fmt.Errorf("service watcher channel closed")
+			}
+			if event.Type == watch.Added || event.Type == watch.Modified {
+				service := event.Object.(*v1.Service)
+				// FieldSelector should ensure this, but use belt & braces.
+				if service.Name != serverServiceName {
+					slog.Warn("Event received for unexpected service", slog.String("service", service.Name))
+				} else if ip, err := getServiceExternalIP(service); err == nil {
+					serviceIP = ip
+				}
+			}
+		case <-timeout:
+			return "", fmt.Errorf("timeout waiting for pod and service to be ready")
+		}
+
+		if podReady && serviceIP != "" {
+			return serviceIP, nil
+		}
+	}
+}
+
+// GetBundle retrieves a SPIFFE bundle for the local trust zone by exec'ing into a SPIRE Server.
+func GetBundle(ctx context.Context, client *kubeutil.Client) (string, error) {
+	command := []string{"bundle", "show", "-format", "spiffe"}
+	stdout, _, err := execInServerContainer(ctx, client, command)
+	if err != nil {
+		return "", err
+	}
+	return string(stdout), nil
+}
+
+func createPodWatcher(ctx context.Context, client *kubeutil.Client) (watch.Interface, error) {
+	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
+		timeout := int64(120)
+		return client.Clientset.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
+			FieldSelector:  fmt.Sprintf("metadata.name=%s", serverPodName),
+			TimeoutSeconds: &timeout,
+		})
+	}
+
+	watcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create watcher for context %s: %v", client.CmdConfig.CurrentContext, err)
+	}
+
+	return watcher, nil
+}
+
+func createServiceWatcher(ctx context.Context, client *kubeutil.Client) (watch.Interface, error) {
+	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
+		timeout := int64(120)
+		return client.Clientset.CoreV1().Services(namespace).Watch(ctx, metav1.ListOptions{
+			FieldSelector:  fmt.Sprintf("metadata.name=%s", serverServiceName),
+			TimeoutSeconds: &timeout,
+		})
+	}
+
+	watcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service watcher for context %s: %v", client.CmdConfig.CurrentContext, err)
+	}
+
+	return watcher, nil
+}
+
+func isPodReady(pod *v1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+func getServiceExternalIP(service *v1.Service) (string, error) {
+	serviceLoadBalancerIngress := service.Status.LoadBalancer.Ingress
+	if len(serviceLoadBalancerIngress) != 1 {
+		return "", fmt.Errorf("failed to retrieve the service ingress information")
+	}
+
+	// Usually set on AWS load balancers
+	ingressHostName := serviceLoadBalancerIngress[0].Hostname
+	if ingressHostName != "" {
+		return ingressHostName, nil
+	}
+
+	// Usually set on GCE/OpenStack load balancers
+	ingressIP := serviceLoadBalancerIngress[0].IP
+	if ingressIP != "" {
+		return ingressIP, nil
+	}
+
+	return "", fmt.Errorf("failed to retrieve the service ingress information")
 }
 
 // formatIdUrl formats a SPIFFE ID as a URL string.
