@@ -137,12 +137,12 @@ func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_z
 	// Bundle does not exist at all on opposite trust domain
 	_, ok := compare[to].federatedBundles[from.TrustDomain]
 	if !ok {
-		return "Unhealthy 1", nil
+		return "Unhealthy", nil
 	}
 
 	_, ok = compare[from].federatedBundles[to.TrustDomain]
 	if !ok {
-		return "Unhealthy 2", nil
+		return "Unhealthy", nil
 	}
 
 	// Bundle does not match entry on opposite trust domain
