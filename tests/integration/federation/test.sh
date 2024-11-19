@@ -54,6 +54,7 @@ function show_status() {
   ./cofidectl workload list
   ./cofidectl trust-zone status $TRUST_ZONE_1
   ./cofidectl trust-zone status $TRUST_ZONE_2
+  ./cofidectl federation list
 }
 
 function run_tests() {

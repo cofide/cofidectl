@@ -82,10 +82,16 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
+
+				status, err := checkFederationStatus(cmd.Context(), kubeConfig, from, to)
+				if err != nil {
+					return err
+				}
+
 				data[i] = []string{
 					federation.From,
 					federation.To,
-					checkFederationStatus(cmd.Context(), kubeConfig, from, to),
+					status,
 				}
 			}
 
@@ -108,14 +114,18 @@ type bundles struct {
 
 // checkFederationStatus builds a comparison map between two trust domains, retrieves there server CA bundle and any federated bundles available
 // locally from the SPIRE server, and then compares the bundles on each to verify SPIRE has the correct bundles on each side of the federation
-func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) string {
+func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) (string, error) {
 	compare := make(map[*trust_zone_proto.TrustZone]bundles)
 
 	for _, tz := range []*trust_zone_proto.TrustZone{from, to} {
-		client, _ := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, tz.GetKubernetesContext())
+		client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, tz.GetKubernetesContext())
+		if err != nil {
+			return "", err
+		}
+
 		serverCABundle, federatedBundles, err := spire.GetServerCABundleAndFederatedBundles(ctx, client)
 		if err != nil {
-			return "Unknown"
+			return "", err
 		}
 
 		compare[tz] = bundles{
@@ -127,24 +137,24 @@ func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_z
 	// Bundle does not exist at all on opposite trust domain
 	_, ok := compare[to].federatedBundles[from.TrustDomain]
 	if !ok {
-		return "Unhealthy"
+		return "Unhealthy 1", nil
 	}
 
 	_, ok = compare[from].federatedBundles[to.TrustDomain]
 	if !ok {
-		return "Unhealthy"
+		return "Unhealthy 2", nil
 	}
 
 	// Bundle does not match entry on opposite trust domain
-	if compare[from].serverCABundle == compare[to].federatedBundles[from.TrustDomain] {
-		return "Unhealthy"
+	if compare[from].serverCABundle != compare[to].federatedBundles[from.TrustDomain] {
+		return "Unhealthy", nil
 	}
 
-	if compare[to].serverCABundle == compare[from].federatedBundles[to.TrustDomain] {
-		return "Unhealthy"
+	if compare[to].serverCABundle != compare[from].federatedBundles[to.TrustDomain] {
+		return "Unhealthy", nil
 	}
 
-	return "Healthy"
+	return "Healthy", nil
 }
 
 var federationAddCmdDesc = `
