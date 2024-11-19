@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

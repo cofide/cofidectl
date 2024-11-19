@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 )
 

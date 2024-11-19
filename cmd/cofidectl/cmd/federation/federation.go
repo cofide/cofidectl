@@ -11,7 +11,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 
-	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"

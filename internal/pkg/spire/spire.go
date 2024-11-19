@@ -11,8 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cofide/cofidectl/internal/pkg/kube"
-	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	appsv1 "k8s.io/api/apps/v1"
@@ -420,7 +419,7 @@ func formatIdUrl(id *types.SPIFFEID) (string, error) {
 
 // GetServerCABundleAndFederatedBundles retrieves the server CA bundle (i.e. bundle of the host) and any available
 // federated bundles from the SPIRE server, in order to do a federation health check
-func GetServerCABundleAndFederatedBundles(ctx context.Context, client *kube.Client) (string, map[string]string, error) {
+func GetServerCABundleAndFederatedBundles(ctx context.Context, client *kubeutil.Client) (string, map[string]string, error) {
 	serverCABundle, err := getServerCABundle(ctx, client)
 	if err != nil {
 		return "", nil, err
@@ -433,7 +432,7 @@ func GetServerCABundleAndFederatedBundles(ctx context.Context, client *kube.Clie
 }
 
 // getServerCABundle retrives the x509_authorities component of the server CA trust bundle
-func getServerCABundle(ctx context.Context, client *kube.Client) (string, error) {
+func getServerCABundle(ctx context.Context, client *kubeutil.Client) (string, error) {
 	command := []string{"bundle", "show", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)
 	if err != nil {
@@ -454,7 +453,7 @@ type federatedBundles struct {
 	Bundles []map[string]interface{} `json:"bundles"`
 }
 
-func getFederatedBundles(ctx context.Context, client *kube.Client) (map[string]string, error) {
+func getFederatedBundles(ctx context.Context, client *kubeutil.Client) (map[string]string, error) {
 	command := []string{"bundle", "list", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)
 	if err != nil {
