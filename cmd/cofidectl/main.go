@@ -15,9 +15,7 @@ import (
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
-	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/pkg/plugin"
-	"github.com/cofide/cofidectl/pkg/plugin/manager"
 )
 
 const (
@@ -36,7 +34,7 @@ func main() {
 }
 
 func run() error {
-	cmdCtx := getCommandContext()
+	cmdCtx := cmdcontext.NewCommandContext(cofideConfigFile)
 	defer cmdCtx.Shutdown()
 
 	go handleSignals(cmdCtx)
@@ -63,14 +61,6 @@ func run() error {
 
 	// Cobra logs any errors returned by commands, so don't log again.
 	return rootCmd.ExecuteContext(cmdCtx.Ctx)
-}
-
-// getCommandContext returns a command context wired up with a config loader and plugin manager.
-func getCommandContext() *cmdcontext.CommandContext {
-	configLoader := config.NewFileLoader(cofideConfigFile)
-	pluginManager := manager.NewManager(configLoader)
-
-	return cmdcontext.NewCommandContext(pluginManager)
 }
 
 // handleSignals waits for SIGINT or SIGTERM, then triggers a clean shutdown using the command context.
