@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strconv"
 
-	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
 	"github.com/manifoldco/promptui"
 

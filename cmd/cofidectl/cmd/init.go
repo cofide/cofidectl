@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	"github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/manager"
 	"github.com/spf13/cobra"
