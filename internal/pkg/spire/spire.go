@@ -5,9 +5,9 @@ package spire
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 	"time"
 
@@ -298,26 +298,31 @@ func GetServerCABundleAndFederatedBundles(ctx context.Context, client *kube.Clie
 }
 
 func getServerCABundle(ctx context.Context, client *kube.Client) (string, error) {
-	command := []string{"bundle", "show"}
+	command := []string{"bundle", "show", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)
-	return string(stdout), err
+	var data map[string]interface{}
+	if err := json.Unmarshal(stdout, &data); err != nil {
+		return "", err
+	}
+	return fmt.Sprint(data["x509_authorities"]), err
+}
+
+type federatedBundles struct {
+	Bundles []map[string]interface{} `json:"bundles"`
 }
 
 func getFederatedBundles(ctx context.Context, client *kube.Client) (map[string]string, error) {
-	command := []string{"bundle", "list"}
+	command := []string{"bundle", "list", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)
-	return parseFederatedBundles(stdout), err
-}
 
-func parseFederatedBundles(stdout []byte) map[string]string {
-	bundles := make(map[string]string, 0)
-	split := strings.Split(string(stdout), "****************************************")
-	for c := range slices.Chunk(split[1:], 2) {
-		trustDomain := strings.TrimSuffix(
-			strings.TrimPrefix(string(c[0]), "\n* "),
-			"\n",
-		)
-		bundles[trustDomain] = c[1]
+	result := make(map[string]string)
+	var data federatedBundles
+	if err := json.Unmarshal(stdout, &data); err != nil {
+		return nil, err
 	}
-	return bundles
+	for _, bundle := range data.Bundles {
+		// Store string repr of bundle JSON for comparison, keyed by trust domain
+		result[bundle["trust_domain"].(string)] = fmt.Sprint(bundle["x509_authorities"])
+	}
+	return result, err
 }

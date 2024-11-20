@@ -90,7 +90,7 @@ function main() {
   show_config
   show_status
   run_tests
-  down
+  #down
   echo "Success!"
 }
 
