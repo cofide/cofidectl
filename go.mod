@@ -1,24 +1,26 @@
 module github.com/cofide/cofidectl
 
-go 1.23.3
+go 1.22.7
 
 require (
 	buf.build/go/protoyaml v0.2.0
-	cuelang.org/go v0.10.0
-	github.com/cofide/cofide-api-sdk v0.2.0
-	github.com/fatih/color v1.13.0
+	cuelang.org/go v0.10.1
+	github.com/cofide/cofide-api-sdk v0.2.1-0.20241115095234-9cbc477358a3
+	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-plugin v1.6.2
 	github.com/manifoldco/promptui v0.9.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spiffe/go-spiffe/v2 v2.4.0
-	github.com/spiffe/spire-api-sdk v1.10.4
+	github.com/spiffe/spire-api-sdk v1.11.0
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.67.1
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.35.2
 	helm.sh/helm/v3 v3.16.1
 )
+
+require gopkg.in/yaml.v3 v3.0.1 // indirect
 
 // Uncomment the following for development with local Cofide API SDK changes:
 //replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
@@ -161,11 +163,10 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.0 // indirect
 	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.31.0 // indirect
-	k8s.io/apimachinery v0.31.1
+	k8s.io/apimachinery v0.31.2
 	k8s.io/apiserver v0.31.0 // indirect
 	k8s.io/cli-runtime v0.31.0 // indirect
 	k8s.io/client-go v0.31.1
