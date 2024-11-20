@@ -297,14 +297,22 @@ func GetServerCABundleAndFederatedBundles(ctx context.Context, client *kube.Clie
 	return serverCABundle, federatedBundles, err
 }
 
+// getServerCABundle retrives the x509_authorities component of the server CA trust bundle
 func getServerCABundle(ctx context.Context, client *kube.Client) (string, error) {
 	command := []string{"bundle", "show", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)
+	if err != nil {
+		return "", err
+	}
+	return parseServerCABundle(stdout)
+}
+
+func parseServerCABundle(stdout []byte) (string, error) {
 	var data map[string]interface{}
 	if err := json.Unmarshal(stdout, &data); err != nil {
 		return "", err
 	}
-	return fmt.Sprint(data["x509_authorities"]), err
+	return fmt.Sprint(data["x509_authorities"]), nil
 }
 
 type federatedBundles struct {
@@ -314,15 +322,21 @@ type federatedBundles struct {
 func getFederatedBundles(ctx context.Context, client *kube.Client) (map[string]string, error) {
 	command := []string{"bundle", "list", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)
+	if err != nil {
+		return nil, err
+	}
+	return parseFederatedBundles(stdout)
+}
 
+func parseFederatedBundles(stdout []byte) (map[string]string, error) {
 	result := make(map[string]string)
 	var data federatedBundles
 	if err := json.Unmarshal(stdout, &data); err != nil {
 		return nil, err
 	}
 	for _, bundle := range data.Bundles {
-		// Store string repr of bundle JSON for comparison, keyed by trust domain
+		// Store x509_authorities for comparison, keyed by trust domain
 		result[bundle["trust_domain"].(string)] = fmt.Sprint(bundle["x509_authorities"])
 	}
-	return result, err
+	return result, nil
 }

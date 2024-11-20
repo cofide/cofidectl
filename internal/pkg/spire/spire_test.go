@@ -10,6 +10,8 @@ import (
 	"time"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyv1 "k8s.io/client-go/applyconfigurations/apps/v1"
 	v1 "k8s.io/client-go/applyconfigurations/core/v1"
@@ -215,4 +217,21 @@ func Test_addAgentK8sStatus(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("unexpected status got = %v, want = %v", got, want)
 	}
+}
+
+func TestSpire_parseServerCABundle_parseFederatedBundles(t *testing.T) {
+	// Example output from /opt/spire/bin/spire-server bundle show -output json
+	// trust_domain: td1
+	testServerCAJSONOutput := `{"jwt_authorities":[{"expires_at":"1732178926","key_id":"1eEODyZCgwlYD7PfzP3fV5svASUUJMsz","public_key":"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvv4ljaugt9hjVMYGIURByGVvVFQOstjtqXrtVAqo/uBiSBbm7Zq3B4a+7sMJL93zqe7DNuF3qmXWchKfBGZ+8gkB9/zSSszBrpOFSFQYgslCBwI/PNyKtPDMpYt2EdvesjJh9MZIoTqZ0nPyY/fM1yBx0mlIf7gTYJqzB0q/banoD2Ruxc/R3vru8yXPM84bIv3oyYzCNlc52k32EAGasRI580SJRnJ1ukb4GkuAkLxZXQjwwLiXhMGlZDfzxhy0foGVF64ANFyjCRpf5CTC65Cegc2UsCoI89ykVY5nLB/LuDwse1jXc4mtWiWkHZ+wwYlNHK4QuPWWZCb5B+cN4wIDAQAB","tainted":false}],"refresh_hint":"0","sequence_number":"1","trust_domain":"td1","x509_authorities":[{"asn1":"MIIDtTCCAp2gAwIBAgIQE4Hqzopq+emwuVOnc52dDDANBgkqhkiG9w0BAQsFADBoMQ0wCwYDVQQGEwRBUlBBMRAwDgYDVQQKEwdFeGFtcGxlMRQwEgYDVQQDEwtleGFtcGxlLm9yZzEvMC0GA1UEBRMmMjU5Mjk5MDA2NjIzNTEzODQ0NTA4OTAxOTEzOTEyMDQxNTQ2MzYwHhcNMjQxMTIwMjA0ODM2WhcNMjQxMTIxMDg0ODQ2WjBoMQ0wCwYDVQQGEwRBUlBBMRAwDgYDVQQKEwdFeGFtcGxlMRQwEgYDVQQDEwtleGFtcGxlLm9yZzEvMC0GA1UEBRMmMjU5Mjk5MDA2NjIzNTEzODQ0NTA4OTAxOTEzOTEyMDQxNTQ2MzYwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDV1RlLOGjoheNKC+gia2vPGiBhDu4uHEXLRHMQ7Vqi+GEPhnl4R9MvJKnF1Au2ltkRO3o8qX9/Zy78ht5OitMBk1XaaEWTMwvGXYmlr4WksAan21rVb0b20qb5BTDVqFNPiWtGqMRnH0hwoGXX39ioOzYS1zU2WrtxohWYl9rxBPToDooHGg2k7pkGn0tkeyPkYHroOe1XU61cEAOelcoGeCipqQd+eFCCf16V/HemQKfiWb8tJZjHLEnvx0DBVPA33FngOsisIkwpGVA2Ycq7vRG35vyTH6Pa7Ryoom3ZvjCVV0eyZJvL3JznVMCoyCb3z1P4pypFT6XK1YRfz5tlAgMBAAGjWzBZMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTJdjj10TsO2JLYv1bycXz4dfFbdjAXBgNVHREEEDAOhgxzcGlmZmU6Ly90ZDEwDQYJKoZIhvcNAQELBQADggEBAB8u7hiIfT4SPCHAwPXdMrqv2Z/ivyLMtwFYJAgg0/HdSWmm0IaaMPN/ZzoN+lHtomY9trGZqw5I6zRyY03EwcGR+etpzi6nPDqeuMR35rK39q2aBTVLWAwcJSV7NEUMJDQ4vgQlQZ3iO41H48zHtdJYMh9p00elIRPJdd7AdHZb9lFs4Y+cxAJSYBQxMVwYkD65fdddF850QgESx2z74zVgmPMpia63khH8L5mY9+9evPw9bXo/xr4qUo8Mj2PFg4+GUPJobqN2eGkFr886+HeE67cjd77k8cHoQ/ZLFrYAT26qd7diJFNuR9R0zrDV0kfgdFiH6sfIao22ISM2d2Y=","tainted":false}]}`
+
+	// Example from /opt/spire/bin/spire-server bundle list -output json with td1 successfully federated
+	testBundleListJSONOutput := `{"bundles":[{"jwt_authorities":[{"expires_at":"0","key_id":"1eEODyZCgwlYD7PfzP3fV5svASUUJMsz","public_key":"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvv4ljaugt9hjVMYGIURByGVvVFQOstjtqXrtVAqo/uBiSBbm7Zq3B4a+7sMJL93zqe7DNuF3qmXWchKfBGZ+8gkB9/zSSszBrpOFSFQYgslCBwI/PNyKtPDMpYt2EdvesjJh9MZIoTqZ0nPyY/fM1yBx0mlIf7gTYJqzB0q/banoD2Ruxc/R3vru8yXPM84bIv3oyYzCNlc52k32EAGasRI580SJRnJ1ukb4GkuAkLxZXQjwwLiXhMGlZDfzxhy0foGVF64ANFyjCRpf5CTC65Cegc2UsCoI89ykVY5nLB/LuDwse1jXc4mtWiWkHZ+wwYlNHK4QuPWWZCb5B+cN4wIDAQAB","tainted":false}],"refresh_hint":"300","sequence_number":"0","trust_domain":"td1","x509_authorities":[{"asn1":"MIIDtTCCAp2gAwIBAgIQE4Hqzopq+emwuVOnc52dDDANBgkqhkiG9w0BAQsFADBoMQ0wCwYDVQQGEwRBUlBBMRAwDgYDVQQKEwdFeGFtcGxlMRQwEgYDVQQDEwtleGFtcGxlLm9yZzEvMC0GA1UEBRMmMjU5Mjk5MDA2NjIzNTEzODQ0NTA4OTAxOTEzOTEyMDQxNTQ2MzYwHhcNMjQxMTIwMjA0ODM2WhcNMjQxMTIxMDg0ODQ2WjBoMQ0wCwYDVQQGEwRBUlBBMRAwDgYDVQQKEwdFeGFtcGxlMRQwEgYDVQQDEwtleGFtcGxlLm9yZzEvMC0GA1UEBRMmMjU5Mjk5MDA2NjIzNTEzODQ0NTA4OTAxOTEzOTEyMDQxNTQ2MzYwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDV1RlLOGjoheNKC+gia2vPGiBhDu4uHEXLRHMQ7Vqi+GEPhnl4R9MvJKnF1Au2ltkRO3o8qX9/Zy78ht5OitMBk1XaaEWTMwvGXYmlr4WksAan21rVb0b20qb5BTDVqFNPiWtGqMRnH0hwoGXX39ioOzYS1zU2WrtxohWYl9rxBPToDooHGg2k7pkGn0tkeyPkYHroOe1XU61cEAOelcoGeCipqQd+eFCCf16V/HemQKfiWb8tJZjHLEnvx0DBVPA33FngOsisIkwpGVA2Ycq7vRG35vyTH6Pa7Ryoom3ZvjCVV0eyZJvL3JznVMCoyCb3z1P4pypFT6XK1YRfz5tlAgMBAAGjWzBZMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTJdjj10TsO2JLYv1bycXz4dfFbdjAXBgNVHREEEDAOhgxzcGlmZmU6Ly90ZDEwDQYJKoZIhvcNAQELBQADggEBAB8u7hiIfT4SPCHAwPXdMrqv2Z/ivyLMtwFYJAgg0/HdSWmm0IaaMPN/ZzoN+lHtomY9trGZqw5I6zRyY03EwcGR+etpzi6nPDqeuMR35rK39q2aBTVLWAwcJSV7NEUMJDQ4vgQlQZ3iO41H48zHtdJYMh9p00elIRPJdd7AdHZb9lFs4Y+cxAJSYBQxMVwYkD65fdddF850QgESx2z74zVgmPMpia63khH8L5mY9+9evPw9bXo/xr4qUo8Mj2PFg4+GUPJobqN2eGkFr886+HeE67cjd77k8cHoQ/ZLFrYAT26qd7diJFNuR9R0zrDV0kfgdFiH6sfIao22ISM2d2Y=","tainted":false}]}],"next_page_token":""}`
+
+	gotServerCA, err := parseServerCABundle([]byte(testServerCAJSONOutput))
+	require.Nil(t, err)
+	gotFederated, err := parseFederatedBundles([]byte(testBundleListJSONOutput))
+	require.Nil(t, err)
+
+	assert.NotNil(t, gotFederated["td1"])
+	assert.Equal(t, gotServerCA, gotFederated["td1"])
 }
