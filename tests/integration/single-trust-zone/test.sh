@@ -46,6 +46,7 @@ function show_status() {
 
 function run_tests() {
   just -f demos/Justfile prompt_namespace=no deploy-ping-pong $K8S_CLUSTER_CONTEXT
+  kubectl --context $K8S_CLUSTER_CONTEXT wait -n demo --for=condition=Available --timeout 60s deployments/ping-pong-client
   if ! wait_for_pong; then
     echo "Timed out waiting for pong from server"
     echo "Client logs:"
@@ -57,13 +58,13 @@ function run_tests() {
 }
 
 function wait_for_pong() {
-  kubectl --context $K8S_CLUSTER_CONTEXT wait -n demo --for=condition=Available --timeout 60s deployments/ping-pong-client
   for i in $(seq 30); do
     if kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client | grep pong; then
-      return
+      return 0
     fi
     sleep 2
   done
+  return 1
 }
 
 function down() {
