@@ -54,7 +54,6 @@ function show_status() {
   ./cofidectl workload list
   ./cofidectl trust-zone status $TRUST_ZONE_1
   ./cofidectl trust-zone status $TRUST_ZONE_2
-  ./cofidectl federation list
 }
 
 function run_tests() {
@@ -79,6 +78,13 @@ function wait_for_pong() {
   done
 }
 
+function post_deploy() {
+  if ./cofidectl federation list | grep Healthy; then 
+      return
+  fi
+  exit 1
+}
+
 function down() {
   ./cofidectl down
 }
@@ -90,7 +96,8 @@ function main() {
   show_config
   show_status
   run_tests
-  #down
+  post_deploy
+  down
   echo "Success!"
 }
 
