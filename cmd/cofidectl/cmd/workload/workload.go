@@ -135,36 +135,6 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			ds, err := w.cmdCtx.PluginManager.GetDataSource()
-			if err != nil {
-				return err
-			}
-
-			var trustZones []*trust_zone_proto.TrustZone
-
-			if opts.trustZone != "" {
-				trustZone, err := ds.GetTrustZone(opts.trustZone)
-				if err != nil {
-					return err
-				}
-
-				trustZones = append(trustZones, trustZone)
-			} else {
-				trustZones, err = ds.ListTrustZones()
-				if err != nil {
-					return err
-				}
-			}
-
-			if len(trustZones) == 0 {
-				return fmt.Errorf("no trust zones have been configured")
-			}
-
-			err = renderRegisteredWorkloads(cmd.Context(), kubeConfig, trustZones)
-			if err != nil {
-				return err
-			}
-
 			opts.workloadName = args[0]
 			return w.status(cmd.Context(), kubeConfig, opts)
 		},

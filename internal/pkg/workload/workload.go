@@ -143,14 +143,14 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 	defer cancel()
 	statusCh <- provider.ProviderStatus{
 		Stage:   "Creating",
-		Message: fmt.Sprintf("Waiting for ephemeral container to be created in %s", podName),
+		Message: fmt.Sprintf("Waiting for ephemeral debug container to be created in %s", podName),
 	}
 
 	pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
 		statusCh <- provider.ProviderStatus{
 			Stage:   "Creating",
-			Message: fmt.Sprintf("Failed waiting for ephemeral container to be created in %s", podName),
+			Message: fmt.Sprintf("Failed waiting for ephemeral debug container to be created in %s", podName),
 			Done:    true,
 			Error:   err,
 		}
@@ -187,7 +187,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 	if err != nil {
 		statusCh <- provider.ProviderStatus{
 			Stage:   "Creating",
-			Message: fmt.Sprintf("Failed waiting for ephemeral container to be created in %s", podName),
+			Message: fmt.Sprintf("Failed waiting for ephemeral debug container to be created in %s", podName),
 			Done:    true,
 			Error:   err,
 		}
@@ -196,7 +196,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 
 	statusCh <- provider.ProviderStatus{
 		Stage:   "Waiting",
-		Message: "Waiting for ephemeral container to complete",
+		Message: "Waiting for ephemeral debug container to complete",
 	}
 
 	for {
@@ -204,7 +204,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 		if err != nil {
 			statusCh <- provider.ProviderStatus{
 				Stage:   "Waiting",
-				Message: "Error waiting for ephemeral container to complete",
+				Message: "Error waiting for ephemeral debug container to complete",
 			}
 			return
 		}
@@ -225,7 +225,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 		case <-waitCtx.Done():
 			statusCh <- provider.ProviderStatus{
 				Stage:   "Waiting",
-				Message: "Error waiting for ephemeral container to complete",
+				Message: "Error waiting for ephemeral debug container to complete",
 			}
 			return
 		default:
@@ -240,7 +240,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 	if err != nil {
 		statusCh <- provider.ProviderStatus{
 			Stage:   "Waiting",
-			Message: "Error waiting for ephemeral container logs",
+			Message: "Error waiting for ephemeral debug container logs",
 		}
 		return
 	}
@@ -252,7 +252,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 	if err != nil {
 		statusCh <- provider.ProviderStatus{
 			Stage:   "Waiting",
-			Message: "Error waiting for ephemeral container logs",
+			Message: "Error waiting for ephemeral debug container logs",
 		}
 	}
 
@@ -260,7 +260,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 
 	statusCh <- provider.ProviderStatus{
 		Stage:   "Complete",
-		Message: fmt.Sprintf("Successfully executed emphemeral container in %s", podName),
+		Message: fmt.Sprintf("Successfully executed emphemeral debug container in %s", podName),
 		Done:    true,
 	}
 }
