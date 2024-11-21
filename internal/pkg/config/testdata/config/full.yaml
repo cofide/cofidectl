@@ -1,0 +1,72 @@
+data_source: fake-plugin
+trust_zones:
+    - name: tz1
+      trust_domain: td1
+      kubernetes_cluster: local1
+      kubernetes_context: kind-local1
+      trust_provider:
+        kind: kubernetes
+      bundle_endpoint_url: 127.0.0.1
+      federations:
+        - from: tz1
+          to: tz2
+      attestation_policies:
+        - trust_zone: tz1
+          policy: ap1
+          federates_with:
+            - tz2
+      jwt_issuer: https://tz1.example.com
+    - name: tz2
+      trust_domain: td2
+      kubernetes_cluster: local2
+      kubernetes_context: kind-local2
+      trust_provider:
+        kind: kubernetes
+      bundle_endpoint_url: 127.0.0.2
+      federations:
+        - from: tz2
+          to: tz1
+      attestation_policies:
+        - trust_zone: tz2
+          policy: ap2
+          federates_with:
+            - tz1
+      jwt_issuer: https://tz2.example.com
+attestation_policies:
+    - name: ap1
+      kubernetes:
+        namespace_selector:
+            match_labels:
+                kubernetes.io/metadata.name: ns1
+    - name: ap2
+      kubernetes:
+        pod_selector:
+            match_expressions:
+                - key: foo
+                  operator: In
+                  values:
+                    - bar
+    - name: ap3
+      kubernetes:
+        namespace_selector:
+            match_labels:
+                kubernetes.io/metadata.name: ns3
+        pod_selector:
+            match_labels:
+                label1: value1
+                label2: value2
+            match_expressions:
+                - key: foo
+                  operator: In
+                  values:
+                    - bar
+                    - baz
+                - key: foo
+                  operator: NotIn
+                  values:
+                    - qux
+                    - quux
+                - key: bar
+                  operator: Exists
+                - key: baz
+                  operator: DoesNotExist

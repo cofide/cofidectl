@@ -1,0 +1,42 @@
+set export
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+namespace := "demo"
+
+# Set prompt_namespace=no to avoid prompting before namespace creation.
+prompt_namespace := 'yes'
+
+# Check for demo script dependencies
+check-deps:
+    for cmd in ko kubectl; do \
+        if ! command -v $cmd &> /dev/null; then \
+            echo "Error: $cmd is not installed" >&2; \
+            exit 1; \
+        fi \
+    done
+    echo "All dependencies installed"
+
+ensure-namespace context:
+    if [[ ! -z "{{context}}" ]]; then \
+        if ! kubectl --context {{context}} get namespace "{{namespace}}" &> /dev/null; then \
+            echo "Namespace {{namespace}} does not exist"; \
+            if [[ "{{prompt_namespace}}" != "no" ]]; then \
+                read -p "Create namespace? (y/n) " -r; \
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then \
+                    echo "Aborting..."; \
+                    exit 1; \
+                fi \
+            fi; \
+            kubectl --context {{context}} create namespace "{{namespace}}"; \
+        fi \
+    fi
+
+# Clone the cofide-demos git repo.
+clone-demos-repo:
+    if [ ! -d cofide-demos ]; then \
+        git clone https://github.com/cofide/cofide-demos; \
+    fi
+
+# Deploy ping-pong server and client
+deploy-ping-pong client_context server_context="": clone-demos-repo (ensure-namespace client_context) (ensure-namespace server_context)
+    ping-pong/deploy.sh {{namespace}} {{client_context}} {{server_context}}

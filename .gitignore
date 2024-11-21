@@ -10,5 +10,7 @@ cofide.yaml
 .vscode
 
 # Plugins
-cofidectl-connect-plugin
+cofidectl-connect
 
+# cofide-demos repository
+demos/cofide-demos/

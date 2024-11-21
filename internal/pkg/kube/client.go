@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package kube
 
 import (
@@ -11,7 +14,7 @@ import (
 
 type Client struct {
 	CmdConfig  *api.Config
-	Clientset  *kubernetes.Clientset
+	Clientset  kubernetes.Interface
 	RestConfig *rest.Config
 }
 

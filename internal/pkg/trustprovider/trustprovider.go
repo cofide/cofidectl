@@ -1,9 +1,12 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package trustprovider
 
 import (
 	"fmt"
 
-	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_provider/v1"
+	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 )
 
 const (
@@ -12,19 +15,21 @@ const (
 )
 
 type TrustProvider struct {
-	Name         string `yaml:"name,omitempty"`
-	Kind         string `yaml:"kind"`
+	Name         string
+	Kind         string
 	AgentConfig  TrustProviderAgentConfig
 	ServerConfig TrustProviderServerConfig
 	Proto        *trust_provider_proto.TrustProvider
 }
 
-func NewTrustProvider(kind string) *TrustProvider {
+func NewTrustProvider(kind string) (*TrustProvider, error) {
 	tp := &TrustProvider{
 		Kind: kind,
 	}
-	tp.GetValues()
-	return tp
+	if err := tp.GetValues(); err != nil {
+		return nil, err
+	}
+	return tp, nil
 }
 
 func (tp *TrustProvider) GetValues() error {
@@ -55,7 +60,7 @@ func (tp *TrustProvider) GetValues() error {
 			},
 		}
 	default:
-		return fmt.Errorf("an unknown profile was specified")
+		return fmt.Errorf("an unknown trust provider profile was specified: %s", tp.Kind)
 	}
 	return nil
 }

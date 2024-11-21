@@ -1,0 +1,13 @@
+linters:
+  enable:
+    - goheader
+
+linters-settings:
+  goheader:
+    values:
+      const:
+        COMPANY: Cofide Limited
+    # Require Cofide copyright and SPDX license in all source files.
+    template: |
+      Copyright {{ MOD-YEAR }} {{ COMPANY }}.
+      SPDX-License-Identifier: Apache-2.0

@@ -1,17 +1,19 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package attestationpolicy
 
 import (
 	"fmt"
 
-	"buf.build/go/protoyaml"
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/proto/attestation_policy/v1"
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 )
 
 type AttestationPolicy struct {
-	AttestationPolicyProto *attestation_policy_proto.AttestationPolicy `yaml:"attestationPolicy"`
+	AttestationPolicyProto *attestation_policy_proto.AttestationPolicy
 }
-
-type AttestationPolicyKind string
 
 const (
 	Annotated   = "annotated"
@@ -26,64 +28,50 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 	}
 }
 
-func (ap *AttestationPolicy) marshalToYAML() ([]byte, error) {
-	return protoyaml.Marshal(ap.AttestationPolicyProto)
-}
-
-func (ap *AttestationPolicy) unmarshalFromYAML(data []byte) error {
-	return protoyaml.Unmarshal(data, ap.AttestationPolicyProto)
-}
-
-func (ap *AttestationPolicy) GetHelmConfig() map[string]interface{} {
+func (ap *AttestationPolicy) GetHelmConfig(source cofidectl_plugin.DataSource, binding *ap_binding_proto.APBinding) (map[string]interface{}, error) {
 	var clusterSPIFFEID = make(map[string]interface{})
-	switch ap.AttestationPolicyProto.Kind {
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED:
-		clusterSPIFFEID["podSelector"] = map[string]interface{}{
-			"matchLabels": map[string]interface{}{
-				ap.AttestationPolicyProto.PodKey: ap.AttestationPolicyProto.PodValue,
-			},
+	switch policy := ap.AttestationPolicyProto.Policy.(type) {
+	case *attestation_policy_proto.AttestationPolicy_Kubernetes:
+		kubernetes := policy.Kubernetes
+		if kubernetes.NamespaceSelector != nil {
+			selector := getAPLabelSelectorHelmConfig(kubernetes.NamespaceSelector)
+			if selector != nil {
+				clusterSPIFFEID["namespaceSelector"] = selector
+			}
 		}
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE:
-		clusterSPIFFEID["namespaceSelector"] = map[string]interface{}{
-			"matchExpressions": []map[string]interface{}{
-				{
-					"key":      "kubernetes.io/metadata.name",
-					"operator": "In",
-					"values":   []string{ap.AttestationPolicyProto.Namespace},
-				},
-			},
+		if kubernetes.PodSelector != nil {
+			selector := getAPLabelSelectorHelmConfig(kubernetes.PodSelector)
+			if selector != nil {
+				clusterSPIFFEID["podSelector"] = selector
+			}
 		}
 	default:
-		clusterSPIFFEID["enabled"] = "false"
+		return nil, fmt.Errorf("unexpected attestation policy kind: %T", policy)
 	}
 
-	return clusterSPIFFEID
+	if len(binding.FederatesWith) > 0 {
+		// Convert from trust zones to trust domains.
+		federatesWith := []string{}
+		for _, tzName := range binding.FederatesWith {
+			if trustZone, err := source.GetTrustZone(tzName); err != nil {
+				return nil, err
+			} else {
+				federatesWith = append(federatesWith, trustZone.TrustDomain)
+			}
+		}
+		clusterSPIFFEID["federatesWith"] = federatesWith
+	}
+
+	return clusterSPIFFEID, nil
 }
 
-func GetAttestationPolicyKind(kind string) (attestation_policy_proto.AttestationPolicyKind, error) {
-	switch kind {
-	case "annotated", "ATTESTATION_POLICY_KIND_ANNOTATED":
-		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED, nil
-	case "cluster", "ATTESTATION_POLICY_KIND_CLUSTER":
-		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_CLUSTER, nil
-	case "namespace", "ATTESTATION_POLICY_KIND_NAMESPACE":
-		return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE, nil
+func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSelector) map[string]interface{} {
+	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
+		return nil
 	}
 
-	// TODO: Update error message.
-	return attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_UNSPECIFIED, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
-}
-
-func GetAttestationPolicyKindString(kind string) (string, error) {
-	switch kind {
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_ANNOTATED.String():
-		return Annotated, nil
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_CLUSTER.String():
-		return Cluster, nil
-	case attestation_policy_proto.AttestationPolicyKind_ATTESTATION_POLICY_KIND_NAMESPACE.String():
-		return Namespace, nil
+	return map[string]interface{}{
+		"matchLabels":      selector.MatchLabels,
+		"matchExpressions": selector.MatchExpressions,
 	}
-
-	// TODO: Update error message.
-	return Unspecified, fmt.Errorf(fmt.Sprintf("unknown attestation policy kind %v", kind))
 }

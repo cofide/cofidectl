@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package helm
 
 import (
@@ -6,22 +9,22 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
-	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
+	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 )
 
 type HelmValuesGenerator struct {
-	config    *config.Config
+	source    cofidectl_plugin.DataSource
 	trustZone *trust_zone_proto.TrustZone
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, config *config.Config) *HelmValuesGenerator {
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource) *HelmValuesGenerator {
 	return &HelmValuesGenerator{
 		trustZone: trustZone,
-		config:    config,
+		source:    source,
 	}
 }
 
@@ -35,11 +38,15 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	serverConfig := tp.ServerConfig
 
 	globalValues := map[string]interface{}{
-		"global.spire.clusterName":              g.trustZone.KubernetesCluster,
+		"global.spire.clusterName":              g.trustZone.GetKubernetesCluster(),
 		"global.spire.trustDomain":              g.trustZone.TrustDomain,
 		"global.spire.recommendations.create":   true,
 		"global.installAndUpgradeHooks.enabled": false,
 		"global.deleteHooks.enabled":            false,
+	}
+
+	if issuer := g.trustZone.GetJwtIssuer(); issuer != "" {
+		globalValues["global.spire.jwtIssuer"] = issuer
 	}
 
 	spireAgentValues := map[string]interface{}{
@@ -56,7 +63,6 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	}
 
 	spireServerValues := map[string]interface{}{
-		`"spire-server"."federation"."enabled"`:        true,
 		`"spire-server"."service"."type"`:              "LoadBalancer",
 		`"spire-server"."caKeyType"`:                   "rsa-2048",
 		`"spire-server"."controllerManager"."enabled"`: true,
@@ -73,8 +79,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	// add attestation policies as ClusterSPIFFEIDs to be reconcilced by spire-controller-manager
 	if len(g.trustZone.AttestationPolicies) > 0 {
 		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = false
-		for _, ap := range g.trustZone.AttestationPolicies {
-			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."%s"`, ap.Name)] = attestationpolicy.NewAttestationPolicy(ap).GetHelmConfig()
+		for _, binding := range g.trustZone.AttestationPolicies {
+			policy, err := g.source.GetAttestationPolicy(binding.Policy)
+			if err != nil {
+				return nil, err
+			}
+			clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+			if err != nil {
+				return nil, err
+			}
+			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."%s"`, policy.Name)] = clusterSPIFFEIDs
 		}
 	} else {
 		// defaults to true
@@ -83,13 +97,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 
 	// add federations as clusterFederatedTrustDomains to be reconcilced by spire-controller-manager
 	if len(g.trustZone.Federations) > 0 {
-		spireServerValues[`"spire-server"."federation"."enabled"`] = true
 		for _, fed := range g.trustZone.Federations {
-			tz, ok := g.config.GetTrustZoneByName(fed.Right)
-			if !ok {
+			tz, err := g.source.GetTrustZone(fed.To)
+			if err != nil {
 				return nil, err
 			}
-			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.Right)] = federation.NewFederation(tz).GetHelmConfig()
+			if tz.GetBundleEndpointUrl() != "" {
+				spireServerValues[`"spire-server"."federation"."enabled"`] = true
+				config := federation.NewFederation(tz).GetHelmConfig()
+				spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.To)] = config
+			}
 		}
 	}
 

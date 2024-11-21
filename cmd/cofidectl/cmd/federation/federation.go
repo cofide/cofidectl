@@ -1,25 +1,25 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package federation
 
 import (
-	"fmt"
 	"os"
 
-	"helm.sh/helm/v3/cmd/helm/require"
-
-	federation_proto "github.com/cofide/cofide-api-sdk/gen/proto/federation/v1"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
+	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
 type FederationCommand struct {
-	source cofidectl_plugin.DataSource
+	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewFederationCommand(source cofidectl_plugin.DataSource) *FederationCommand {
+func NewFederationCommand(cmdCtx *cmdcontext.CommandContext) *FederationCommand {
 	return &FederationCommand{
-		source: source,
+		cmdCtx: cmdCtx,
 	}
 }
 
@@ -30,7 +30,7 @@ This command consists of multiple sub-commands to administer Cofide trust zone f
 func (c *FederationCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "federation add|list [ARGS]",
-		Short: "add, list federation",
+		Short: "Add, list federations",
 		Long:  federationRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -52,7 +52,12 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 		Long:  federationListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			federations, err := c.source.ListFederation()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
+				return err
+			}
+
+			federations, err := ds.ListFederations()
 			if err != nil {
 				return err
 			}
@@ -60,14 +65,14 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			data := make([][]string, len(federations))
 			for i, federation := range federations {
 				data[i] = []string{
-					fmt.Sprintf("%s", federation.Left),
-					fmt.Sprintf("%s", federation.Right),
-					"Healthy", //TODO
+					federation.From,
+					federation.To,
+					"Healthy", // TODO
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Trust Zone", "Trust Zone", "Status"})
+			table.SetHeader([]string{"From Trust Zone", "To Trust Zone", "Status"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -83,31 +88,38 @@ This command will add a new federation to the Cofide configuration state.
 `
 
 type Opts struct {
-	left  string
-	right string
+	from string
+	to   string
 }
 
 func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	opts := Opts{}
 	cmd := &cobra.Command{
-		Use:   "add [NAME]",
+		Use:   "add",
 		Short: "Add a new federation",
 		Long:  federationAddCmdDesc,
-		Args:  require.ExactArgs(1),
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			newFederation := &federation_proto.Federation{
-				Left:  opts.left,
-				Right: opts.right,
+			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			if err != nil {
+				return err
 			}
-			return c.source.AddFederation(newFederation)
+
+			newFederation := &federation_proto.Federation{
+				From: opts.from,
+				To:   opts.to,
+			}
+			_, err = ds.AddFederation(newFederation)
+			return err
 		},
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.left, "left", "", "Trust zone to federate")
-	f.StringVar(&opts.right, "right", "", "Trust zone to federate")
-	cmd.MarkFlagRequired("left")
-	cmd.MarkFlagRequired("right")
+	f.StringVar(&opts.from, "from", "", "Trust zone to federate from")
+	f.StringVar(&opts.to, "to", "", "Trust zone to federate to")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("from"))
+	cobra.CheckErr(cmd.MarkFlagRequired("to"))
 
 	return cmd
 }

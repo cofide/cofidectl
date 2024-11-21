@@ -1,8 +1,12 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package trustzone
 
 import (
-	"buf.build/go/protoyaml"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/proto/trust_zone/v1"
+	"fmt"
+
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 )
 
@@ -16,14 +20,10 @@ func NewTrustZone(trustZone *trust_zone_proto.TrustZone) *TrustZone {
 	}
 }
 
-func (tz *TrustZone) marshalToYAML() ([]byte, error) {
-	return protoyaml.Marshal(tz.TrustZoneProto)
-}
-
-func (tz *TrustZone) unmarshalFromYAML(data []byte) error {
-	return protoyaml.Unmarshal(data, tz.TrustZoneProto)
-}
-
 func (tz *TrustZone) GetTrustProvider() (*trustprovider.TrustProvider, error) {
-	return trustprovider.NewTrustProvider(tz.TrustZoneProto.TrustProvider.Kind), nil
+	trustProviderProto := tz.TrustZoneProto.GetTrustProvider()
+	if trustProviderProto == nil {
+		return nil, fmt.Errorf("no trust provider for trust zone %s", tz.TrustZoneProto.Name)
+	}
+	return trustprovider.NewTrustProvider(trustProviderProto.GetKind())
 }
