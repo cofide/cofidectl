@@ -145,10 +145,6 @@ func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_z
 		return "Unhealthy", nil
 	}
 
-	if compare[to].serverCABundle != compare[from].federatedBundles[to.TrustDomain] {
-		return "Unhealthy", nil
-	}
-
 	return "Healthy", nil
 }
 
