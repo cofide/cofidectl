@@ -80,10 +80,10 @@ function wait_for_pong() {
 }
 
 function post_deploy() {
-  if ./cofidectl federation list | grep Healthy; then 
-      return
+  federations=$(./cofidectl federation list)
+  if echo "$federations" | grep Unhealthy >/dev/null; then 
+      return 1
   fi
-  exit 1
 }
 
 function down() {
