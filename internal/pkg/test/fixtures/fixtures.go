@@ -64,6 +64,19 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		JwtIssuer: StringPtr("https://tz2.example.com"),
 	},
+	// tz3 has no federations or bound attestation policies.
+	"tz3": {
+		Name:              "tz3",
+		TrustDomain:       "td3",
+		KubernetesCluster: StringPtr("local3"),
+		KubernetesContext: StringPtr("kind-local3"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		BundleEndpointUrl:   StringPtr("127.0.0.3"),
+		Federations:         []*federation_proto.Federation{},
+		AttestationPolicies: []*ap_binding_proto.APBinding{},
+	},
 }
 
 var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPolicy = map[string]*attestation_policy_proto.AttestationPolicy{
