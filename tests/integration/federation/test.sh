@@ -79,6 +79,13 @@ function wait_for_pong() {
   return 1
 }
 
+function post_deploy() {
+  federations=$(./cofidectl federation list)
+  if echo "$federations" | grep Unhealthy >/dev/null; then 
+      return 1
+  fi
+}
+
 function down() {
   ./cofidectl down
 }
@@ -90,6 +97,7 @@ function main() {
   show_config
   show_status
   run_tests
+  post_deploy
   down
   echo "Success!"
 }

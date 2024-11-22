@@ -5,11 +5,13 @@ package spire
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/cofide/cofidectl/internal/pkg/kube"
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
@@ -414,4 +416,62 @@ func formatIdUrl(id *types.SPIFFEID) (string, error) {
 	} else {
 		return id.String(), nil
 	}
+}
+
+// GetServerCABundleAndFederatedBundles retrieves the server CA bundle (i.e. bundle of the host) and any available
+// federated bundles from the SPIRE server, in order to do a federation health check
+func GetServerCABundleAndFederatedBundles(ctx context.Context, client *kube.Client) (string, map[string]string, error) {
+	serverCABundle, err := getServerCABundle(ctx, client)
+	if err != nil {
+		return "", nil, err
+	}
+	federatedBundles, err := getFederatedBundles(ctx, client)
+	if err != nil {
+		return "", nil, err
+	}
+	return serverCABundle, federatedBundles, err
+}
+
+// getServerCABundle retrives the x509_authorities component of the server CA trust bundle
+func getServerCABundle(ctx context.Context, client *kube.Client) (string, error) {
+	command := []string{"bundle", "show", "-output", "json"}
+	stdout, _, err := execInServerContainer(ctx, client, command)
+	if err != nil {
+		return "", err
+	}
+	return parseServerCABundle(stdout)
+}
+
+func parseServerCABundle(stdout []byte) (string, error) {
+	var data map[string]interface{}
+	if err := json.Unmarshal(stdout, &data); err != nil {
+		return "", err
+	}
+	return fmt.Sprint(data["x509_authorities"]), nil
+}
+
+type federatedBundles struct {
+	Bundles []map[string]interface{} `json:"bundles"`
+}
+
+func getFederatedBundles(ctx context.Context, client *kube.Client) (map[string]string, error) {
+	command := []string{"bundle", "list", "-output", "json"}
+	stdout, _, err := execInServerContainer(ctx, client, command)
+	if err != nil {
+		return nil, err
+	}
+	return parseFederatedBundles(stdout)
+}
+
+func parseFederatedBundles(stdout []byte) (map[string]string, error) {
+	result := make(map[string]string)
+	var data federatedBundles
+	if err := json.Unmarshal(stdout, &data); err != nil {
+		return nil, err
+	}
+	for _, bundle := range data.Bundles {
+		// Store x509_authorities for comparison, keyed by trust domain
+		result[bundle["trust_domain"].(string)] = fmt.Sprint(bundle["x509_authorities"])
+	}
+	return result, nil
 }
