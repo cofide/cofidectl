@@ -116,10 +116,9 @@ This command will display the status of workloads in the Cofide configuration st
 `
 
 type StatusOpts struct {
-	workloadName string // used to pass arg[0]
-	podName      string
-	namespace    string
-	trustZone    string
+	podName   string
+	namespace string
+	trustZone string
 }
 
 func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
@@ -128,14 +127,13 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 		Use:   "status [NAME]",
 		Short: "Display workload status",
 		Long:  workloadStatusCmdDesc,
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			opts.workloadName = args[0]
 			return w.status(cmd.Context(), kubeConfig, opts)
 		},
 	}
