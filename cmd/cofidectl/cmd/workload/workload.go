@@ -35,7 +35,7 @@ This command consists of multiple sub-commands to interact with workloads.
 func (c *WorkloadCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workload list|discover|status [ARGS]",
-		Short: "List or introspect the status of workloads in a trust zone or discover candidate workloads",
+		Short: "List, introspect or discover the status of workloads in a trust zone",
 		Long:  workloadRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -112,7 +112,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 }
 
 var workloadStatusCmdDesc = `
-This command will display the status of workloads in the Cofide configuration state.
+This command will display the status of workloads in a trust zone.
 `
 
 type StatusOpts struct {
@@ -161,7 +161,7 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts St
 		return err
 	}
 
-	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, *trustZone.KubernetesContext)
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, trustZone.GetKubernetesContext())
 	if err != nil {
 		return err
 	}
