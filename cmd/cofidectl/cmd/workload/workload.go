@@ -163,7 +163,7 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts St
 		return err
 	}
 
-	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, *trustZone.KubernetesContext)
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, trustZone.GetKubernetesContext())
 	if err != nil {
 		return err
 	}
