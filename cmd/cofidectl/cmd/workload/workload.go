@@ -112,7 +112,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 }
 
 var workloadStatusCmdDesc = `
-This command will display the status of workloads in the Cofide configuration state.
+This command will display the status of workloads in a trust zone.
 `
 
 type StatusOpts struct {
