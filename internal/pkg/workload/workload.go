@@ -260,7 +260,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 
 	statusCh <- provider.ProviderStatus{
 		Stage:   "Complete",
-		Message: fmt.Sprintf("Successfully executed emphemeral debug container in %s", podName),
+		Message: fmt.Sprintf("Successfully executed ephemeral debug container in %s", podName),
 		Done:    true,
 	}
 }
