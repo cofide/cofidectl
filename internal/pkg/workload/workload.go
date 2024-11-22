@@ -225,7 +225,7 @@ func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dat
 		case <-waitCtx.Done():
 			statusCh <- provider.ProviderStatus{
 				Stage:   "Waiting",
-				Message: "Error waiting for ephemeral debug container to complete",
+				Message: "Timed out waiting for ephemeral debug container to complete",
 			}
 			return
 		default:
