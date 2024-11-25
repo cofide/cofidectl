@@ -70,3 +70,14 @@ attestation_policies:
                   operator: Exists
                 - key: baz
                   operator: DoesNotExist
+plugin_config:
+    plugin1:
+        list-cfg:
+            - 456
+            - another-string
+        map-cfg:
+            key1: yet-another
+            key2: 789
+    plugin2:
+        number-cfg: 123
+        string-cfg: fake-string

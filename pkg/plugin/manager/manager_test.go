@@ -14,6 +14,7 @@ import (
 	go_plugin "github.com/hashicorp/go-plugin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type fakeGrpcDataSource struct {
@@ -28,10 +29,11 @@ func newFakeGrpcDataSource(t *testing.T, configLoader config.Loader) *fakeGrpcDa
 
 func TestManager_Init_success(t *testing.T) {
 	tests := []struct {
-		name       string
-		config     *config.Config
-		pluginName string
-		want       func(config.Loader) cofidectl_plugin.DataSource
+		name         string
+		config       *config.Config
+		pluginName   string
+		pluginConfig map[string]*structpb.Struct
+		want         func(config.Loader) cofidectl_plugin.DataSource
 	}{
 		{
 			name:       "local",
@@ -53,6 +55,17 @@ func TestManager_Init_success(t *testing.T) {
 			},
 		},
 		{
+			name:         "local with config",
+			config:       nil,
+			pluginName:   LocalPluginName,
+			pluginConfig: fakePluginConfig(t),
+			want: func(cl config.Loader) cofidectl_plugin.DataSource {
+				lds, err := local.NewLocalDataSource(cl)
+				assert.Nil(t, err)
+				return lds
+			},
+		},
+		{
 			name:       "existing local",
 			config:     &config.Config{DataSource: LocalPluginName},
 			pluginName: LocalPluginName,
@@ -71,6 +84,17 @@ func TestManager_Init_success(t *testing.T) {
 				return fcds
 			},
 		},
+		{
+			name:         "existing local with config",
+			config:       &config.Config{DataSource: LocalPluginName, PluginConfig: fakePluginConfig(t)},
+			pluginName:   LocalPluginName,
+			pluginConfig: fakePluginConfig(t),
+			want: func(cl config.Loader) cofidectl_plugin.DataSource {
+				lds, err := local.NewLocalDataSource(cl)
+				assert.Nil(t, err)
+				return lds
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -83,7 +107,7 @@ func TestManager_Init_success(t *testing.T) {
 				return nil, newFakeGrpcDataSource(t, configLoader), nil
 			}
 
-			got, err := m.Init(tt.pluginName)
+			got, err := m.Init(tt.pluginName, tt.pluginConfig)
 			require.Nil(t, err)
 
 			want := tt.want(configLoader)
@@ -91,7 +115,16 @@ func TestManager_Init_success(t *testing.T) {
 
 			config, err := configLoader.Read()
 			assert.Nil(t, err)
-			assert.Equal(t, config.DataSource, tt.pluginName)
+			assert.Equal(t, tt.pluginName, config.DataSource)
+
+			expectedConfig := tt.pluginConfig
+			if expectedConfig == nil {
+				expectedConfig = map[string]*structpb.Struct{}
+			}
+			assert.EqualExportedValues(t, expectedConfig, config.PluginConfig)
+			for pluginName, value := range tt.pluginConfig {
+				assert.NotSame(t, value, config.PluginConfig[pluginName], "pointer to plugin config stored in config")
+			}
 
 			got2, err := m.GetDataSource()
 			require.Nil(t, err)
@@ -105,6 +138,7 @@ func TestManager_Init_failure(t *testing.T) {
 		name           string
 		config         *config.Config
 		pluginName     string
+		pluginConfig   map[string]*structpb.Struct
 		want           func(config.Loader) cofidectl_plugin.DataSource
 		wantErrMessage string
 	}{
@@ -114,6 +148,12 @@ func TestManager_Init_failure(t *testing.T) {
 			pluginName:     LocalPluginName,
 			wantErrMessage: "existing config file uses a different plugin: fake-plugin vs local",
 		},
+		{
+			name:           "existing different plugin config",
+			config:         &config.Config{DataSource: "local", PluginConfig: fakePluginConfig(t)},
+			pluginName:     LocalPluginName,
+			wantErrMessage: "existing config file has different plugin config:",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -122,7 +162,7 @@ func TestManager_Init_failure(t *testing.T) {
 
 			m := NewManager(configLoader)
 
-			_, err = m.Init(tt.pluginName)
+			_, err = m.Init(tt.pluginName, tt.pluginConfig)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.wantErrMessage)
 
@@ -264,4 +304,111 @@ func TestManager_Shutdown(t *testing.T) {
 			assert.Nil(t, m.client)
 		})
 	}
+}
+
+func TestManager_GetPluginConfig(t *testing.T) {
+	tests := []struct {
+		name           string
+		config         *config.Config
+		pluginName     string
+		want           *structpb.Struct
+		wantErr        bool
+		wantErrMessage string
+	}{
+		{
+			name:       "success",
+			config:     &config.Config{PluginConfig: fakePluginConfig(t)},
+			pluginName: "local",
+			want:       fakeLocalPluginConfig(t),
+		},
+		{
+			name:           "non-existent plugin",
+			config:         &config.Config{PluginConfig: fakePluginConfig(t)},
+			pluginName:     "non-existent-plugin",
+			want:           fakeLocalPluginConfig(t),
+			wantErr:        true,
+			wantErrMessage: "no plugin configuration found for non-existent-plugin",
+		},
+		{
+			name:           "no plugin config",
+			config:         &config.Config{},
+			pluginName:     "non-existent-plugin",
+			want:           fakeLocalPluginConfig(t),
+			wantErr:        true,
+			wantErrMessage: "no plugin configuration found for non-existent-plugin",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configLoader, err := config.NewMemoryLoader(tt.config)
+			require.Nil(t, err)
+
+			m := NewManager(configLoader)
+			got, err := m.GetPluginConfig(tt.pluginName)
+
+			if tt.wantErr {
+				require.Error(t, err, err)
+				assert.ErrorContains(t, err, tt.wantErrMessage)
+			} else {
+				require.Nil(t, err, err)
+				assert.EqualExportedValues(t, tt.want, got)
+
+				config, err := configLoader.Read()
+				require.Nil(t, err, err)
+				assert.EqualExportedValues(t, tt.want, config.PluginConfig[tt.pluginName])
+
+				assert.NotSame(t, config.PluginConfig[tt.pluginName], got, "pointer to plugin config returned")
+			}
+		})
+	}
+}
+
+func TestManager_SetPluginConfig(t *testing.T) {
+	tests := []struct {
+		name         string
+		config       *config.Config
+		pluginName   string
+		pluginConfig *structpb.Struct
+	}{
+		{
+			name:         "success",
+			config:       &config.Config{},
+			pluginName:   "local",
+			pluginConfig: fakeLocalPluginConfig(t),
+		},
+		{
+			name:         "overwrite",
+			config:       &config.Config{PluginConfig: fakePluginConfig(t)},
+			pluginName:   "local",
+			pluginConfig: fakeLocalPluginConfig(t),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configLoader, err := config.NewMemoryLoader(tt.config)
+			require.Nil(t, err)
+
+			m := NewManager(configLoader)
+			err = m.SetPluginConfig(tt.pluginName, tt.pluginConfig)
+
+			require.Nil(t, err, err)
+
+			config, err := configLoader.Read()
+			require.Nil(t, err, err)
+			assert.EqualExportedValues(t, tt.pluginConfig, config.PluginConfig[tt.pluginName])
+
+			assert.NotSame(t, config.PluginConfig[tt.pluginName], tt.pluginConfig, "pointer to plugin config stored in config")
+		})
+	}
+}
+
+func fakePluginConfig(t *testing.T) map[string]*structpb.Struct {
+	s := fakeLocalPluginConfig(t)
+	return map[string]*structpb.Struct{"local": s}
+}
+
+func fakeLocalPluginConfig(t *testing.T) *structpb.Struct {
+	s, err := structpb.NewStruct(map[string]any{"fake-opt": "fake-value"})
+	require.Nil(t, err, err)
+	return s
 }

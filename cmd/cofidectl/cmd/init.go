@@ -57,7 +57,7 @@ func (i *InitCommand) GetRootCommand() *cobra.Command {
 				pluginName = manager.LocalPluginName
 			}
 
-			_, err := i.cmdCtx.PluginManager.Init(pluginName)
+			_, err := i.cmdCtx.PluginManager.Init(pluginName, nil)
 			return err
 		},
 	}
