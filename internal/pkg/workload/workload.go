@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
