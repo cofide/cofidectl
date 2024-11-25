@@ -11,7 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
@@ -27,7 +30,7 @@ const (
 )
 
 func main() {
-	log.SetFlags(0)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if err := run(); err != nil {
 		// This should be the only place that calls os.Exit, to ensure proper clean up.
 		// This includes functions that call os.Exit, e.g. cobra.CheckErr, log.Fatal
@@ -69,6 +72,22 @@ func run() error {
 func getCommandContext() *cmdcontext.CommandContext {
 	configLoader := config.NewFileLoader(cofideConfigFile)
 	pluginManager := manager.NewManager(configLoader)
+	tz := trust_zone_proto.TrustZone{Name: "foo"}
+	pluginCfg, err := anypb.New(&tz)
+	if err != nil {
+		panic("foo")
+	}
+	d, err := proto.Marshal(pluginCfg)
+	if err != nil {
+		panic("bar")
+	}
+	var pluginCfg2 anypb.Any
+	err = proto.Unmarshal(d, &pluginCfg2)
+	if err != nil {
+		panic("baz")
+	}
+	fmt.Println(pluginCfg, "XX", pluginCfg2)
+	pluginManager.SetPluginConfig("foo", pluginCfg)
 
 	return cmdcontext.NewCommandContext(pluginManager)
 }

@@ -53,10 +53,22 @@
 	to!: string
 }
 
+#PluginConfig: {
+	[string]: #AnyPb
+}
+
+#AnyPb: {
+	"@type"!: string
+	//value!: bytes
+	// FIXME: remove?
+	[string]: _
+}
+
 #Config: {
 	data_source!: #DataSource
 	trust_zones: [...#TrustZone]
 	attestation_policies: [...#AttestationPolicy]
+	plugin_config?: #PluginConfig
 }
 
 #Config

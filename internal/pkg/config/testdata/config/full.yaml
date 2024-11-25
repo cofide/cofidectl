@@ -70,3 +70,7 @@ attestation_policies:
                   operator: Exists
                 - key: baz
                   operator: DoesNotExist
+plugin_config:
+    fake-plugin:
+        "@type": type.googleapis.com/proto.trust_zonex.v1alpha1.TrustZoneX
+        name: fake-tzx

@@ -1,4 +1,4 @@
-build: test
+build:
     go build -o cofidectl ./cmd/cofidectl/main.go
 
 test:

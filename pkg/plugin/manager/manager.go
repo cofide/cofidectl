@@ -15,6 +15,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
@@ -175,4 +176,25 @@ func (pm *PluginManager) Shutdown() {
 		pm.client = nil
 	}
 	pm.source = nil
+}
+
+func (pm *PluginManager) GetPluginConfig(pluginName string) (*anypb.Any, error) {
+	cfg, err := pm.configLoader.Read()
+	if err != nil {
+		return nil, err
+	}
+	pluginConfig, ok := cfg.PluginConfig[pluginName]
+	if !ok {
+		return nil, fmt.Errorf("no plugin configuration found for %s", pluginName)
+	}
+	return pluginConfig, nil
+}
+
+func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *anypb.Any) error {
+	cfg, err := pm.configLoader.Read()
+	if err != nil {
+		return err
+	}
+	cfg.PluginConfig[pluginName] = pluginConfig
+	return pm.configLoader.Write(cfg)
 }
