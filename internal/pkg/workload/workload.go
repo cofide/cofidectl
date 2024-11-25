@@ -4,15 +4,22 @@
 package workload
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	kubeutil "github.com/cofide/cofidectl/internal/pkg/kube"
+	"github.com/cofide/cofidectl/internal/pkg/provider"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
+
+const debugContainerNamePrefix = "cofidectl-debug"
+const debugContainerImage = "cofidectl-debug:latest"
 
 type Workload struct {
 	Name             string
@@ -129,6 +136,133 @@ func GetUnregisteredWorkloads(ctx context.Context, kubeCfgFile string, kubeConte
 	}
 
 	return unregisteredWorkloads, nil
+}
+
+func GetStatus(ctx context.Context, statusCh chan<- provider.ProviderStatus, dataCh chan string, client *kubeutil.Client, podName string, namespace string) {
+	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+	statusCh <- provider.ProviderStatus{
+		Stage:   "Creating",
+		Message: fmt.Sprintf("Waiting for ephemeral debug container to be created in %s", podName),
+	}
+
+	pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		statusCh <- provider.ProviderStatus{
+			Stage:   "Creating",
+			Message: fmt.Sprintf("Failed waiting for ephemeral debug container to be created in %s", podName),
+			Done:    true,
+			Error:   err,
+		}
+		return
+	}
+
+	debugContainerName := fmt.Sprintf("%s-%s", debugContainerNamePrefix, rand.String(5))
+
+	debugContainer := v1.EphemeralContainer{
+		EphemeralContainerCommon: v1.EphemeralContainerCommon{
+			Name:            debugContainerName,
+			Image:           debugContainerImage,
+			ImagePullPolicy: v1.PullIfNotPresent,
+			TTY:             true,
+			Stdin:           true,
+			VolumeMounts: []v1.VolumeMount{
+				{
+					ReadOnly:  true,
+					Name:      "spiffe-workload-api",
+					MountPath: "/spiffe-workload-api",
+				}},
+		},
+		TargetContainerName: pod.Spec.Containers[0].Name,
+	}
+
+	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, debugContainer)
+
+	_, err = client.Clientset.CoreV1().Pods(namespace).UpdateEphemeralContainers(
+		ctx,
+		pod.Name,
+		pod,
+		metav1.UpdateOptions{},
+	)
+	if err != nil {
+		statusCh <- provider.ProviderStatus{
+			Stage:   "Creating",
+			Message: fmt.Sprintf("Failed waiting for ephemeral debug container to be created in %s", podName),
+			Done:    true,
+			Error:   err,
+		}
+		return
+	}
+
+	statusCh <- provider.ProviderStatus{
+		Stage:   "Waiting",
+		Message: "Waiting for ephemeral debug container to complete",
+	}
+
+	for {
+		pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+		if err != nil {
+			statusCh <- provider.ProviderStatus{
+				Stage:   "Waiting",
+				Message: "Error waiting for ephemeral debug container to complete",
+			}
+			return
+		}
+
+		containerTerminated := false
+		for _, status := range pod.Status.EphemeralContainerStatuses {
+			if status.Name == debugContainerName && status.State.Terminated != nil {
+				containerTerminated = true
+				break
+			}
+		}
+
+		if containerTerminated {
+			break
+		}
+
+		select {
+		case <-waitCtx.Done():
+			statusCh <- provider.ProviderStatus{
+				Stage:   "Waiting",
+				Message: "Timed out waiting for ephemeral debug container to complete",
+			}
+			return
+		default:
+			time.Sleep(time.Second)
+			continue
+		}
+	}
+
+	logs, err := client.Clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &v1.PodLogOptions{
+		Container: debugContainerName,
+	}).Stream(ctx)
+	if err != nil {
+		statusCh <- provider.ProviderStatus{
+			Stage:   "Waiting",
+			Message: "Error waiting for ephemeral debug container logs",
+		}
+		return
+	}
+	defer logs.Close()
+
+	// Read the logs
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, logs)
+	if err != nil {
+		statusCh <- provider.ProviderStatus{
+			Stage:   "Waiting",
+			Message: "Error waiting for ephemeral debug container logs",
+		}
+	}
+
+	dataCh <- buf.String()
+
+	statusCh <- provider.ProviderStatus{
+		Stage:   "Complete",
+		Message: fmt.Sprintf("Successfully executed ephemeral debug container in %s", podName),
+		Done:    true,
+	}
 }
 
 func isAtRisk(creationTS time.Time) (time.Duration, bool) {

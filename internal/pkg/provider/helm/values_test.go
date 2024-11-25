@@ -71,7 +71,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
-							"disableContainerSelectors":   false,
+							"disableContainerSelectors":   true,
 							"enabled":                     true,
 							"skipKubeletVerification":     true,
 							"useNewContainerLocator":      false,
@@ -152,7 +152,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
-							"disableContainerSelectors":   false,
+							"disableContainerSelectors":   true,
 							"enabled":                     true,
 							"skipKubeletVerification":     true,
 							"useNewContainerLocator":      false,
