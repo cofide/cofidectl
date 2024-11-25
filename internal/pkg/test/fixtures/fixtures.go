@@ -12,6 +12,7 @@ import (
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -39,6 +40,25 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			},
 		},
 		JwtIssuer: StringPtr("https://tz1.example.com"),
+		ExtraHelmValues: func() *structpb.Struct {
+			ev := map[string]interface{}{
+				"global": map[string]interface{}{
+					"spire": map[string]interface{}{
+						"namespaces": map[string]interface{}{
+							"create": true,
+						},
+					},
+				},
+				"spire-server": map[string]interface{}{
+					"logLevel": "INFO",
+				},
+			}
+			value, err := structpb.NewStruct(ev)
+			if err != nil {
+				panic(err)
+			}
+			return value
+		}(),
 	},
 	"tz2": {
 		Name:              "tz2",

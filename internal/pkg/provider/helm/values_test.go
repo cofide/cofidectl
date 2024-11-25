@@ -14,6 +14,7 @@ import (
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Values = map[string]interface{}
@@ -34,6 +35,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				tz.BundleEndpointUrl = nil
 				tz.Federations = nil
 				tz.JwtIssuer = nil
+				tz.ExtraHelmValues = nil
 				return tz
 			}(),
 			want: Values{
@@ -127,6 +129,9 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"spire": Values{
 						"clusterName": "local1",
 						"jwtIssuer":   "https://tz1.example.com",
+						"namespaces": Values{
+							"create": true,
+						},
 						"recommendations": Values{
 							"create": true,
 						},
@@ -199,7 +204,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"enabled": true,
 					},
 					"fullnameOverride": "spire-server",
-					"logLevel":         "DEBUG",
+					"logLevel":         "INFO",
 					"nodeAttestor": Values{
 						"k8sPsat": Values{
 							"allowedNodeLabelKeys": ValueList{},
@@ -229,7 +234,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				trustZone: tt.trustZone,
 			}
 			got, err := g.GenerateValues()
-			require.Nil(t, err)
+			require.Nil(t, err, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -276,6 +281,21 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 				return tz
 			}(),
 			wantErrString: "failed to find trust zone invalid-tz in local config",
+		},
+		{
+			name: "invalid extra helm values",
+			trustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz1")
+				s, err := structpb.NewStruct(map[string]any{
+					"global": "not-a-map",
+				})
+				if err != nil {
+					require.Nil(t, err, err)
+				}
+				tz.ExtraHelmValues = s
+				return tz
+			}(),
+			wantErrString: "global: conflicting values \"not-a-map\"",
 		},
 	}
 	for _, tt := range tests {
