@@ -8,7 +8,7 @@ import (
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	config_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/config/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
-	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Config describes the cofide.yaml configuration file format.
@@ -16,7 +16,7 @@ type Config struct {
 	DataSource          string
 	TrustZones          []*trust_zone_proto.TrustZone
 	AttestationPolicies []*attestation_policy_proto.AttestationPolicy
-	PluginConfig        map[string]*anypb.Any
+	PluginConfig        map[string]*structpb.Struct
 }
 
 func NewConfig() *Config {
@@ -24,7 +24,7 @@ func NewConfig() *Config {
 		DataSource:          "",
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
-		PluginConfig:        map[string]*anypb.Any{},
+		PluginConfig:        map[string]*structpb.Struct{},
 	}
 }
 
@@ -58,7 +58,7 @@ func unmarshalYAML(data []byte) (*Config, error) {
 	proto := config_proto.Config{
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
-		PluginConfig:        map[string]*anypb.Any{},
+		PluginConfig:        map[string]*structpb.Struct{},
 	}
 	err := protoyaml.Unmarshal(data, &proto)
 	if err != nil {

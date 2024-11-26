@@ -265,3 +265,29 @@ func TestManager_Shutdown(t *testing.T) {
 		})
 	}
 }
+
+func TestManager_GetPluginConfig(t *testing.T) {
+	tests := []struct {
+		name   string
+		config config.Config
+		want   func(config.Loader) cofidectl_plugin.DataSource
+	}{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// TODO
+		})
+	}
+}
+
+func TestManager_SetPluginConfig(t *testing.T) {
+	tests := []struct {
+		name   string
+		config config.Config
+		want   func(config.Loader) cofidectl_plugin.DataSource
+	}{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// TODO
+		})
+	}
+}

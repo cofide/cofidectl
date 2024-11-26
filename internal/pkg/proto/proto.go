@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
@@ -42,6 +43,17 @@ func CloneAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBi
 	} else {
 		if clone == binding {
 			return nil, fmt.Errorf("bug: attestation policy binding %s/%s clones are the same", binding.Policy, binding.TrustZone)
+		}
+		return clone, nil
+	}
+}
+
+func CloneStruct(spb *structpb.Struct) (*structpb.Struct, error) {
+	if clone, ok := proto.Clone(spb).(*structpb.Struct); !ok {
+		return nil, fmt.Errorf("bug: type assertion failed for struct %s", spb)
+	} else {
+		if clone == spb {
+			return nil, fmt.Errorf("bug: struct %s clones are the same", spb)
 		}
 		return clone, nil
 	}

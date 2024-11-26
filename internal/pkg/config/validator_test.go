@@ -62,6 +62,11 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			wantErr: "attestation_policies: conflicting values \"not-a-list\" and [...#AttestationPolicy]",
 		},
 		{
+			name:    "plugin config not a map",
+			data:    "plugin_config: \"not-a-map\"",
+			wantErr: "plugin_config: conflicting values \"not-a-map\" and {[string]:_}",
+		},
+		{
 			name:    "unexpected trust zone field",
 			data:    "trust_zones: [foo: bar]",
 			wantErr: "trust_zones.0.foo: field not allowed",

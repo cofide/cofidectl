@@ -12,10 +12,10 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	hclog "github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
@@ -178,7 +178,7 @@ func (pm *PluginManager) Shutdown() {
 	pm.source = nil
 }
 
-func (pm *PluginManager) GetPluginConfig(pluginName string) (*anypb.Any, error) {
+func (pm *PluginManager) GetPluginConfig(pluginName string) (*structpb.Struct, error) {
 	cfg, err := pm.configLoader.Read()
 	if err != nil {
 		return nil, err
@@ -190,7 +190,7 @@ func (pm *PluginManager) GetPluginConfig(pluginName string) (*anypb.Any, error) 
 	return pluginConfig, nil
 }
 
-func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *anypb.Any) error {
+func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *structpb.Struct) error {
 	cfg, err := pm.configLoader.Read()
 	if err != nil {
 		return err

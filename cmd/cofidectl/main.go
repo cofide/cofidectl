@@ -11,10 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd"
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
@@ -72,23 +70,29 @@ func run() error {
 func getCommandContext() *cmdcontext.CommandContext {
 	configLoader := config.NewFileLoader(cofideConfigFile)
 	pluginManager := manager.NewManager(configLoader)
-	tz := trust_zone_proto.TrustZone{Name: "foo"}
-	pluginCfg, err := anypb.New(&tz)
+	// testing
+	pluginCfg, err := structpb.NewStruct(map[string]any{
+		"key1": "value1",
+		"key2": "value2",
+	})
 	if err != nil {
 		panic("foo")
 	}
-	d, err := proto.Marshal(pluginCfg)
+	err = pluginManager.SetPluginConfig("foo", pluginCfg)
 	if err != nil {
-		panic("bar")
+		// fails on first run: ignore
 	}
-	var pluginCfg2 anypb.Any
-	err = proto.Unmarshal(d, &pluginCfg2)
-	if err != nil {
-		panic("baz")
-	}
-	fmt.Println(pluginCfg, "XX", pluginCfg2)
-	pluginManager.SetPluginConfig("foo", pluginCfg)
 
+	pluginCfg, err = pluginManager.GetPluginConfig("foo")
+	if err != nil {
+		panic(err)
+	}
+	v1, ok := pluginCfg.Fields["key1"]
+	if !ok {
+		panic("no key1")
+	}
+	v11 := v1.GetStringValue()
+	fmt.Println(v11)
 	return cmdcontext.NewCommandContext(pluginManager)
 }
 

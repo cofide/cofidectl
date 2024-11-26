@@ -12,7 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/testing/protocmp"
-	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestConfig_YAMLMarshall(t *testing.T) {
@@ -42,11 +42,9 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap2"),
 					fixtures.AttestationPolicy("ap3"),
 				},
-				PluginConfig: map[string]*anypb.Any{
-					"fake-plugin": {
-						TypeUrl: "type.googleapis.com/proto.trust_zone.v1alpha1.TrustZoneX",
-						Value:   []byte{},
-					},
+				PluginConfig: map[string]*structpb.Struct{
+					"plugin1": fixtures.PluginConfig("plugin1"),
+					"plugin2": fixtures.PluginConfig("plugin2"),
 				},
 			},
 			wantFile: "full.yaml",
@@ -78,7 +76,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				DataSource:          "local",
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
-				PluginConfig:        map[string]*anypb.Any{},
+				PluginConfig:        map[string]*structpb.Struct{},
 			},
 		},
 		{
@@ -95,7 +93,10 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap2"),
 					fixtures.AttestationPolicy("ap3"),
 				},
-				PluginConfig: map[string]*anypb.Any{},
+				PluginConfig: map[string]*structpb.Struct{
+					"plugin1": fixtures.PluginConfig("plugin1"),
+					"plugin2": fixtures.PluginConfig("plugin2"),
+				},
 			},
 		},
 	}

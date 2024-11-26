@@ -71,6 +71,13 @@ attestation_policies:
                 - key: baz
                   operator: DoesNotExist
 plugin_config:
-    fake-plugin:
-        "@type": type.googleapis.com/proto.trust_zonex.v1alpha1.TrustZoneX
-        name: fake-tzx
+    plugin1:
+        list-cfg:
+            - 456
+            - another-string
+        map-cfg:
+            key1: yet-another
+            key2: 789
+    plugin2:
+        number-cfg: 123
+        string-cfg: fake-string

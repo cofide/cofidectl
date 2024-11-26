@@ -54,13 +54,6 @@
 }
 
 #PluginConfig: {
-	[string]: #AnyPb
-}
-
-#AnyPb: {
-	"@type"!: string
-	//value!: bytes
-	// FIXME: remove?
 	[string]: _
 }
 
