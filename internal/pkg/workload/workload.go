@@ -67,7 +67,7 @@ func GetRegisteredWorkloads(ctx context.Context, kubeConfig string, kubeContext 
 }
 
 // GetUnregisteredWorkloads will discover workloads in a Kubernetes cluster that are not (yet) registered
-func GetUnregisteredWorkloads(ctx context.Context, kubeCfgFile string, kubeContext string, secretDiscovery bool) ([]Workload, error) {
+func GetUnregisteredWorkloads(ctx context.Context, kubeCfgFile string, kubeContext string, secretDiscovery bool, checkSpire bool) ([]Workload, error) {
 	// Includes the initial Kubernetes namespaces.
 	ignoredNamespaces := map[string]int{
 		"kube-node-lease":    1,
@@ -82,9 +82,12 @@ func GetUnregisteredWorkloads(ctx context.Context, kubeCfgFile string, kubeConte
 		return nil, err
 	}
 
-	registeredEntries, err := spire.GetRegistrationEntries(ctx, client)
-	if err != nil {
-		return nil, err
+	var registeredEntries map[string]*spire.RegisteredEntry
+	if checkSpire {
+		registeredEntries, err = spire.GetRegistrationEntries(ctx, client)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	pods, err := client.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})

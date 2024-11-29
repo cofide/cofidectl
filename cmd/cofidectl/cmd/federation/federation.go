@@ -11,8 +11,9 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
 
-	kubeutil "github.com/cofide/cofidectl/pkg/kube"
+	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/internal/pkg/spire"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -118,6 +119,12 @@ func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_z
 	compare := make(map[*trust_zone_proto.TrustZone]bundles)
 
 	for _, tz := range []*trust_zone_proto.TrustZone{from, to} {
+		if deployed, err := isTrustZoneDeployed(ctx, tz); err != nil {
+			return "", err
+		} else if !deployed {
+			return "Inactive", nil
+		}
+
 		client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, tz.GetKubernetesContext())
 		if err != nil {
 			return "", err
@@ -146,6 +153,15 @@ func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_z
 	}
 
 	return "Healthy", nil
+}
+
+// isTrustZoneDeployed returns whether a trust zone has been deployed, i.e. whether a SPIRE Helm release has been installed.
+func isTrustZoneDeployed(ctx context.Context, trustZone *trust_zone_proto.TrustZone) (bool, error) {
+	prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	return prov.CheckIfAlreadyInstalled()
 }
 
 var federationAddCmdDesc = `
