@@ -16,6 +16,13 @@ trust_zones:
           federates_with:
             - tz2
       jwt_issuer: https://tz1.example.com
+      extra_helm_values:
+        global:
+            spire:
+                namespaces:
+                    create: true
+        spire-server:
+            logLevel: INFO
     - name: tz2
       trust_domain: td2
       kubernetes_cluster: local2
