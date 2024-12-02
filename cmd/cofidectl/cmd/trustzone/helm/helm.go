@@ -13,8 +13,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
-	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/provider/helm"
 )
 
 type HelmCommand struct {
