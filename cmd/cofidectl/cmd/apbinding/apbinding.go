@@ -9,7 +9,7 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
-	cmdcontext "github.com/cofide/cofidectl/cmd/cofidectl/cmd/context"
+	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 
 	"github.com/olekukonko/tablewriter"

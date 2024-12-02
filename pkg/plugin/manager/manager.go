@@ -6,12 +6,15 @@ package manager
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 
 	"github.com/cofide/cofidectl/internal/pkg/config"
+	"github.com/cofide/cofidectl/internal/pkg/proto"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	hclog "github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
@@ -37,7 +40,7 @@ func NewManager(configLoader config.Loader) *PluginManager {
 }
 
 // Init initialises the configuration for the specified data source plugin.
-func (pm *PluginManager) Init(dsName string) (cofidectl_plugin.DataSource, error) {
+func (pm *PluginManager) Init(dsName string, pluginConfig map[string]*structpb.Struct) (cofidectl_plugin.DataSource, error) {
 	if exists, _ := pm.configLoader.Exists(); exists {
 		// Check that existing plugin config matches.
 		cfg, err := pm.configLoader.Read()
@@ -47,10 +50,16 @@ func (pm *PluginManager) Init(dsName string) (cofidectl_plugin.DataSource, error
 		if cfg.DataSource != dsName {
 			return nil, fmt.Errorf("existing config file uses a different plugin: %s vs %s", cfg.DataSource, dsName)
 		}
+		if !maps.EqualFunc(cfg.PluginConfig, pluginConfig, proto.StructsEqual) {
+			return nil, fmt.Errorf("existing config file has different plugin config:\n%v\nvs\n\n%v", cfg.PluginConfig, pluginConfig)
+		}
 		fmt.Println("the config file already exists")
 	} else {
 		cfg := config.NewConfig()
 		cfg.DataSource = dsName
+		if pluginConfig != nil {
+			cfg.PluginConfig = pluginConfig
+		}
 		if err := pm.configLoader.Write(cfg); err != nil {
 			return nil, err
 		}
@@ -175,4 +184,35 @@ func (pm *PluginManager) Shutdown() {
 		pm.client = nil
 	}
 	pm.source = nil
+}
+
+// GetPluginConfig returns a `Struct` message containing per-plugin configuration from the config file.
+func (pm *PluginManager) GetPluginConfig(pluginName string) (*structpb.Struct, error) {
+	cfg, err := pm.configLoader.Read()
+	if err != nil {
+		return nil, err
+	}
+	pluginConfig, ok := cfg.PluginConfig[pluginName]
+	if !ok {
+		return nil, fmt.Errorf("no plugin configuration found for %s", pluginName)
+	}
+	pluginConfig, err = proto.CloneStruct(pluginConfig)
+	if err != nil {
+		return nil, err
+	}
+	return pluginConfig, nil
+}
+
+// SetPluginConfig writes a `Struct` message containing per-plugin configuration to the config file.
+func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *structpb.Struct) error {
+	cfg, err := pm.configLoader.Read()
+	if err != nil {
+		return err
+	}
+	pluginConfig, err = proto.CloneStruct(pluginConfig)
+	if err != nil {
+		return err
+	}
+	cfg.PluginConfig[pluginName] = pluginConfig
+	return pm.configLoader.Write(cfg)
 }

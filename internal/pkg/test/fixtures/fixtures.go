@@ -161,6 +161,35 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 	},
 }
 
+var pluginConfigFixtures map[string]*structpb.Struct = map[string]*structpb.Struct{
+	"plugin1": func() *structpb.Struct {
+		s, err := structpb.NewStruct(map[string]any{
+			"list-cfg": []any{
+				456,
+				"another-string",
+			},
+			"map-cfg": map[string]any{
+				"key1": "yet-another",
+				"key2": 789,
+			},
+		})
+		if err != nil {
+			panic(fmt.Sprintf("failed to create struct: %s", err))
+		}
+		return s
+	}(),
+	"plugin2": func() *structpb.Struct {
+		s, err := structpb.NewStruct(map[string]any{
+			"string-cfg": "fake-string",
+			"number-cfg": 123,
+		})
+		if err != nil {
+			panic(fmt.Sprintf("failed to create struct: %s", err))
+		}
+		return s
+	}(),
+}
+
 func TrustZone(name string) *trust_zone_proto.TrustZone {
 	tz, ok := trustZoneFixtures[name]
 	if !ok {
@@ -183,6 +212,18 @@ func AttestationPolicy(name string) *attestation_policy_proto.AttestationPolicy 
 		panic(fmt.Sprintf("failed to clone attestation policy: %s", err))
 	}
 	return ap
+}
+
+func PluginConfig(name string) *structpb.Struct {
+	pc, ok := pluginConfigFixtures[name]
+	if !ok {
+		panic(fmt.Sprintf("invalid plugin config fixture %s", name))
+	}
+	pc, err := proto.CloneStruct(pc)
+	if err != nil {
+		panic(fmt.Sprintf("failed to clone plugin config: %s", err))
+	}
+	return pc
 }
 
 func StringPtr(s string) *string {

@@ -58,10 +58,15 @@
 	[string]: _
 }
 
+#PluginConfig: {
+	[string]: _
+}
+
 #Config: {
 	data_source!: #DataSource
 	trust_zones: [...#TrustZone]
 	attestation_policies: [...#AttestationPolicy]
+	plugin_config?: #PluginConfig
 }
 
 #Config
