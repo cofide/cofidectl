@@ -11,6 +11,7 @@
 	federations: [...#Federation]
 	attestation_policies: [...#APBinding]
 	jwt_issuer?: string
+	extra_helm_values?: #HelmValues
 }
 
 #TrustProvider: {
@@ -51,6 +52,10 @@
 #Federation: {
 	from!: string
 	to!: string
+}
+
+#HelmValues: {
+	[string]: _
 }
 
 #PluginConfig: {

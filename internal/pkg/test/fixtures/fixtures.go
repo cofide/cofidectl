@@ -40,6 +40,25 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			},
 		},
 		JwtIssuer: StringPtr("https://tz1.example.com"),
+		ExtraHelmValues: func() *structpb.Struct {
+			ev := map[string]interface{}{
+				"global": map[string]interface{}{
+					"spire": map[string]interface{}{
+						"namespaces": map[string]interface{}{
+							"create": true,
+						},
+					},
+				},
+				"spire-server": map[string]interface{}{
+					"logLevel": "INFO",
+				},
+			}
+			value, err := structpb.NewStruct(ev)
+			if err != nil {
+				panic(err)
+			}
+			return value
+		}(),
 	},
 	"tz2": {
 		Name:              "tz2",

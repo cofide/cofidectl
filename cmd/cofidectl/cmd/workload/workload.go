@@ -10,6 +10,7 @@ import (
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
+	"github.com/cofide/cofidectl/internal/pkg/provider/helm"
 	"github.com/cofide/cofidectl/internal/pkg/workload"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -111,6 +112,12 @@ func renderRegisteredWorkloads(ctx context.Context, kubeConfig string, trustZone
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
+		if deployed, err := isTrustZoneDeployed(ctx, trustZone); err != nil {
+			return err
+		} else if !deployed {
+			return fmt.Errorf("trust zone %s has not been deployed", trustZone.Name)
+		}
+
 		registeredWorkloads, err := workload.GetRegisteredWorkloads(ctx, kubeConfig, trustZone.GetKubernetesContext())
 		if err != nil {
 			return err
@@ -205,7 +212,12 @@ func renderUnregisteredWorkloads(ctx context.Context, kubeConfig string, trustZo
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		registeredWorkloads, err := workload.GetUnregisteredWorkloads(ctx, kubeConfig, trustZone.GetKubernetesContext(), includeSecrets)
+		deployed, err := isTrustZoneDeployed(ctx, trustZone)
+		if err != nil {
+			return err
+		}
+
+		registeredWorkloads, err := workload.GetUnregisteredWorkloads(ctx, kubeConfig, trustZone.GetKubernetesContext(), includeSecrets, deployed)
 		if err != nil {
 			return err
 		}
@@ -236,4 +248,13 @@ func renderUnregisteredWorkloads(ctx context.Context, kubeConfig string, trustZo
 	table.Render()
 
 	return nil
+}
+
+// isTrustZoneDeployed returns whether a trust zone has been deployed, i.e. whether a SPIRE Helm release has been installed.
+func isTrustZoneDeployed(ctx context.Context, trustZone *trust_zone_proto.TrustZone) (bool, error) {
+	prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	return prov.CheckIfAlreadyInstalled()
 }
