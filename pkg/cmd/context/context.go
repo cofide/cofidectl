@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/pkg/plugin/manager"
 )
 
@@ -16,8 +17,11 @@ type CommandContext struct {
 	PluginManager *manager.PluginManager
 }
 
-func NewCommandContext(pluginManager *manager.PluginManager) *CommandContext {
+// NewCommandContext returns a command context wired up with a config loader and plugin manager.
+func NewCommandContext(cofideConfigFile string) *CommandContext {
 	ctx, cancel := context.WithCancelCause(context.Background())
+	configLoader := config.NewFileLoader(cofideConfigFile)
+	pluginManager := manager.NewManager(configLoader)
 	return &CommandContext{Ctx: ctx, cancel: cancel, PluginManager: pluginManager}
 }
 
