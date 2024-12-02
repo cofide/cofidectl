@@ -10,7 +10,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 )
 
-// DataSource is the interface plugins have to implement.
+// DataSource is the interface data source plugins have to implement.
 type DataSource interface {
 	Validate() error
 	GetTrustZone(string) (*trust_zone_proto.TrustZone, error)

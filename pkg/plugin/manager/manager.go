@@ -14,6 +14,8 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/proto"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
+	"github.com/cofide/cofidectl/pkg/plugin/provision"
+	"github.com/cofide/cofidectl/pkg/plugin/provision/spirehelm"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -215,4 +217,9 @@ func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *struct
 	}
 	cfg.PluginConfig[pluginName] = pluginConfig
 	return pm.configLoader.Write(cfg)
+}
+
+// GetProvision returns the provision plugin.
+func (pm *PluginManager) GetProvision() provision.Provision {
+	return spirehelm.NewSpireHelm()
 }
