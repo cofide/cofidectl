@@ -12,7 +12,7 @@ import (
 	"time"
 
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
-	"github.com/cofide/cofidectl/internal/pkg/provider"
+	"github.com/cofide/cofidectl/pkg/provider"
 
 	"github.com/gofrs/flock"
 	"helm.sh/helm/v3/pkg/action"

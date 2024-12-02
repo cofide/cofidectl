@@ -10,7 +10,7 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 
-	"github.com/cofide/cofidectl/internal/pkg/provider"
+	"github.com/cofide/cofidectl/pkg/provider"
 )
 
 // statusSpinner implements a CLI spinner that displays messages from `provider.ProviderStatus`.
