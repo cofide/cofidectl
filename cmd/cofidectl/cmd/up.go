@@ -13,8 +13,8 @@ import (
 	"github.com/cofide/cofidectl/pkg/provider"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
 
-	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
+	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/spf13/cobra"
 )
@@ -97,7 +97,7 @@ func addSPIRERepository(ctx context.Context) error {
 
 func installSPIREStack(ctx context.Context, source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, source)
+		generator := helm.NewHelmValuesGenerator(trustZone, source, nil)
 		spireValues, err := generator.GenerateValues()
 		if err != nil {
 			return err
@@ -173,7 +173,7 @@ func getBundleAndEndpoint(ctx context.Context, statusCh chan<- provider.Provider
 
 func applyPostInstallHelmConfig(ctx context.Context, source cofidectl_plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, source)
+		generator := helm.NewHelmValuesGenerator(trustZone, source, nil)
 
 		spireValues, err := generator.GenerateValues()
 		if err != nil {

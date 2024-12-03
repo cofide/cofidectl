@@ -107,7 +107,7 @@ func (c *HelmCommand) overrideValues(ds plugin.DataSource, tzName string, values
 	}
 
 	// Check that the values are acceptable.
-	generator := helm.NewHelmValuesGenerator(trustZone, ds)
+	generator := helm.NewHelmValuesGenerator(trustZone, ds, nil)
 	if _, err = generator.GenerateValues(); err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (c *HelmCommand) getValues(ds plugin.DataSource, tzName string) (map[string
 		return nil, err
 	}
 
-	generator := helm.NewHelmValuesGenerator(trustZone, ds)
+	generator := helm.NewHelmValuesGenerator(trustZone, ds, nil)
 	values, err := generator.GenerateValues()
 	if err != nil {
 		return nil, err

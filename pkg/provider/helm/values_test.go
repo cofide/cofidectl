@@ -232,6 +232,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 			g := &HelmValuesGenerator{
 				source:    source,
 				trustZone: tt.trustZone,
+				values:    nil,
 			}
 			got, err := g.GenerateValues()
 			require.Nil(t, err, err)
@@ -305,6 +306,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			g := &HelmValuesGenerator{
 				source:    source,
 				trustZone: tt.trustZone,
+				values:    nil,
 			}
 			_, err := g.GenerateValues()
 			require.Error(t, err)

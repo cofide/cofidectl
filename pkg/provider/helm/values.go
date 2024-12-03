@@ -19,12 +19,14 @@ import (
 type HelmValuesGenerator struct {
 	source    cofidectl_plugin.DataSource
 	trustZone *trust_zone_proto.TrustZone
+	values    map[string]interface{}
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource) *HelmValuesGenerator {
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource, values map[string]interface{}) *HelmValuesGenerator {
 	return &HelmValuesGenerator{
 		trustZone: trustZone,
 		source:    source,
+		values:    values,
 	}
 }
 
