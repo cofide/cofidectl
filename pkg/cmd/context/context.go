@@ -6,10 +6,17 @@ package context
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/pkg/plugin/manager"
 )
+
+const shutdownTimeoutSec = 10
 
 type CommandContext struct {
 	Ctx           context.Context
@@ -31,4 +38,19 @@ func (cc *CommandContext) Shutdown() {
 		cc.cancel = nil
 	}
 	cc.PluginManager.Shutdown()
+}
+
+// HandleSignals waits for SIGINT or SIGTERM, then triggers a clean shutdown using the command context.
+// It should be called from a non-main goroutine.
+func (cc *CommandContext) HandleSignals() {
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	s := <-shutdown
+	fmt.Printf("Caught %s signal, exiting\n", s.String())
+	cc.Shutdown()
+
+	// Wait for a while to allow for graceful completion of the main goroutine.
+	<-time.After(shutdownTimeoutSec * time.Second)
+	fmt.Println("Timed out waiting for shutdown")
+	os.Exit(1)
 }
