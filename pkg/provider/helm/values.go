@@ -21,18 +21,17 @@ type HelmValuesGenerator struct {
 }
 
 type globalValues struct {
+	deleteHooks                   bool
+	installAndUpgradeHooksEnabled bool
 	spireClusterName              string
 	spireCreateRecommendations    bool
 	spireTrustDomain              string
-	installAndUpgradeHooksEnabled bool
-	deleteHooks                   bool
 }
 
 type spireAgentValues struct {
-	fullnameOverride string
-	logLevel         string
-
 	agentConfig        trustprovider.TrustProviderAgentConfig
+	fullnameOverride   string
+	logLevel           string
 	spireServerAddress string
 }
 
