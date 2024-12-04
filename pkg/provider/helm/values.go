@@ -29,8 +29,9 @@ type globalValues struct {
 }
 
 type spireAgentValues struct {
-	fullnameOverride   string
-	logLevel           string
+	fullnameOverride string
+	logLevel         string
+
 	agentConfig        trustprovider.TrustProviderAgentConfig
 	spireServerAddress string
 }
@@ -78,7 +79,10 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		installAndUpgradeHooksEnabled: false,
 		deleteHooks:                   false,
 	}
-	globalValues := gv.generateValues()
+	globalValues, err := gv.generateValues()
+	if err != nil {
+		return nil, err
+	}
 
 	if issuer := g.trustZone.GetJwtIssuer(); issuer != "" {
 		global, ok := getNestedMap(globalValues, "global")
@@ -100,7 +104,10 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		agentConfig:        agentConfig,
 		spireServerAddress: "spire-server.spire",
 	}
-	spireAgentValues := sav.generateValues()
+	spireAgentValues, err := sav.generateValues()
+	if err != nil {
+		return nil, err
+	}
 
 	ssv := spireServerValues{
 		caKeyType:                "rsa-2048",
@@ -111,7 +118,10 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		serverConfig:             serverConfig,
 		serviceType:              "LoadBalancer",
 	}
-	spireServerValues := ssv.generateValues()
+	spireServerValues, err := ssv.generateValues()
+	if err != nil {
+		return nil, err
+	}
 
 	spireServer, ok := getNestedMap(spireServerValues, "spire-server")
 	if !ok {
@@ -189,15 +199,17 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		}
 	}
 
-	soidcpv := spiffeOIDCDiscoveryProviderValues{
-		enabled: false,
+	soidcpv := spiffeOIDCDiscoveryProviderValues{enabled: false}
+	spiffeOIDCDiscoveryProviderValues, err := soidcpv.generateValues()
+	if err != nil {
+		return nil, err
 	}
-	spiffeOIDCDiscoveryProviderValues := soidcpv.generateValues()
 
-	scsidv := spiffeCSIDriverValues{
-		fullnameOverride: "spiffe-csi-driver",
+	scsidv := spiffeCSIDriverValues{fullnameOverride: "spiffe-csi-driver"}
+	spiffeCSIDriverValues, err := scsidv.generateValues()
+	if err != nil {
+		return nil, err
 	}
-	spiffeCSIDriverValues := scsidv.generateValues()
 
 	valuesMaps := []map[string]any{
 		globalValues,
@@ -207,23 +219,31 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		spiffeCSIDriverValues,
 	}
 
+	combinedValues := flattenMaps(valuesMaps)
+
 	if g.values != nil {
-		mergeValues(valuesMaps, g.values, true)
+		mergeValues(combinedValues, g.values, true)
 	}
 
 	if g.trustZone.ExtraHelmValues != nil {
 		// TODO: Potentially retrieve Helm values as map[string]any directly.
 		extraHelmValues := g.trustZone.ExtraHelmValues.AsMap()
-		mergeValues(valuesMaps, extraHelmValues, true)
+		mergeValues(combinedValues, extraHelmValues, true)
 	}
-
-	combinedValues := flattenMaps(valuesMaps)
 
 	return combinedValues, nil
 }
 
 // generateValues generates the global Helm values map.
-func (g *globalValues) generateValues() map[string]any {
+func (g *globalValues) generateValues() (map[string]any, error) {
+	if g.spireClusterName == "" {
+		return nil, fmt.Errorf("spireClusterName value is empty")
+	}
+
+	if g.spireTrustDomain == "" {
+		return nil, fmt.Errorf("spireTrustDomain value is empty")
+	}
+
 	return map[string]any{
 		"global": map[string]any{
 			"spire": map[string]any{
@@ -240,11 +260,39 @@ func (g *globalValues) generateValues() map[string]any {
 				"enabled": g.deleteHooks,
 			},
 		},
-	}
+	}, nil
 }
 
 // generateValues generates the spire-agent Helm values map.
-func (s *spireAgentValues) generateValues() map[string]any {
+func (s *spireAgentValues) generateValues() (map[string]any, error) {
+	if s.fullnameOverride == "" {
+		return nil, fmt.Errorf("fullnameOverride value is empty")
+	}
+
+	if s.logLevel == "" {
+		return nil, fmt.Errorf("logLevel value is empty")
+	}
+
+	if s.agentConfig.NodeAttestor == "" {
+		return nil, fmt.Errorf("agentConfig.NodeAttestor value is empty")
+	}
+
+	if s.agentConfig.WorkloadAttestor == "" {
+		return nil, fmt.Errorf("agentConfig.WorkloadAttestor value is empty")
+	}
+
+	if s.agentConfig.WorkloadAttestorConfig == nil {
+		return nil, fmt.Errorf("agentConfig.WorkloadAttestorConfig value is nil")
+	}
+
+	if len(s.agentConfig.WorkloadAttestorConfig) == 0 {
+		return nil, fmt.Errorf("agentConfig.WorkloadAttestorConfig value is empty")
+	}
+
+	if s.spireServerAddress == "" {
+		return nil, fmt.Errorf("spireServerAddress value is empty")
+	}
+
 	return map[string]any{
 		"spire-agent": map[string]any{
 			"fullnameOverride": s.fullnameOverride,
@@ -255,17 +303,49 @@ func (s *spireAgentValues) generateValues() map[string]any {
 				},
 			},
 			"server": map[string]any{
-				"address": "spire-server.spire",
+				"address": s.spireServerAddress,
 			},
 			"workloadAttestors": map[string]any{
 				s.agentConfig.WorkloadAttestor: s.agentConfig.WorkloadAttestorConfig,
 			},
 		},
-	}
+	}, nil
 }
 
 // generateValues generates the spire-server Helm values map.
-func (s *spireServerValues) generateValues() map[string]any {
+func (s *spireServerValues) generateValues() (map[string]any, error) {
+	if s.caKeyType == "" {
+		return nil, fmt.Errorf("caKeyType value is empty")
+	}
+
+	if s.caTTL == "" {
+		return nil, fmt.Errorf("caTTL value is empty")
+	}
+
+	if s.fullnameOverride == "" {
+		return nil, fmt.Errorf("fullnameOverride value is empty")
+	}
+
+	if s.logLevel == "" {
+		return nil, fmt.Errorf("logLevel value is empty")
+	}
+
+	if s.serverConfig.NodeAttestor == "" {
+		return nil, fmt.Errorf("serverConfig.NodeAttestor value is empty")
+	}
+
+	if s.serverConfig.NodeAttestorConfig == nil {
+		return nil, fmt.Errorf("serverConfig.NodeAttestorConfig value is nil")
+	}
+
+	if len(s.serverConfig.NodeAttestorConfig) == 0 {
+		return nil, fmt.Errorf("serverConfig.NodeAttestorConfig value is empty")
+	}
+
+	if s.serviceType == "" {
+		return nil, fmt.Errorf("serviceType value is empty")
+	}
+
 	return map[string]any{
 		"spire-server": map[string]any{
 			"caKeyType": s.caKeyType,
@@ -282,49 +362,61 @@ func (s *spireServerValues) generateValues() map[string]any {
 				"type": s.serviceType,
 			},
 		},
-	}
+	}, nil
 }
 
 // generateValues generates the spiffe-oidc-discovery-provider Helm values map.
-func (s *spiffeOIDCDiscoveryProviderValues) generateValues() map[string]any {
+func (s *spiffeOIDCDiscoveryProviderValues) generateValues() (map[string]any, error) {
 	return map[string]any{
 		"spiffe-oidc-discovery-provider": map[string]any{
 			"enabled": s.enabled,
 		},
-	}
+	}, nil
 }
 
 // generateValues generates the spiffe-csi-driver Helm values map.
-func (s *spiffeCSIDriverValues) generateValues() map[string]any {
+func (s *spiffeCSIDriverValues) generateValues() (map[string]any, error) {
+	if s.fullnameOverride == "" {
+		return nil, fmt.Errorf("fullnameOverride value is empty")
+	}
+
 	return map[string]any{
 		"spiffe-csi-driver": map[string]any{
 			"fullnameOverride": s.fullnameOverride,
 		},
-	}
+	}, nil
 }
 
 // getNestedMap retrieves a nested map[string]any from a parent map.
 func getNestedMap(m map[string]any, key string) (map[string]any, bool) {
-	val, exists := m[key]
+	value, exists := m[key]
 	if !exists {
 		return nil, false
 	}
 
-	nestedMap := val.(map[string]any)
+	nestedMap := value.(map[string]any)
 	return nestedMap, true
 }
 
-// mergeValues iterates over a slice of maps and merges each map with the provided values map.
-func mergeValues(valuesMaps []map[string]any, values map[string]any, overwriteExistingKeys bool) {
-	for i, valuesMap := range valuesMaps {
-		for key := range valuesMap {
-			if inputValue, exists := values[key]; exists {
-				if inputMap, ok := inputValue.(map[string]any); ok {
-					if existingMap, exists := valuesMap[key].(map[string]any); exists {
-						valuesMaps[i][key] = mergeMaps(inputMap, existingMap, overwriteExistingKeys)
-					}
-				}
-			}
+// mergeValues merges the values from the values map into the destination map.
+func mergeValues(dest map[string]any, values map[string]any, overwriteExistingKeys bool) {
+	for key, value := range values {
+		inputMap, isMap := value.(map[string]any)
+
+		// If the key doesn't exist in the destination map, set it.
+		if _, exists := dest[key]; !exists {
+			dest[key] = value
+			continue
+		}
+
+		existingMap, existingIsMap := dest[key].(map[string]any)
+		if isMap && existingIsMap {
+			dest[key] = mergeMaps(inputMap, existingMap, overwriteExistingKeys)
+			continue
+		}
+
+		if overwriteExistingKeys {
+			dest[key] = value
 		}
 	}
 }
@@ -344,10 +436,8 @@ func mergeMaps(src, dest map[string]any, overwriteExistingKeys bool) map[string]
 			} else {
 				merged[key] = srcMap
 			}
-		} else {
-			if overwriteExistingKeys || merged[key] == nil {
-				merged[key] = value
-			}
+		} else if overwriteExistingKeys || merged[key] == nil {
+			merged[key] = value
 		}
 	}
 

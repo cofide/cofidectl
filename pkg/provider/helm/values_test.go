@@ -10,6 +10,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
+	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/stretchr/testify/assert"
@@ -488,6 +489,168 @@ func TestGetNestedMap(t *testing.T) {
 	}
 }
 
+func TestMergeValues(t *testing.T) {
+	tests := []struct {
+		name                  string
+		dest                  map[string]any
+		values                map[string]any
+		overwriteExistingKeys bool
+		want                  map[string]any
+	}{
+		{
+			name: "valid values and valid dest, no overwrites",
+			dest: map[string]any{
+				"foo": "bar",
+			},
+			values: map[string]any{
+				"fizz": "buzz",
+			},
+			overwriteExistingKeys: false,
+			want: map[string]any{
+				"foo":  "bar",
+				"fizz": "buzz",
+			},
+		},
+		{
+			name: "valid dest and empty values, no overwrites",
+			dest: map[string]any{
+				"foo": "bar",
+			},
+			values:                map[string]any{},
+			overwriteExistingKeys: false,
+			want: map[string]any{
+				"foo": "bar",
+			},
+		},
+		{
+			name: "empty dest and valid values, no overwrites",
+			dest: map[string]any{},
+			values: map[string]any{
+				"fizz": "buzz",
+			},
+			overwriteExistingKeys: false,
+			want: map[string]any{
+				"fizz": "buzz",
+			},
+		},
+		{
+			name: "valid dest and valid values, nested, no overwrites",
+			dest: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1-old",
+					},
+				},
+			},
+			values: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1-new",
+					},
+					"trustDomain": "td1",
+				},
+			},
+			overwriteExistingKeys: false,
+			want: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1-old",
+					},
+					"trustDomain": "td1",
+				},
+			},
+		},
+		{
+			name: "valid dest and valid values, with overwrites",
+			dest: map[string]any{
+				"foo":   "bar",
+				"hello": "world",
+			},
+			values: map[string]any{
+				"foo": "baz",
+			},
+			overwriteExistingKeys: true,
+			want: map[string]any{
+				"foo":   "baz",
+				"hello": "world",
+			},
+		},
+		{
+			name: "valid dest and valid src, additional nesting, with overwrites",
+			dest: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"controllerManager": map[string]any{
+						"enabled": true,
+						"identities": map[string]any{
+							"clusterSPIFFEIDs": map[string]any{
+								"default": Values{
+									"enabled": false,
+								},
+							},
+							"clusterFederatedTrustDomains": map[string]any{
+								"cofide": map[string]any{
+									"bundleEndpointProfile": map[string]any{
+										"type": "https_web",
+									},
+									"bundleEndpointURL": "https://td1/connect/bundle",
+									"trustDomain":       "td1",
+								},
+							},
+						},
+					},
+				},
+			},
+			values: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"controllerManager": map[string]any{
+						"enabled": true,
+						"identities": map[string]any{
+							"clusterSPIFFEIDs": map[string]any{
+								"default": Values{
+									"enabled": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			overwriteExistingKeys: true,
+			want: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"controllerManager": map[string]any{
+						"enabled": true,
+						"identities": map[string]any{
+							"clusterSPIFFEIDs": map[string]any{
+								"default": Values{
+									"enabled": true,
+								},
+							},
+							"clusterFederatedTrustDomains": map[string]any{
+								"cofide": map[string]any{
+									"bundleEndpointProfile": map[string]any{
+										"type": "https_web",
+									},
+									"bundleEndpointURL": "https://td1/connect/bundle",
+									"trustDomain":       "td1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mergeValues(tt.dest, tt.values, tt.overwriteExistingKeys)
+			assert.Equal(t, tt.want, tt.dest)
+		})
+	}
+}
+
 func TestMergeMaps(t *testing.T) {
 	tests := []struct {
 		name                  string
@@ -579,14 +742,14 @@ func TestMergeMaps(t *testing.T) {
 			src: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
-						"clusterName": "kind-new",
+						"clusterName": "local1-new",
 					},
 				},
 			},
 			dest: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
-						"clusterName": "kind-old",
+						"clusterName": "local1-old",
 					},
 					"trustDomain": "td1",
 				},
@@ -595,7 +758,7 @@ func TestMergeMaps(t *testing.T) {
 			want: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
-						"clusterName": "kind-new",
+						"clusterName": "local1-new",
 					},
 					"trustDomain": "td1",
 				},
@@ -672,6 +835,427 @@ func TestMergeMaps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp := mergeMaps(tt.src, tt.dest, tt.overwriteExistingKeys)
+			assert.Equal(t, tt.want, resp)
+		})
+	}
+}
+
+func TestFlattenMaps(t *testing.T) {
+	tests := []struct {
+		name string
+		maps []map[string]any
+		want map[string]any
+	}{
+		{
+			name: "valid slice of maps",
+			maps: []map[string]any{
+				map[string]any{
+					"foo": "bar",
+				},
+				map[string]any{
+					"fizz": "buzz",
+				},
+			},
+			want: map[string]any{
+				"foo":  "bar",
+				"fizz": "buzz",
+			},
+		},
+		{
+			name: "empty slice of maps",
+			maps: []map[string]any{},
+			want: map[string]any{},
+		},
+		{
+			name: "slice of empty maps",
+			maps: []map[string]any{
+				map[string]any{},
+				map[string]any{},
+			},
+			want: map[string]any{},
+		},
+		{
+			name: "nil maps value",
+			maps: nil,
+			want: map[string]any{},
+		},
+		{
+			name: "nil map value in maps",
+			maps: []map[string]any{nil},
+			want: map[string]any{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := flattenMaps(tt.maps)
+			assert.Equal(t, tt.want, resp)
+		})
+	}
+}
+
+func TestGlobalValues_GenerateValues(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     globalValues
+		want      map[string]any
+		wantErr   bool
+		errString string
+	}{
+		{
+			name: "valid global values",
+			input: globalValues{
+				spireClusterName: "local1",
+				spireTrustDomain: "td1",
+			},
+			want: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1",
+						"recommendations": map[string]any{
+							"create": false,
+						},
+						"trustDomain": "td1",
+					},
+					"installAndUpgradeHooks": map[string]any{
+						"enabled": false,
+					},
+					"deleteHooks": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid global values, missing spireTrustDomain value",
+			input: globalValues{
+				spireClusterName: "local1",
+			},
+			want:      nil,
+			wantErr:   true,
+			errString: "spireTrustDomain value is empty",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := tt.input.generateValues()
+			if tt.wantErr {
+				assert.Equal(t, tt.errString, err.Error())
+				return
+			}
+
+			assert.Equal(t, tt.want, resp)
+		})
+	}
+}
+
+func TestSpireAgentValues_GenerateValues(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     spireAgentValues
+		want      map[string]any
+		wantErr   bool
+		errString string
+	}{
+		{
+			name: "valid SPIRE agent values",
+			input: spireAgentValues{
+				fullnameOverride: "spire-agent",
+				logLevel:         "DEBUG",
+				agentConfig: trustprovider.TrustProviderAgentConfig{
+					WorkloadAttestor:        "k8s",
+					WorkloadAttestorEnabled: true,
+					WorkloadAttestorConfig: map[string]any{
+						"enabled":                     true,
+						"skipKubeletVerification":     true,
+						"disableContainerSelectors":   false,
+						"useNewContainerLocator":      false,
+						"verboseContainerLocatorLogs": false,
+					},
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+				},
+				spireServerAddress: "spire-server.spire",
+			},
+			want: map[string]any{
+				"spire-agent": map[string]any{
+					"fullnameOverride": "spire-agent",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": map[string]any{
+						"k8sPsat": map[string]any{
+							"enabled": true,
+						},
+					},
+					"server": map[string]any{
+						"address": "spire-server.spire",
+					},
+					"workloadAttestors": map[string]any{
+						"k8s": map[string]any{
+							"enabled":                     true,
+							"skipKubeletVerification":     true,
+							"disableContainerSelectors":   false,
+							"useNewContainerLocator":      false,
+							"verboseContainerLocatorLogs": false,
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid SPIRE agent values, missing logLevel value",
+			input: spireAgentValues{
+				fullnameOverride: "spire-agent",
+				agentConfig: trustprovider.TrustProviderAgentConfig{
+					WorkloadAttestor:        "k8s",
+					WorkloadAttestorEnabled: true,
+					WorkloadAttestorConfig: map[string]any{
+						"enabled":                     true,
+						"skipKubeletVerification":     true,
+						"disableContainerSelectors":   false,
+						"useNewContainerLocator":      false,
+						"verboseContainerLocatorLogs": false,
+					},
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+				},
+				spireServerAddress: "spire-server.spire",
+			},
+			want:      nil,
+			wantErr:   true,
+			errString: "logLevel value is empty",
+		},
+		{
+			name: "invalid SPIRE agent values, empty WorkloadAttestorConfig value",
+			input: spireAgentValues{
+				fullnameOverride: "spire-agent",
+				logLevel:         "DEBUG",
+				agentConfig: trustprovider.TrustProviderAgentConfig{
+					WorkloadAttestor:        "k8s",
+					WorkloadAttestorEnabled: true,
+					WorkloadAttestorConfig:  map[string]any{},
+					NodeAttestor:            "k8sPsat",
+					NodeAttestorEnabled:     true,
+				},
+				spireServerAddress: "spire-server.spire",
+			},
+			want:      nil,
+			wantErr:   true,
+			errString: "agentConfig.WorkloadAttestorConfig value is empty",
+		},
+		{
+			name: "invalid SPIRE agent values, empty WorkloadAttestor value",
+			input: spireAgentValues{
+				fullnameOverride: "spire-agent",
+				logLevel:         "DEBUG",
+				agentConfig: trustprovider.TrustProviderAgentConfig{
+					WorkloadAttestor:        "",
+					WorkloadAttestorEnabled: true,
+					WorkloadAttestorConfig: map[string]any{
+						"enabled":                     true,
+						"skipKubeletVerification":     true,
+						"disableContainerSelectors":   false,
+						"useNewContainerLocator":      false,
+						"verboseContainerLocatorLogs": false,
+					},
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+				},
+				spireServerAddress: "spire-server.spire",
+			},
+			want:      nil,
+			wantErr:   true,
+			errString: "agentConfig.WorkloadAttestor value is empty",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := tt.input.generateValues()
+			if tt.wantErr {
+				assert.Equal(t, tt.errString, err.Error())
+				return
+			}
+
+			assert.Equal(t, tt.want, resp)
+		})
+	}
+}
+
+func TestSpireServerValues_GenerateValues(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     spireServerValues
+		want      map[string]any
+		wantErr   bool
+		errString string
+	}{
+		{
+			name: "valid SPIRE server values",
+			input: spireServerValues{
+				caKeyType:                "rsa-2048",
+				caTTL:                    "12h",
+				controllerManagerEnabled: true,
+				fullnameOverride:         "spire-server",
+				logLevel:                 "DEBUG",
+				serverConfig: trustprovider.TrustProviderServerConfig{
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+					NodeAttestorConfig: map[string]any{
+						"enabled":                 true,
+						"serviceAccountAllowList": []string{"spire:spire-agent"},
+						"audience":                []string{"spire-server"},
+						"allowedNodeLabelKeys":    []string{},
+						"allowedPodLabelKeys":     []string{},
+					},
+				},
+				serviceType: "LoadBalancer",
+			},
+			want: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"caTTL":     "12h",
+					"controllerManager": map[string]any{
+						"enabled": true,
+					},
+					"fullnameOverride": "spire-server",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPsat": Values{
+							"allowedNodeLabelKeys": []string{},
+							"allowedPodLabelKeys":  []string{},
+							"audience": []string{
+								"spire-server",
+							},
+							"enabled": true,
+							"serviceAccountAllowList": []string{
+								"spire:spire-agent",
+							},
+						},
+					},
+					"service": map[string]any{
+						"type": "LoadBalancer",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid SPIRE server values, empty serviceType value",
+			input: spireServerValues{
+				caKeyType:                "rsa-2048",
+				caTTL:                    "12h",
+				controllerManagerEnabled: true,
+				fullnameOverride:         "spire-server",
+				logLevel:                 "DEBUG",
+				serverConfig: trustprovider.TrustProviderServerConfig{
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+					NodeAttestorConfig: map[string]any{
+						"enabled":                 true,
+						"serviceAccountAllowList": []string{"spire:spire-agent"},
+						"audience":                []string{"spire-server"},
+						"allowedNodeLabelKeys":    []string{},
+						"allowedPodLabelKeys":     []string{},
+					},
+				},
+				serviceType: "",
+			},
+			want:      nil,
+			wantErr:   true,
+			errString: "serviceType value is empty",
+		},
+		{
+			name: "invalid SPIRE server values, empty NodeAttestorConfig value",
+			input: spireServerValues{
+				caKeyType:                "rsa-2048",
+				caTTL:                    "12h",
+				controllerManagerEnabled: true,
+				fullnameOverride:         "spire-server",
+				logLevel:                 "DEBUG",
+				serverConfig: trustprovider.TrustProviderServerConfig{
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+					NodeAttestorConfig:  map[string]any{},
+				},
+				serviceType: "",
+			},
+			want:      nil,
+			wantErr:   true,
+			errString: "serverConfig.NodeAttestorConfig value is empty",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := tt.input.generateValues()
+			if tt.wantErr {
+				assert.Equal(t, tt.errString, err.Error())
+				return
+			}
+
+			assert.Equal(t, tt.want, resp)
+		})
+	}
+}
+
+func TestSpiffeOIDCDiscoveryProviderValues_GenerateValues(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     spiffeOIDCDiscoveryProviderValues
+		want      map[string]any
+		wantErr   bool
+		errString string
+	}{
+		{
+			name:  "valid SPIFFE OIDC discovery provider values",
+			input: spiffeOIDCDiscoveryProviderValues{enabled: true},
+			want: map[string]any{
+				"spiffe-oidc-discovery-provider": map[string]any{
+					"enabled": true,
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := tt.input.generateValues()
+			if tt.wantErr {
+				assert.Equal(t, tt.errString, err.Error())
+				return
+			}
+
+			assert.Equal(t, tt.want, resp)
+		})
+	}
+}
+
+func TestSpiffeCSIDriverValues_GenerateValues(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     spiffeCSIDriverValues
+		want      map[string]any
+		wantErr   bool
+		errString string
+	}{
+		{
+			name:  "valid SPIFFE CSI driver values",
+			input: spiffeCSIDriverValues{fullnameOverride: "spiffe-csi-driver"},
+			want: map[string]any{
+				"spiffe-csi-driver": map[string]any{
+					"fullnameOverride": "spiffe-csi-driver",
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := tt.input.generateValues()
+			if tt.wantErr {
+				assert.Equal(t, tt.errString, err.Error())
+				return
+			}
+
 			assert.Equal(t, tt.want, resp)
 		})
 	}
