@@ -4,6 +4,8 @@
 package helm
 
 import (
+	"fmt"
+
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
@@ -54,11 +56,17 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	}
 
 	if issuer := g.trustZone.GetJwtIssuer(); issuer != "" {
-		if global, ok := getNestedMap(globalValues, "global"); ok {
-			if spire, ok := getNestedMap(global, "spire"); ok {
-				spire["jwtIssuer"] = issuer
-			}
+		global, ok := getNestedMap(globalValues, "global")
+		if !ok {
+			return nil, fmt.Errorf("failed to get global map from globalValues")
 		}
+
+		spire, ok := getNestedMap(global, "spire")
+		if !ok {
+			return nil, fmt.Errorf("failed to get spire map from global map")
+		}
+
+		spire["jwtIssuer"] = issuer
 	}
 
 	spireAgentValues := map[string]any{
@@ -97,18 +105,39 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		},
 	}
 
+	// Enables the default ClusterSPIFFEID CR, be default.
+	spireServer, ok := getNestedMap(spireServerValues, "spire-server")
+	if !ok {
+		return nil, fmt.Errorf("failed to get spire-server map from spireServerValues")
+	}
+
+	controllerManager, ok := getNestedMap(spireServer, "controllerManager")
+	if !ok {
+		return nil, fmt.Errorf("failed to get controllerManager map from spireServer")
+	}
+
+	controllerManager["identities"] = map[string]any{
+		"clusterSPIFFEIDs": map[string]any{
+			"default": map[string]any{
+				"enabled": true,
+			},
+		},
+	}
+
+	identities, ok := getNestedMap(controllerManager, "identities")
+	if !ok {
+		return nil, fmt.Errorf("failed to get identities map from controllerManager")
+	}
+
 	if len(g.trustZone.AttestationPolicies) > 0 {
 		// Disables the default ClusterSPIFFEID CR.
-		if spireServer, ok := getNestedMap(spireServerValues, "spire-server"); ok {
-			if controllerManager, ok := getNestedMap(spireServer, "controllerManager"); ok {
-				controllerManager["identities"] = map[string]any{
-					"clusterSPIFFEIDs": map[string]any{
-						"default": map[string]any{
-							"enabled": false,
-						},
-					},
-				}
-			}
+		csids, ok := getNestedMap(identities, "clusterSPIFFEIDs")
+		if !ok {
+			return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities")
+		}
+
+		csids["default"] = map[string]any{
+			"enabled": false,
 		}
 
 		// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by spire-controller-manager.
@@ -123,28 +152,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 				return nil, err
 			}
 
-			if spireServer, ok := getNestedMap(spireServerValues, "spire-server"); ok {
-				if controllerManager, ok := getNestedMap(spireServer, "controllerManager"); ok {
-					if identities, ok := getNestedMap(controllerManager, "identities"); ok {
-						if csid, ok := getNestedMap(identities, "clusterSPIFFEIDs"); ok {
-							csid[policy.Name] = clusterSPIFFEIDs
-						}
-					}
-				}
-			}
-		}
-	} else {
-		// Enables the default ClusterSPIFFEID CR.
-		if spireServer, ok := getNestedMap(spireServerValues, "spire-server"); ok {
-			if controllerManager, ok := getNestedMap(spireServer, "controllerManager"); ok {
-				controllerManager["identities"] = map[string]any{
-					"clusterSPIFFEIDs": map[string]any{
-						"default": map[string]any{
-							"enabled": true,
-						},
-					},
-				}
-			}
+			csids[policy.Name] = clusterSPIFFEIDs
 		}
 	}
 
@@ -157,22 +165,17 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 			}
 
 			if tz.GetBundleEndpointUrl() != "" {
-				if spireServer, ok := getNestedMap(spireServerValues, "spire-server"); ok {
-					spireServer["federation"] = map[string]any{
-						"enabled": true,
-					}
+				spireServer["federation"] = map[string]any{
+					"enabled": true,
+				}
 
-					if controllerManager, ok := getNestedMap(spireServer, "controllerManager"); ok {
-						if identities, ok := getNestedMap(controllerManager, "identities"); ok {
-							if cftd, ok := getNestedMap(identities, "clusterFederatedTrustDomains"); ok {
-								cftd[fed.To] = federation.NewFederation(tz).GetHelmConfig()
-							} else {
-								identities["clusterFederatedTrustDomains"] = map[string]any{
-									fed.To: federation.NewFederation(tz).GetHelmConfig(),
-								}
-							}
-						}
+				cftd, ok := getNestedMap(identities, "clusterFederatedTrustDomains")
+				if !ok {
+					identities["clusterFederatedTrustDomains"] = map[string]any{
+						fed.To: federation.NewFederation(tz).GetHelmConfig(),
 					}
+				} else {
+					cftd[fed.To] = federation.NewFederation(tz).GetHelmConfig()
 				}
 			}
 		}
