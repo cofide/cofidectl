@@ -14,10 +14,10 @@ import (
 type HelmValuesGenerator struct {
 	source    cofidectl_plugin.DataSource
 	trustZone *trust_zone_proto.TrustZone
-	values    map[string]interface{}
+	values    map[string]any
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource, values map[string]interface{}) *HelmValuesGenerator {
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource, values map[string]any) *HelmValuesGenerator {
 	return &HelmValuesGenerator{
 		trustZone: trustZone,
 		source:    source,
@@ -25,7 +25,7 @@ func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofide
 	}
 }
 
-func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
+func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	tz := trustzone.NewTrustZone(g.trustZone)
 	tp, err := tz.GetTrustProvider()
 	if err != nil {
@@ -35,19 +35,19 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	agentConfig := tp.AgentConfig
 	serverConfig := tp.ServerConfig
 
-	globalValues := map[string]interface{}{
-		"global": map[string]interface{}{
-			"spire": map[string]interface{}{
+	globalValues := map[string]any{
+		"global": map[string]any{
+			"spire": map[string]any{
 				"clusterName": g.trustZone.GetKubernetesCluster(),
-				"recommendations": map[string]interface{}{
+				"recommendations": map[string]any{
 					"create": true,
 				},
 				"trustDomain": g.trustZone.TrustDomain,
 			},
-			"installAndUpgradeHooks": map[string]interface{}{
+			"installAndUpgradeHooks": map[string]any{
 				"enabled": false,
 			},
-			"deleteHooks": map[string]interface{}{
+			"deleteHooks": map[string]any{
 				"enabled": false,
 			},
 		},
@@ -61,37 +61,37 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		}
 	}
 
-	spireAgentValues := map[string]interface{}{
-		"spire-agent": map[string]interface{}{
+	spireAgentValues := map[string]any{
+		"spire-agent": map[string]any{
 			"fullnameOverride": "spire-agent",
 			"logLevel":         "DEBUG",
-			"nodeAttestor": map[string]interface{}{
-				agentConfig.NodeAttestor: map[string]interface{}{
+			"nodeAttestor": map[string]any{
+				agentConfig.NodeAttestor: map[string]any{
 					"enabled": agentConfig.NodeAttestorEnabled,
 				},
 			},
-			"server": map[string]interface{}{
+			"server": map[string]any{
 				"address": "spire-server.spire",
 			},
-			"workloadAttestors": map[string]interface{}{
+			"workloadAttestors": map[string]any{
 				agentConfig.WorkloadAttestor: agentConfig.WorkloadAttestorConfig,
 			},
 		},
 	}
 
-	spireServerValues := map[string]interface{}{
-		"spire-server": map[string]interface{}{
+	spireServerValues := map[string]any{
+		"spire-server": map[string]any{
 			"caKeyType": "rsa-2048",
 			"caTTL":     "12h",
-			"controllerManager": map[string]interface{}{
+			"controllerManager": map[string]any{
 				"enabled": true,
 			},
 			"fullnameOverride": "spire-server",
 			"logLevel":         "DEBUG",
-			"nodeAttestor": map[string]interface{}{
+			"nodeAttestor": map[string]any{
 				serverConfig.NodeAttestor: serverConfig.NodeAttestorConfig,
 			},
-			"service": map[string]interface{}{
+			"service": map[string]any{
 				"type": "LoadBalancer",
 			},
 		},
@@ -101,9 +101,9 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		// Disables the default ClusterSPIFFEID CR.
 		if spireServer, ok := getNestedMap(spireServerValues, "spire-server"); ok {
 			if controllerManager, ok := getNestedMap(spireServer, "controllerManager"); ok {
-				controllerManager["identities"] = map[string]interface{}{
-					"clusterSPIFFEIDs": map[string]interface{}{
-						"default": map[string]interface{}{
+				controllerManager["identities"] = map[string]any{
+					"clusterSPIFFEIDs": map[string]any{
+						"default": map[string]any{
 							"enabled": false,
 						},
 					},
@@ -137,9 +137,9 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		// Enables the default ClusterSPIFFEID CR.
 		if spireServer, ok := getNestedMap(spireServerValues, "spire-server"); ok {
 			if controllerManager, ok := getNestedMap(spireServer, "controllerManager"); ok {
-				controllerManager["identities"] = map[string]interface{}{
-					"clusterSPIFFEIDs": map[string]interface{}{
-						"default": map[string]interface{}{
+				controllerManager["identities"] = map[string]any{
+					"clusterSPIFFEIDs": map[string]any{
+						"default": map[string]any{
 							"enabled": true,
 						},
 					},
@@ -158,7 +158,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 
 			if tz.GetBundleEndpointUrl() != "" {
 				if spireServer, ok := getNestedMap(spireServerValues, "spire-server"); ok {
-					spireServer["federation"] = map[string]interface{}{
+					spireServer["federation"] = map[string]any{
 						"enabled": true,
 					}
 
@@ -167,7 +167,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 							if cftd, ok := getNestedMap(identities, "clusterFederatedTrustDomains"); ok {
 								cftd[fed.To] = federation.NewFederation(tz).GetHelmConfig()
 							} else {
-								identities["clusterFederatedTrustDomains"] = map[string]interface{}{
+								identities["clusterFederatedTrustDomains"] = map[string]any{
 									fed.To: federation.NewFederation(tz).GetHelmConfig(),
 								}
 							}
@@ -178,19 +178,19 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		}
 	}
 
-	spiffeOIDCDiscoveryProviderValues := map[string]interface{}{
-		"spiffe-oidc-discovery-provider": map[string]interface{}{
+	spiffeOIDCDiscoveryProviderValues := map[string]any{
+		"spiffe-oidc-discovery-provider": map[string]any{
 			"enabled": false,
 		},
 	}
 
-	spiffeCSIDriverValues := map[string]interface{}{
-		"spiffe-csi-driver": map[string]interface{}{
+	spiffeCSIDriverValues := map[string]any{
+		"spiffe-csi-driver": map[string]any{
 			"fullnameOverride": "spiffe-csi-driver",
 		},
 	}
 
-	valuesMaps := []map[string]interface{}{
+	valuesMaps := []map[string]any{
 		globalValues,
 		spireAgentValues,
 		spireServerValues,
@@ -208,7 +208,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		mergeValues(valuesMaps, extraHelmValues, true)
 	}
 
-	combinedValues := make(map[string]interface{})
+	combinedValues := make(map[string]any)
 
 	for _, valuesMap := range valuesMaps {
 		for key, value := range valuesMap {
@@ -219,24 +219,24 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 	return combinedValues, nil
 }
 
-// getNestedMap retrieves a nested map[string]interface{} from a parent map.
-func getNestedMap(m map[string]interface{}, key string) (map[string]interface{}, bool) {
+// getNestedMap retrieves a nested map[string]any from a parent map.
+func getNestedMap(m map[string]any, key string) (map[string]any, bool) {
 	val, exists := m[key]
 	if !exists {
 		return nil, false
 	}
 
-	nestedMap := val.(map[string]interface{})
+	nestedMap := val.(map[string]any)
 	return nestedMap, true
 }
 
 // mergeValues iterates over a slice of maps and merges each map with the provided values map.
-func mergeValues(valuesMaps []map[string]interface{}, values map[string]interface{}, overwriteExistingKeys bool) {
+func mergeValues(valuesMaps []map[string]any, values map[string]any, overwriteExistingKeys bool) {
 	for i, valuesMap := range valuesMaps {
 		for key := range valuesMap {
 			if inputValue, exists := values[key]; exists {
-				if inputMap, ok := inputValue.(map[string]interface{}); ok {
-					if existingMap, exists := valuesMap[key].(map[string]interface{}); exists {
+				if inputMap, ok := inputValue.(map[string]any); ok {
+					if existingMap, exists := valuesMap[key].(map[string]any); exists {
 						valuesMaps[i][key] = mergeMaps(inputMap, existingMap, overwriteExistingKeys)
 					}
 				}
@@ -246,16 +246,16 @@ func mergeValues(valuesMaps []map[string]interface{}, values map[string]interfac
 }
 
 // mergeMaps merges the source map into the destination map, returning a new merged map.
-func mergeMaps(src, dest map[string]interface{}, overwriteExistingKeys bool) map[string]interface{} {
-	merged := make(map[string]interface{})
+func mergeMaps(src, dest map[string]any, overwriteExistingKeys bool) map[string]any {
+	merged := make(map[string]any)
 
 	for key, value := range dest {
 		merged[key] = value
 	}
 
 	for key, value := range src {
-		if srcMap, isSrcMap := value.(map[string]interface{}); isSrcMap {
-			if destMap, isDestMap := dest[key].(map[string]interface{}); isDestMap {
+		if srcMap, isSrcMap := value.(map[string]any); isSrcMap {
+			if destMap, isDestMap := dest[key].(map[string]any); isDestMap {
 				merged[key] = mergeMaps(srcMap, destMap, overwriteExistingKeys)
 			} else {
 				merged[key] = srcMap
