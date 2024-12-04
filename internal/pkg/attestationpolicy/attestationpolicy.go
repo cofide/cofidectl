@@ -70,8 +70,18 @@ func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSele
 		return nil
 	}
 
+	var matchExpressions = []map[string]interface{}{}
+
+	for _, me := range selector.MatchExpressions {
+		matchExpressions = append(matchExpressions, map[string]interface{}{
+			"key":      me.GetKey(),
+			"operator": me.GetOperator(),
+			"values":   me.GetValues(),
+		})
+	}
+
 	return map[string]interface{}{
 		"matchLabels":      selector.MatchLabels,
-		"matchExpressions": selector.MatchExpressions,
+		"matchExpressions": matchExpressions,
 	}
 }
