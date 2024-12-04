@@ -221,13 +221,13 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	combinedValues := flattenMaps(valuesMaps)
 
 	if g.values != nil {
-		mergeValues(combinedValues, g.values, true)
+		combinedValues = mergeMaps(g.values, combinedValues, true)
 	}
 
 	if g.trustZone.ExtraHelmValues != nil {
 		// TODO: Potentially retrieve Helm values as map[string]any directly.
 		extraHelmValues := g.trustZone.ExtraHelmValues.AsMap()
-		mergeValues(combinedValues, extraHelmValues, true)
+		combinedValues = mergeMaps(extraHelmValues, combinedValues, true)
 	}
 
 	return combinedValues, nil
@@ -397,29 +397,6 @@ func getNestedMap(m map[string]any, key string) (map[string]any, bool) {
 	return nestedMap, true
 }
 
-// mergeValues merges the values from the values map into the destination map.
-func mergeValues(dest map[string]any, values map[string]any, overwriteExistingKeys bool) {
-	for key, value := range values {
-		inputMap, isMap := value.(map[string]any)
-
-		// If the key doesn't exist in the destination map, set it.
-		if _, exists := dest[key]; !exists {
-			dest[key] = value
-			continue
-		}
-
-		existingMap, existingIsMap := dest[key].(map[string]any)
-		if isMap && existingIsMap {
-			dest[key] = mergeMaps(inputMap, existingMap, overwriteExistingKeys)
-			continue
-		}
-
-		if overwriteExistingKeys {
-			dest[key] = value
-		}
-	}
-}
-
 // mergeMaps merges the source map into the destination map, returning a new merged map.
 func mergeMaps(src, dest map[string]any, overwriteExistingKeys bool) map[string]any {
 	merged := make(map[string]any)
@@ -430,7 +407,7 @@ func mergeMaps(src, dest map[string]any, overwriteExistingKeys bool) map[string]
 
 	for key, value := range src {
 		if srcMap, isSrcMap := value.(map[string]any); isSrcMap {
-			if destMap, isDestMap := dest[key].(map[string]any); isDestMap {
+			if destMap, isDestMap := merged[key].(map[string]any); isDestMap {
 				merged[key] = mergeMaps(srcMap, destMap, overwriteExistingKeys)
 			} else {
 				merged[key] = srcMap

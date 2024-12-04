@@ -234,6 +234,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				trustZone: tt.trustZone,
 				values:    nil,
 			}
+
 			got, err := g.GenerateValues()
 			require.Nil(t, err, err)
 			assert.Equal(t, tt.want, got)
@@ -373,6 +374,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				trustZone: tt.trustZone,
 				values:    tt.values,
 			}
+
 			got, err := g.GenerateValues()
 			require.Nil(t, err, err)
 			assert.Equal(t, tt.want, got)
@@ -485,168 +487,6 @@ func TestGetNestedMap(t *testing.T) {
 			if tt.exists {
 				assert.Equal(t, tt.want, resp)
 			}
-		})
-	}
-}
-
-func TestMergeValues(t *testing.T) {
-	tests := []struct {
-		name                  string
-		dest                  map[string]any
-		values                map[string]any
-		overwriteExistingKeys bool
-		want                  map[string]any
-	}{
-		{
-			name: "valid values and valid dest, no overwrites",
-			dest: map[string]any{
-				"foo": "bar",
-			},
-			values: map[string]any{
-				"fizz": "buzz",
-			},
-			overwriteExistingKeys: false,
-			want: map[string]any{
-				"foo":  "bar",
-				"fizz": "buzz",
-			},
-		},
-		{
-			name: "valid dest and empty values, no overwrites",
-			dest: map[string]any{
-				"foo": "bar",
-			},
-			values:                map[string]any{},
-			overwriteExistingKeys: false,
-			want: map[string]any{
-				"foo": "bar",
-			},
-		},
-		{
-			name: "empty dest and valid values, no overwrites",
-			dest: map[string]any{},
-			values: map[string]any{
-				"fizz": "buzz",
-			},
-			overwriteExistingKeys: false,
-			want: map[string]any{
-				"fizz": "buzz",
-			},
-		},
-		{
-			name: "valid dest and valid values, nested, no overwrites",
-			dest: map[string]any{
-				"global": map[string]any{
-					"spire": map[string]any{
-						"clusterName": "local1-old",
-					},
-				},
-			},
-			values: map[string]any{
-				"global": map[string]any{
-					"spire": map[string]any{
-						"clusterName": "local1-new",
-					},
-					"trustDomain": "td1",
-				},
-			},
-			overwriteExistingKeys: false,
-			want: map[string]any{
-				"global": map[string]any{
-					"spire": map[string]any{
-						"clusterName": "local1-old",
-					},
-					"trustDomain": "td1",
-				},
-			},
-		},
-		{
-			name: "valid dest and valid values, with overwrites",
-			dest: map[string]any{
-				"foo":   "bar",
-				"hello": "world",
-			},
-			values: map[string]any{
-				"foo": "baz",
-			},
-			overwriteExistingKeys: true,
-			want: map[string]any{
-				"foo":   "baz",
-				"hello": "world",
-			},
-		},
-		{
-			name: "valid dest and valid src, additional nesting, with overwrites",
-			dest: map[string]any{
-				"spire-server": map[string]any{
-					"caKeyType": "rsa-2048",
-					"controllerManager": map[string]any{
-						"enabled": true,
-						"identities": map[string]any{
-							"clusterSPIFFEIDs": map[string]any{
-								"default": Values{
-									"enabled": false,
-								},
-							},
-							"clusterFederatedTrustDomains": map[string]any{
-								"cofide": map[string]any{
-									"bundleEndpointProfile": map[string]any{
-										"type": "https_web",
-									},
-									"bundleEndpointURL": "https://td1/connect/bundle",
-									"trustDomain":       "td1",
-								},
-							},
-						},
-					},
-				},
-			},
-			values: map[string]any{
-				"spire-server": map[string]any{
-					"caKeyType": "rsa-2048",
-					"controllerManager": map[string]any{
-						"enabled": true,
-						"identities": map[string]any{
-							"clusterSPIFFEIDs": map[string]any{
-								"default": Values{
-									"enabled": true,
-								},
-							},
-						},
-					},
-				},
-			},
-			overwriteExistingKeys: true,
-			want: map[string]any{
-				"spire-server": map[string]any{
-					"caKeyType": "rsa-2048",
-					"controllerManager": map[string]any{
-						"enabled": true,
-						"identities": map[string]any{
-							"clusterSPIFFEIDs": map[string]any{
-								"default": Values{
-									"enabled": true,
-								},
-							},
-							"clusterFederatedTrustDomains": map[string]any{
-								"cofide": map[string]any{
-									"bundleEndpointProfile": map[string]any{
-										"type": "https_web",
-									},
-									"bundleEndpointURL": "https://td1/connect/bundle",
-									"trustDomain":       "td1",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mergeValues(tt.dest, tt.values, tt.overwriteExistingKeys)
-			assert.Equal(t, tt.want, tt.dest)
 		})
 	}
 }
