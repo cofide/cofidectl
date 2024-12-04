@@ -14,11 +14,10 @@ import (
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type Values = map[string]interface{}
-type ValueList = []interface{}
+type Values = map[string]any
+type ValueList = []any
 
 func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 	tests := []struct {
@@ -98,13 +97,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
 						"k8sPsat": Values{
-							"allowedNodeLabelKeys": ValueList{},
-							"allowedPodLabelKeys":  ValueList{},
-							"audience": ValueList{
+							"allowedNodeLabelKeys": []string{},
+							"allowedPodLabelKeys":  []string{},
+							"audience": []string{
 								"spire-server",
 							},
 							"enabled": true,
-							"serviceAccountAllowList": ValueList{
+							"serviceAccountAllowList": []string{
 								"spire:spire-agent",
 							},
 						},
@@ -184,12 +183,12 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 							"clusterSPIFFEIDs": Values{
 								"ap1": Values{
-									"federatesWith": ValueList{
+									"federatesWith": []string{
 										"td2",
 									},
 									"namespaceSelector": Values{
-										"matchExpressions": ValueList{},
-										"matchLabels": Values{
+										"matchExpressions": []map[string]any{},
+										"matchLabels": map[string]string{
 											"kubernetes.io/metadata.name": "ns1",
 										},
 									},
@@ -207,13 +206,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"logLevel":         "INFO",
 					"nodeAttestor": Values{
 						"k8sPsat": Values{
-							"allowedNodeLabelKeys": ValueList{},
-							"allowedPodLabelKeys":  ValueList{},
-							"audience": ValueList{
+							"allowedNodeLabelKeys": []string{},
+							"allowedPodLabelKeys":  []string{},
+							"audience": []string{
 								"spire-server",
 							},
 							"enabled": true,
-							"serviceAccountAllowList": ValueList{
+							"serviceAccountAllowList": []string{
 								"spire:spire-agent",
 							},
 						},
@@ -233,6 +232,145 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				source:    source,
 				trustZone: tt.trustZone,
 				values:    nil,
+			}
+			got, err := g.GenerateValues()
+			require.Nil(t, err, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
+	tests := []struct {
+		name      string
+		trustZone *trust_zone_proto.TrustZone
+		values    Values
+		want      Values
+	}{
+		{
+			name: "tz1 no binding or federation",
+			trustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz1")
+				tz.AttestationPolicies = nil
+				tz.Bundle = nil
+				tz.BundleEndpointUrl = nil
+				tz.Federations = nil
+				tz.JwtIssuer = nil
+				tz.ExtraHelmValues = nil
+				return tz
+			}(),
+			values: Values{
+				"spire-server": Values{
+					"controllerManager": Values{
+						"identities": Values{
+							"clusterFederatedTrustDomains": Values{
+								"cofide": Values{
+									"bundleEndpointProfile": Values{
+										"type": "https_web",
+									},
+									"bundleEndpointURL": "https://td1/connect/bundle",
+									"trustDomain":       "td1",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: Values{
+				"global": Values{
+					"deleteHooks": Values{
+						"enabled": false,
+					},
+					"installAndUpgradeHooks": Values{
+						"enabled": false,
+					},
+					"spire": Values{
+						"clusterName": "local1",
+						"recommendations": Values{
+							"create": true,
+						},
+						"trustDomain": "td1",
+					},
+				},
+				"spiffe-csi-driver": Values{
+					"fullnameOverride": "spiffe-csi-driver",
+				},
+				"spiffe-oidc-discovery-provider": Values{
+					"enabled": false,
+				},
+				"spire-agent": Values{
+					"fullnameOverride": "spire-agent",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPsat": Values{
+							"enabled": true,
+						},
+					},
+					"server": Values{
+						"address": "spire-server.spire",
+					},
+					"workloadAttestors": Values{
+						"k8s": Values{
+							"disableContainerSelectors":   false,
+							"enabled":                     true,
+							"skipKubeletVerification":     true,
+							"useNewContainerLocator":      false,
+							"verboseContainerLocatorLogs": false,
+						},
+					},
+				},
+				"spire-server": Values{
+					"caKeyType": "rsa-2048",
+					"caTTL":     "12h",
+					"controllerManager": Values{
+						"enabled": true,
+						"identities": Values{
+							"clusterSPIFFEIDs": Values{
+								"default": Values{
+									"enabled": true,
+								},
+							},
+							"clusterFederatedTrustDomains": Values{
+								"cofide": Values{
+									"bundleEndpointProfile": Values{
+										"type": "https_web",
+									},
+									"bundleEndpointURL": "https://td1/connect/bundle",
+									"trustDomain":       "td1",
+								},
+							},
+						},
+					},
+					"fullnameOverride": "spire-server",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPsat": Values{
+							"allowedNodeLabelKeys": []string{},
+							"allowedPodLabelKeys":  []string{},
+							"audience": []string{
+								"spire-server",
+							},
+							"enabled": true,
+							"serviceAccountAllowList": []string{
+								"spire:spire-agent",
+							},
+						},
+					},
+					"service": Values{
+						"type": "LoadBalancer",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := defaultConfig()
+			source := newFakeDataSource(t, cfg)
+			g := &HelmValuesGenerator{
+				source:    source,
+				trustZone: tt.trustZone,
+				values:    tt.values,
 			}
 			got, err := g.GenerateValues()
 			require.Nil(t, err, err)
@@ -283,21 +421,6 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			}(),
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
-		{
-			name: "invalid extra helm values",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				s, err := structpb.NewStruct(map[string]any{
-					"global": "not-a-map",
-				})
-				if err != nil {
-					require.Nil(t, err, err)
-				}
-				tz.ExtraHelmValues = s
-				return tz
-			}(),
-			wantErrString: "global: conflicting values \"not-a-map\"",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -311,6 +434,245 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			_, err := g.GenerateValues()
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.wantErrString)
+		})
+	}
+}
+
+func TestGetNestedMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		values map[string]any
+		key    string
+		want   map[string]any
+		exists bool
+	}{
+		{
+			name: "map exists, valid key",
+			values: map[string]any{
+				"spire-server": map[string]any{
+					"fullnameOverride": "spire-server",
+				},
+			},
+			key: "spire-server",
+			want: map[string]any{
+				"fullnameOverride": "spire-server",
+			},
+			exists: true,
+		},
+		{
+			name: "map doesn't exist, valid key",
+			values: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"caTTL":     "12h",
+				},
+			},
+			key: "global",
+			want: map[string]any{
+				"spire": map[string]any{
+					"clusterName": "local1",
+				},
+			},
+			exists: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, exists := getNestedMap(tt.values, tt.key)
+
+			assert.Equal(t, tt.exists, exists)
+			if tt.exists {
+				assert.Equal(t, tt.want, resp)
+			}
+		})
+	}
+}
+
+func TestMergeMaps(t *testing.T) {
+	tests := []struct {
+		name                  string
+		src                   map[string]any
+		dest                  map[string]any
+		overwriteExistingKeys bool
+		want                  map[string]any
+	}{
+		{
+			name: "valid src and valid dest, no overwrites",
+			src: map[string]any{
+				"foo": "bar",
+			},
+			dest: map[string]any{
+				"fizz": "buzz",
+			},
+			overwriteExistingKeys: false,
+			want: map[string]any{
+				"foo":  "bar",
+				"fizz": "buzz",
+			},
+		},
+		{
+			name: "valid src and empty dest, no overwrites",
+			src: map[string]any{
+				"foo": "bar",
+			},
+			dest:                  map[string]any{},
+			overwriteExistingKeys: false,
+			want: map[string]any{
+				"foo": "bar",
+			},
+		},
+		{
+			name: "empty src and valid dest, no overwrites",
+			src:  map[string]any{},
+			dest: map[string]any{
+				"fizz": "buzz",
+			},
+			overwriteExistingKeys: false,
+			want: map[string]any{
+				"fizz": "buzz",
+			},
+		},
+		{
+			name: "valid src and valid dest, nested, no overwrites",
+			src: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1-new",
+					},
+				},
+			},
+			dest: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1",
+					},
+					"trustDomain": "td1",
+				},
+			},
+			overwriteExistingKeys: false,
+			want: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1",
+					},
+					"trustDomain": "td1",
+				},
+			},
+		},
+		{
+			name: "valid src and valid dest, with overwrites",
+			src: map[string]any{
+				"foo":   "bar",
+				"hello": "world",
+			},
+			dest: map[string]any{
+				"foo": "baz",
+			},
+			overwriteExistingKeys: true,
+			want: map[string]any{
+				"foo":   "bar",
+				"hello": "world",
+			},
+		},
+		{
+			name: "valid src and valid dest, nested, with overwrites",
+			src: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "kind-new",
+					},
+				},
+			},
+			dest: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "kind-old",
+					},
+					"trustDomain": "td1",
+				},
+			},
+			overwriteExistingKeys: true,
+			want: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "kind-new",
+					},
+					"trustDomain": "td1",
+				},
+			},
+		},
+		{
+			name: "valid src and valid dest, additional nesting, with overwrites",
+			src: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"controllerManager": map[string]any{
+						"enabled": true,
+						"identities": map[string]any{
+							"clusterSPIFFEIDs": map[string]any{
+								"default": Values{
+									"enabled": false,
+								},
+							},
+							"clusterFederatedTrustDomains": map[string]any{
+								"cofide": map[string]any{
+									"bundleEndpointProfile": map[string]any{
+										"type": "https_web",
+									},
+									"bundleEndpointURL": "https://td1/connect/bundle",
+									"trustDomain":       "td1",
+								},
+							},
+						},
+					},
+				},
+			},
+			dest: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"controllerManager": map[string]any{
+						"enabled": true,
+						"identities": map[string]any{
+							"clusterSPIFFEIDs": map[string]any{
+								"default": Values{
+									"enabled": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			overwriteExistingKeys: true,
+			want: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"controllerManager": map[string]any{
+						"enabled": true,
+						"identities": map[string]any{
+							"clusterSPIFFEIDs": map[string]any{
+								"default": Values{
+									"enabled": false,
+								},
+							},
+							"clusterFederatedTrustDomains": map[string]any{
+								"cofide": map[string]any{
+									"bundleEndpointProfile": map[string]any{
+										"type": "https_web",
+									},
+									"bundleEndpointURL": "https://td1/connect/bundle",
+									"trustDomain":       "td1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := mergeMaps(tt.src, tt.dest, tt.overwriteExistingKeys)
+			assert.Equal(t, tt.want, resp)
 		})
 	}
 }
