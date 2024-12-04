@@ -4,12 +4,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -36,8 +32,7 @@ func main() {
 func run() error {
 	cmdCtx := cmdcontext.NewCommandContext(cofideConfigFile)
 	defer cmdCtx.Shutdown()
-
-	go handleSignals(cmdCtx)
+	go cmdCtx.HandleSignals()
 
 	rootCmd, err := cmd.NewRootCommand(cmdCtx).GetRootCommand()
 	if err != nil {
@@ -61,20 +56,6 @@ func run() error {
 
 	// Cobra logs any errors returned by commands, so don't log again.
 	return rootCmd.ExecuteContext(cmdCtx.Ctx)
-}
-
-// handleSignals waits for SIGINT or SIGTERM, then triggers a clean shutdown using the command context.
-func handleSignals(cmdCtx *cmdcontext.CommandContext) {
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
-	s := <-shutdown
-	fmt.Printf("Caught %s signal, exiting\n", s.String())
-	cmdCtx.Shutdown()
-
-	// Wait for a while to allow for graceful completion of the main goroutine.
-	<-time.After(shutdownTimeoutSec * time.Second)
-	fmt.Println("Timed out waiting for shutdown")
-	os.Exit(1)
 }
 
 // getCliPlugin returns a `plugin.CliPlugin` for a CLI plugin if:
