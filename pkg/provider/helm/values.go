@@ -9,6 +9,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
+	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 )
@@ -17,6 +18,39 @@ type HelmValuesGenerator struct {
 	source    cofidectl_plugin.DataSource
 	trustZone *trust_zone_proto.TrustZone
 	values    map[string]any
+}
+
+type globalValues struct {
+	spireClusterName              string
+	spireCreateRecommendations    bool
+	spireTrustDomain              string
+	installAndUpgradeHooksEnabled bool
+	deleteHooks                   bool
+}
+
+type spireAgentValues struct {
+	fullnameOverride   string
+	logLevel           string
+	agentConfig        trustprovider.TrustProviderAgentConfig
+	spireServerAddress string
+}
+
+type spireServerValues struct {
+	caKeyType                string
+	caTTL                    string
+	controllerManagerEnabled bool
+	fullnameOverride         string
+	logLevel                 string
+	serverConfig             trustprovider.TrustProviderServerConfig
+	serviceType              string
+}
+
+type spiffeOIDCDiscoveryProviderValues struct {
+	enabled bool
+}
+
+type spiffeCSIDriverValues struct {
+	fullnameOverride string
 }
 
 func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource, values map[string]any) *HelmValuesGenerator {
@@ -37,23 +71,14 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	agentConfig := tp.AgentConfig
 	serverConfig := tp.ServerConfig
 
-	globalValues := map[string]any{
-		"global": map[string]any{
-			"spire": map[string]any{
-				"clusterName": g.trustZone.GetKubernetesCluster(),
-				"recommendations": map[string]any{
-					"create": true,
-				},
-				"trustDomain": g.trustZone.TrustDomain,
-			},
-			"installAndUpgradeHooks": map[string]any{
-				"enabled": false,
-			},
-			"deleteHooks": map[string]any{
-				"enabled": false,
-			},
-		},
+	gv := globalValues{
+		spireClusterName:              g.trustZone.GetKubernetesCluster(),
+		spireCreateRecommendations:    true,
+		spireTrustDomain:              g.trustZone.TrustDomain,
+		installAndUpgradeHooksEnabled: false,
+		deleteHooks:                   false,
 	}
+	globalValues := gv.generateValues()
 
 	if issuer := g.trustZone.GetJwtIssuer(); issuer != "" {
 		global, ok := getNestedMap(globalValues, "global")
@@ -69,43 +94,25 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		spire["jwtIssuer"] = issuer
 	}
 
-	spireAgentValues := map[string]any{
-		"spire-agent": map[string]any{
-			"fullnameOverride": "spire-agent",
-			"logLevel":         "DEBUG",
-			"nodeAttestor": map[string]any{
-				agentConfig.NodeAttestor: map[string]any{
-					"enabled": agentConfig.NodeAttestorEnabled,
-				},
-			},
-			"server": map[string]any{
-				"address": "spire-server.spire",
-			},
-			"workloadAttestors": map[string]any{
-				agentConfig.WorkloadAttestor: agentConfig.WorkloadAttestorConfig,
-			},
-		},
+	sav := spireAgentValues{
+		fullnameOverride:   "spire-agent",
+		logLevel:           "DEBUG",
+		agentConfig:        agentConfig,
+		spireServerAddress: "spire-server.spire",
 	}
+	spireAgentValues := sav.generateValues()
 
-	spireServerValues := map[string]any{
-		"spire-server": map[string]any{
-			"caKeyType": "rsa-2048",
-			"caTTL":     "12h",
-			"controllerManager": map[string]any{
-				"enabled": true,
-			},
-			"fullnameOverride": "spire-server",
-			"logLevel":         "DEBUG",
-			"nodeAttestor": map[string]any{
-				serverConfig.NodeAttestor: serverConfig.NodeAttestorConfig,
-			},
-			"service": map[string]any{
-				"type": "LoadBalancer",
-			},
-		},
+	ssv := spireServerValues{
+		caKeyType:                "rsa-2048",
+		caTTL:                    "12h",
+		controllerManagerEnabled: true,
+		fullnameOverride:         "spire-server",
+		logLevel:                 "DEBUG",
+		serverConfig:             serverConfig,
+		serviceType:              "LoadBalancer",
 	}
+	spireServerValues := ssv.generateValues()
 
-	// Enables the default ClusterSPIFFEID CR, be default.
 	spireServer, ok := getNestedMap(spireServerValues, "spire-server")
 	if !ok {
 		return nil, fmt.Errorf("failed to get spire-server map from spireServerValues")
@@ -116,6 +123,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("failed to get controllerManager map from spireServer")
 	}
 
+	// Enables the default ClusterSPIFFEID CR by default.
 	controllerManager["identities"] = map[string]any{
 		"clusterSPIFFEIDs": map[string]any{
 			"default": map[string]any{
@@ -130,17 +138,17 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	}
 
 	if len(g.trustZone.AttestationPolicies) > 0 {
-		// Disables the default ClusterSPIFFEID CR.
 		csids, ok := getNestedMap(identities, "clusterSPIFFEIDs")
 		if !ok {
 			return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities")
 		}
 
+		// Disables the default ClusterSPIFFEID CR.
 		csids["default"] = map[string]any{
 			"enabled": false,
 		}
 
-		// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by spire-controller-manager.
+		// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
 		for _, binding := range g.trustZone.AttestationPolicies {
 			policy, err := g.source.GetAttestationPolicy(binding.Policy)
 			if err != nil {
@@ -156,7 +164,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		}
 	}
 
-	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by spire-controller-manager.
+	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by the spire-controller-manager.
 	if len(g.trustZone.Federations) > 0 {
 		for _, fed := range g.trustZone.Federations {
 			tz, err := g.source.GetTrustZone(fed.To)
@@ -181,17 +189,15 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		}
 	}
 
-	spiffeOIDCDiscoveryProviderValues := map[string]any{
-		"spiffe-oidc-discovery-provider": map[string]any{
-			"enabled": false,
-		},
+	soidcpv := spiffeOIDCDiscoveryProviderValues{
+		enabled: false,
 	}
+	spiffeOIDCDiscoveryProviderValues := soidcpv.generateValues()
 
-	spiffeCSIDriverValues := map[string]any{
-		"spiffe-csi-driver": map[string]any{
-			"fullnameOverride": "spiffe-csi-driver",
-		},
+	scsidv := spiffeCSIDriverValues{
+		fullnameOverride: "spiffe-csi-driver",
 	}
+	spiffeCSIDriverValues := scsidv.generateValues()
 
 	valuesMaps := []map[string]any{
 		globalValues,
@@ -206,20 +212,95 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	}
 
 	if g.trustZone.ExtraHelmValues != nil {
-		// TODO: Potentially retrieve Helm values as a map[string]interface directly.
+		// TODO: Potentially retrieve Helm values as map[string]any directly.
 		extraHelmValues := g.trustZone.ExtraHelmValues.AsMap()
 		mergeValues(valuesMaps, extraHelmValues, true)
 	}
 
-	combinedValues := make(map[string]any)
-
-	for _, valuesMap := range valuesMaps {
-		for key, value := range valuesMap {
-			combinedValues[key] = value
-		}
-	}
+	combinedValues := flattenMaps(valuesMaps)
 
 	return combinedValues, nil
+}
+
+// generateValues generates the global Helm values map.
+func (g *globalValues) generateValues() map[string]any {
+	return map[string]any{
+		"global": map[string]any{
+			"spire": map[string]any{
+				"clusterName": g.spireClusterName,
+				"recommendations": map[string]any{
+					"create": g.spireCreateRecommendations,
+				},
+				"trustDomain": g.spireTrustDomain,
+			},
+			"installAndUpgradeHooks": map[string]any{
+				"enabled": g.installAndUpgradeHooksEnabled,
+			},
+			"deleteHooks": map[string]any{
+				"enabled": g.deleteHooks,
+			},
+		},
+	}
+}
+
+// generateValues generates the spire-agent Helm values map.
+func (s *spireAgentValues) generateValues() map[string]any {
+	return map[string]any{
+		"spire-agent": map[string]any{
+			"fullnameOverride": s.fullnameOverride,
+			"logLevel":         s.logLevel,
+			"nodeAttestor": map[string]any{
+				s.agentConfig.NodeAttestor: map[string]any{
+					"enabled": s.agentConfig.NodeAttestorEnabled,
+				},
+			},
+			"server": map[string]any{
+				"address": "spire-server.spire",
+			},
+			"workloadAttestors": map[string]any{
+				s.agentConfig.WorkloadAttestor: s.agentConfig.WorkloadAttestorConfig,
+			},
+		},
+	}
+}
+
+// generateValues generates the spire-server Helm values map.
+func (s *spireServerValues) generateValues() map[string]any {
+	return map[string]any{
+		"spire-server": map[string]any{
+			"caKeyType": s.caKeyType,
+			"caTTL":     s.caTTL,
+			"controllerManager": map[string]any{
+				"enabled": s.controllerManagerEnabled,
+			},
+			"fullnameOverride": s.fullnameOverride,
+			"logLevel":         s.logLevel,
+			"nodeAttestor": map[string]any{
+				s.serverConfig.NodeAttestor: s.serverConfig.NodeAttestorConfig,
+			},
+			"service": map[string]any{
+				"type": s.serviceType,
+			},
+		},
+	}
+}
+
+// generateValues generates the spiffe-oidc-discovery-provider Helm values map.
+func (s *spiffeOIDCDiscoveryProviderValues) generateValues() map[string]any {
+	return map[string]any{
+		"spiffe-oidc-discovery-provider": map[string]any{
+			"enabled": s.enabled,
+		},
+	}
+}
+
+// generateValues generates the spiffe-csi-driver Helm values map.
+func (s *spiffeCSIDriverValues) generateValues() map[string]any {
+	return map[string]any{
+		"spiffe-csi-driver": map[string]any{
+			"fullnameOverride": s.fullnameOverride,
+		},
+	}
 }
 
 // getNestedMap retrieves a nested map[string]any from a parent map.
@@ -271,4 +352,16 @@ func mergeMaps(src, dest map[string]any, overwriteExistingKeys bool) map[string]
 	}
 
 	return merged
+}
+
+// flattenMaps flattens a slice of maps into a single map.
+func flattenMaps(maps []map[string]any) map[string]any {
+	flattened := make(map[string]any)
+	for _, m := range maps {
+		for key, value := range m {
+			flattened[key] = value
+		}
+	}
+
+	return flattened
 }
