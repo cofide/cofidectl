@@ -539,10 +539,12 @@ func TestGetOrCreateNestedMap(t *testing.T) {
 
 func TestMergeMaps(t *testing.T) {
 	tests := []struct {
-		name string
-		src  map[string]any
-		dest map[string]any
-		want map[string]any
+		name      string
+		src       map[string]any
+		dest      map[string]any
+		want      map[string]any
+		wantErr   bool
+		errString string
 	}{
 		{
 			name: "valid src and valid dest",
@@ -732,10 +734,29 @@ func TestMergeMaps(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "nil src and valid dest",
+			src:       nil,
+			dest:      map[string]any{"foo": "bar"},
+			wantErr:   true,
+			errString: "source map is nil",
+		},
+		{
+			name:      "valid src and nil dest",
+			src:       map[string]any{"foo": "bar"},
+			dest:      nil,
+			wantErr:   true,
+			errString: "destination map is nil",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := mergeMaps(tt.dest, tt.src)
+			resp, err := mergeMaps(tt.dest, tt.src)
+			if tt.wantErr {
+				assert.Equal(t, tt.errString, err.Error())
+				return
+			}
+
 			assert.Equal(t, tt.want, resp)
 		})
 	}
