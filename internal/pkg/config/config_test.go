@@ -46,6 +46,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					"plugin1": fixtures.PluginConfig("plugin1"),
 					"plugin2": fixtures.PluginConfig("plugin2"),
 				},
+				ProvisionPlugin: "fake-provision-plugin",
 			},
 			wantFile: "full.yaml",
 		},
@@ -77,6 +78,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 				PluginConfig:        map[string]*structpb.Struct{},
+				ProvisionPlugin:     "",
 			},
 		},
 		{
@@ -97,6 +99,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 					"plugin1": fixtures.PluginConfig("plugin1"),
 					"plugin2": fixtures.PluginConfig("plugin2"),
 				},
+				ProvisionPlugin: "fake-provision-plugin",
 			},
 		},
 	}

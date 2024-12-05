@@ -49,13 +49,15 @@ func TestNewLocalDataSource(t *testing.T) {
 		{
 			name: "non-default config",
 			config: &config.Config{
-				DataSource: "test-plugin",
+				DataSource:      "test-plugin",
+				ProvisionPlugin: "test-provision-plugin",
 			},
 			wantConfig: &config.Config{
 				DataSource:          "test-plugin",
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 				PluginConfig:        map[string]*structpb.Struct{},
+				ProvisionPlugin:     "test-provision-plugin",
 			},
 		},
 	}

@@ -65,11 +65,15 @@
 	[string]: _
 }
 
+#ProvisionPlugin: string
+
 #Config: {
 	data_source!: #DataSource
 	trust_zones: [...#TrustZone]
 	attestation_policies: [...#AttestationPolicy]
 	plugin_config?: #PluginConfig
+	// FIXME: make required?
+	provision_plugin?: #ProvisionPlugin
 }
 
 #Config

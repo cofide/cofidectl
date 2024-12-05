@@ -7,18 +7,21 @@ import (
 	"context"
 
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
-	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 )
 
 // Provision is the interface that provision plugins have to implement.
 type Provision interface {
+	// Validate checks whether the plugin is configured correctly.
+	Validate(ctx context.Context) error
+
 	// Deploy deploys the workload identity configuration to the clusters in the system.
 	// The method is asynchronous, returning a channel over which Status messages are sent
 	// describing the various stages of deployment and their outcomes.
-	Deploy(ctx context.Context, ds plugin.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error)
+	Deploy(ctx context.Context, ds datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error)
 
 	// TearDown tears down the workload identity configuration from the clusters in the system.
 	// The method is asynchronous, returning a channel over which Status messages are sent
 	// describing the various stages of tear down and their outcomes.
-	TearDown(ctx context.Context, ds plugin.DataSource) (<-chan *provisionpb.Status, error)
+	TearDown(ctx context.Context, ds datasource.DataSource) (<-chan *provisionpb.Status, error)
 }

@@ -4,6 +4,7 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -23,26 +24,29 @@ import (
 )
 
 const (
-	LocalPluginName = "local"
+	LocalPluginName              = "local"
+	SpireHelmProvisionPluginName = "spire-helm"
 )
 
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
 type PluginManager struct {
 	configLoader   config.Loader
-	loadGrpcPlugin func(hclog.Logger, string) (*go_plugin.Client, cofidectl_plugin.DataSource, error)
+	loadGrpcPlugin func(hclog.Logger, string) (*go_plugin.Client, cofidectl_plugin.DataSource, provision.Provision, error)
 	source         cofidectl_plugin.DataSource
-	client         *go_plugin.Client
+	provision      provision.Provision
+	clients        map[string]*go_plugin.Client
 }
 
 func NewManager(configLoader config.Loader) *PluginManager {
 	return &PluginManager{
 		configLoader:   configLoader,
 		loadGrpcPlugin: loadGrpcPlugin,
+		clients:        map[string]*go_plugin.Client{},
 	}
 }
 
 // Init initialises the configuration for the specified data source plugin.
-func (pm *PluginManager) Init(dsName string, pluginConfig map[string]*structpb.Struct) (cofidectl_plugin.DataSource, error) {
+func (pm *PluginManager) Init(dsName string, provisionName string, pluginConfig map[string]*structpb.Struct) (cofidectl_plugin.DataSource, error) {
 	if exists, _ := pm.configLoader.Exists(); exists {
 		// Check that existing plugin config matches.
 		cfg, err := pm.configLoader.Read()
@@ -50,7 +54,10 @@ func (pm *PluginManager) Init(dsName string, pluginConfig map[string]*structpb.S
 			return nil, err
 		}
 		if cfg.DataSource != dsName {
-			return nil, fmt.Errorf("existing config file uses a different plugin: %s vs %s", cfg.DataSource, dsName)
+			return nil, fmt.Errorf("existing config file uses a different data source plugin: %s vs %s", cfg.DataSource, dsName)
+		}
+		if cfg.ProvisionPlugin != provisionName {
+			return nil, fmt.Errorf("existing config file uses a different provision plugin: %s vs %s", cfg.ProvisionPlugin, provisionName)
 		}
 		if !maps.EqualFunc(cfg.PluginConfig, pluginConfig, proto.StructsEqual) {
 			return nil, fmt.Errorf("existing config file has different plugin config:\n%v\nvs\n\n%v", cfg.PluginConfig, pluginConfig)
@@ -59,6 +66,7 @@ func (pm *PluginManager) Init(dsName string, pluginConfig map[string]*structpb.S
 	} else {
 		cfg := config.NewConfig()
 		cfg.DataSource = dsName
+		cfg.ProvisionPlugin = provisionName
 		if pluginConfig != nil {
 			cfg.PluginConfig = pluginConfig
 		}
@@ -83,16 +91,7 @@ func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
 		return nil, errors.New("data source has already been loaded")
 	}
 
-	exists, err := pm.configLoader.Exists()
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
-	}
-
-	cfg, err := pm.configLoader.Read()
+	cfg, err := pm.readConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +115,7 @@ func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
 			Level:  hclog.Error,
 		})
 
-		client, ds, err = pm.loadGrpcPlugin(logger, cfg.DataSource)
+		client, ds, _, err = pm.loadGrpcPlugin(logger, cfg.DataSource)
 		if err != nil {
 			return nil, err
 		}
@@ -129,14 +128,77 @@ func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
 		return nil, err
 	}
 	pm.source = ds
-	pm.client = client
+	pm.clients[cfg.DataSource] = client
 	return ds, nil
 }
 
-func loadGrpcPlugin(logger hclog.Logger, pluginName string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
+func (pm *PluginManager) GetProvision() (provision.Provision, error) {
+	if pm.provision != nil {
+		return pm.provision, nil
+	}
+	return pm.loadProvision()
+}
+
+func (pm *PluginManager) loadProvision() (provision.Provision, error) {
+	if pm.provision != nil {
+		return nil, errors.New("provision plugin has already been loaded")
+	}
+
+	cfg, err := pm.readConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	if cfg.ProvisionPlugin == "" {
+		return nil, errors.New("provision plugin name cannot be empty")
+	}
+
+	var provision provision.Provision
+	var client *go_plugin.Client
+	switch cfg.ProvisionPlugin {
+	case SpireHelmProvisionPluginName:
+		return spirehelm.NewSpireHelm(nil), nil
+	default:
+		logger := hclog.New(&hclog.LoggerOptions{
+			Name:   "plugin",
+			Output: os.Stdout,
+			Level:  hclog.Error,
+		})
+
+		client, _, provision, err = pm.loadGrpcPlugin(logger, cfg.ProvisionPlugin)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := provision.Validate(context.TODO()); err != nil {
+		if client != nil {
+			client.Kill()
+		}
+		return nil, err
+	}
+	pm.provision = provision
+	pm.clients[cfg.ProvisionPlugin] = client
+	return provision, nil
+}
+
+func (pm *PluginManager) readConfig() (*config.Config, error) {
+	exists, err := pm.configLoader.Exists()
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
+	}
+
+	return pm.configLoader.Read()
+}
+
+func loadGrpcPlugin(logger hclog.Logger, pluginName string) (*go_plugin.Client, cofidectl_plugin.DataSource, provision.Provision, error) {
 	pluginPath, err := cofidectl_plugin.GetPluginPath(pluginName)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	cmd := exec.Command(pluginPath, cofidectl_plugin.DataSourcePluginArgs...)
@@ -145,45 +207,58 @@ func loadGrpcPlugin(logger hclog.Logger, pluginName string) (*go_plugin.Client, 
 		HandshakeConfig: cofidectl_plugin.HandshakeConfig,
 		Plugins: map[string]go_plugin.Plugin{
 			cofidectl_plugin.DataSourcePluginName: &cofidectl_plugin.DataSourcePlugin{},
+			provision.ProvisionPluginName:         &provision.ProvisionPlugin{},
 		},
 		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
 		Logger:           logger,
 	})
 
-	source, err := startGrpcPlugin(client, pluginName)
+	source, provision, err := startGrpcPlugin(client, pluginName)
 	if err != nil {
 		client.Kill()
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return client, source, nil
+	return client, source, provision, nil
 }
 
-func startGrpcPlugin(client *go_plugin.Client, pluginName string) (cofidectl_plugin.DataSource, error) {
+func startGrpcPlugin(client *go_plugin.Client, pluginName string) (cofidectl_plugin.DataSource, provision.Provision, error) {
 	grpcClient, err := client.Client()
 	if err != nil {
-		return nil, fmt.Errorf("cannot create interface to plugin: %w", err)
+		return nil, nil, fmt.Errorf("cannot create interface to plugin: %w", err)
 	}
 
 	if err = grpcClient.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping the gRPC client: %w", err)
+		return nil, nil, fmt.Errorf("failed to ping the gRPC client: %w", err)
 	}
 
 	raw, err := grpcClient.Dispense(cofidectl_plugin.DataSourcePluginName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dispense an instance of the plugin: %w", err)
+		return nil, nil, fmt.Errorf("failed to dispense an instance of the plugin: %w", err)
 	}
 
 	source, ok := raw.(cofidectl_plugin.DataSource)
 	if !ok {
-		return nil, fmt.Errorf("gRPC data source plugin %s does not implement plugin interface", pluginName)
+		return nil, nil, fmt.Errorf("gRPC data source plugin %s does not implement plugin interface", pluginName)
 	}
-	return source, nil
+
+	raw, err = grpcClient.Dispense(provision.ProvisionPluginName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to dispense an instance of the plugin: %w", err)
+	}
+
+	provision, ok := raw.(provision.Provision)
+	if !ok {
+		return nil, nil, fmt.Errorf("gRPC data source plugin %s does not implement plugin interface", pluginName)
+	}
+	return source, provision, nil
 }
 
 func (pm *PluginManager) Shutdown() {
-	if pm.client != nil {
-		pm.client.Kill()
-		pm.client = nil
+	for name, client := range pm.clients {
+		if client != nil {
+			client.Kill()
+		}
+		delete(pm.clients, name)
 	}
 	pm.source = nil
 }
@@ -217,9 +292,4 @@ func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *struct
 	}
 	cfg.PluginConfig[pluginName] = pluginConfig
 	return pm.configLoader.Write(cfg)
-}
-
-// GetProvision returns the provision plugin.
-func (pm *PluginManager) GetProvision() provision.Provision {
-	return spirehelm.NewSpireHelm(nil)
 }

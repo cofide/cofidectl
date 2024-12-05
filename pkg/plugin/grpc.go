@@ -23,6 +23,10 @@ type DataSourcePluginClientGRPC struct {
 	client cofidectl_proto.DataSourcePluginServiceClient
 }
 
+func NewDataSourcePluginClientGRPC(ctx context.Context, client cofidectl_proto.DataSourcePluginServiceClient) *DataSourcePluginClientGRPC {
+	return &DataSourcePluginClientGRPC{ctx: ctx, client: client}
+}
+
 func (c *DataSourcePluginClientGRPC) Validate() error {
 	_, err := c.client.Validate(c.ctx, &cofidectl_proto.ValidateRequest{})
 	return err

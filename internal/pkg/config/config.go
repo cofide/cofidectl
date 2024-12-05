@@ -17,6 +17,7 @@ type Config struct {
 	TrustZones          []*trust_zone_proto.TrustZone
 	AttestationPolicies []*attestation_policy_proto.AttestationPolicy
 	PluginConfig        map[string]*structpb.Struct
+	ProvisionPlugin     string
 }
 
 func NewConfig() *Config {
@@ -25,6 +26,7 @@ func NewConfig() *Config {
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 		PluginConfig:        map[string]*structpb.Struct{},
+		ProvisionPlugin:     "",
 	}
 }
 
@@ -34,6 +36,7 @@ func newConfigFromProto(proto *config_proto.Config) *Config {
 		TrustZones:          proto.TrustZones,
 		AttestationPolicies: proto.AttestationPolicies,
 		PluginConfig:        proto.PluginConfig,
+		ProvisionPlugin:     proto.GetProvisionPlugin(),
 	}
 }
 
@@ -43,6 +46,7 @@ func (c *Config) toProto() *config_proto.Config {
 		TrustZones:          c.TrustZones,
 		AttestationPolicies: c.AttestationPolicies,
 		PluginConfig:        c.PluginConfig,
+		ProvisionPlugin:     &c.ProvisionPlugin,
 	}
 }
 

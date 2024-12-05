@@ -36,6 +36,10 @@ func NewSpireHelm(providerFactory ProviderFactory) *SpireHelm {
 	return &SpireHelm{providerFactory: providerFactory}
 }
 
+func (h *SpireHelm) Validate(_ context.Context) error {
+	return nil
+}
+
 func (h *SpireHelm) Deploy(ctx context.Context, ds plugin.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
 	statusCh := make(chan *provisionpb.Status)
 

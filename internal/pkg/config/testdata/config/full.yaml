@@ -90,3 +90,4 @@ plugin_config:
     plugin2:
         number-cfg: 123
         string-cfg: fake-string
+provision_plugin: fake-provision-plugin

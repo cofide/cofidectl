@@ -12,10 +12,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-// DataSourcePluginName is the name that should be used in the plugin map.
-const DataSourcePluginName = "data_source"
+const (
+	// DataSourcePluginName is the name that should be used in the plugin map.
+	DataSourcePluginName = "data_source"
+)
 
 // DataSourcePluginArgs contains the arguments passed to plugins when executing them as a data source.
+// TODO: change to plugin serve
 var DataSourcePluginArgs []string = []string{"data-source", "serve"}
 
 // IsDataSourceServeCmd returns whether the provided command line arguments indicate that a plugin should serve a data source.

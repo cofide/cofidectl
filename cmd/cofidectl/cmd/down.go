@@ -34,7 +34,10 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return err
 			}
 
-			provision := d.cmdCtx.PluginManager.GetProvision()
+			provision, err := d.cmdCtx.PluginManager.GetProvision()
+			if err != nil {
+				return err
+			}
 			statusCh, err := provision.TearDown(cmd.Context(), ds)
 			if err != nil {
 				return err

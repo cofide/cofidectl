@@ -35,7 +35,10 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			provision := u.cmdCtx.PluginManager.GetProvision()
+			provision, err := u.cmdCtx.PluginManager.GetProvision()
+			if err != nil {
+				return err
+			}
 			statusCh, err := provision.Deploy(cmd.Context(), ds, kubeCfgFile)
 			if err != nil {
 				return err
