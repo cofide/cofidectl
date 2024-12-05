@@ -426,26 +426,20 @@ func getOrCreateNestedMap(m map[string]any, key string) (map[string]any, error) 
 
 // mergeMaps merges the source map into the destination map, returning a new merged map.
 func mergeMaps(dest, src map[string]any) map[string]any {
-	merged := make(map[string]any)
-
-	for key, value := range dest {
-		merged[key] = value
-	}
-
 	for key, value := range src {
 		if srcMap, isSrcMap := value.(map[string]any); isSrcMap {
-			if destMap, isDestMap := merged[key].(map[string]any); isDestMap {
-				merged[key] = mergeMaps(destMap, srcMap)
+			if destMap, isDestMap := dest[key].(map[string]any); isDestMap {
+				dest[key] = mergeMaps(destMap, srcMap)
 			} else {
-				merged[key] = srcMap
+				dest[key] = srcMap
 			}
 		} else {
 			// Always overwrite existing keys.
-			merged[key] = value
+			dest[key] = value
 		}
 	}
 
-	return merged
+	return dest
 }
 
 // shallowMerge flattens a slice of maps into a single map.
