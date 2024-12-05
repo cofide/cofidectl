@@ -440,14 +440,60 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 	}
 }
 
-func TestGetNestedMap(t *testing.T) {
+func TestGetOrCreateNestedMap(t *testing.T) {
 	tests := []struct {
-		name   string
-		values map[string]any
-		key    string
-		want   map[string]any
-		exists bool
+		name      string
+		values    map[string]any
+		key       string
+		want      map[string]any
+		wantErr   bool
+		errString string
 	}{
+		{
+			name:   "create new map for missing key",
+			values: map[string]any{"foo": "bar"},
+			key:    "newkey",
+			want:   map[string]any{},
+		},
+		{
+			name: "get existing map",
+			values: map[string]any{
+				"existing": map[string]any{"foo": "bar"},
+			},
+			key:  "existing",
+			want: map[string]any{"foo": "bar"},
+		},
+		{
+			name:      "nil input map",
+			values:    nil,
+			key:       "key",
+			wantErr:   true,
+			errString: "input map is nil",
+		},
+		{
+			name:      "empty key",
+			values:    map[string]any{},
+			key:       "",
+			wantErr:   true,
+			errString: "key cannot be empty",
+		},
+		{
+			name: "key exists but wrong type",
+			values: map[string]any{
+				"wrongtype": "not a map",
+			},
+			key:       "wrongtype",
+			wantErr:   true,
+			errString: "value for key \"wrongtype\" is of type string, expected map[string]any",
+		},
+		{
+			name: "key exists but value is nil",
+			values: map[string]any{
+				"nilvalue": nil,
+			},
+			key:  "nilvalue",
+			want: map[string]any{},
+		},
 		{
 			name: "map exists, valid key",
 			values: map[string]any{
@@ -459,7 +505,6 @@ func TestGetNestedMap(t *testing.T) {
 			want: map[string]any{
 				"fullnameOverride": "spire-server",
 			},
-			exists: true,
 		},
 		{
 			name: "map doesn't exist, valid key",
@@ -469,18 +514,25 @@ func TestGetNestedMap(t *testing.T) {
 					"caTTL":     "12h",
 				},
 			},
-			key:    "global",
-			exists: false,
+			key:  "global",
+			want: map[string]any{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, exists := getNestedMap(tt.values, tt.key)
-
-			assert.Equal(t, tt.exists, exists)
-			if tt.exists {
-				assert.Equal(t, tt.want, resp)
+			resp, err := getOrCreateNestedMap(tt.values, tt.key)
+			if tt.wantErr {
+				assert.Equal(t, tt.errString, err.Error())
+				return
 			}
+
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want, resp)
+			assert.IsType(t, map[string]any{}, resp)
+
+			// For new maps, check that they were added to the input map.
+			_, exists := tt.values[tt.key]
+			assert.True(t, exists)
 		})
 	}
 }

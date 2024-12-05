@@ -111,14 +111,14 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, err
 	}
 
-	spireServer, ok := getNestedMap(spireServerValues, "spire-server")
-	if !ok {
-		return nil, fmt.Errorf("failed to get spire-server map from spireServerValues")
+	spireServer, err := getOrCreateNestedMap(spireServerValues, "spire-server")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spire-server map from spireServerValues: %w", err)
 	}
 
-	controllerManager, ok := getNestedMap(spireServer, "controllerManager")
-	if !ok {
-		return nil, fmt.Errorf("failed to get controllerManager map from spireServer")
+	controllerManager, err := getOrCreateNestedMap(spireServer, "controllerManager")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get controllerManager map from spireServer: %w", err)
 	}
 
 	// Enables the default ClusterSPIFFEID CR by default.
@@ -130,15 +130,15 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		},
 	}
 
-	identities, ok := getNestedMap(controllerManager, "identities")
-	if !ok {
-		return nil, fmt.Errorf("failed to get identities map from controllerManager")
+	identities, err := getOrCreateNestedMap(controllerManager, "identities")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get identities map from controllerManager: %w", err)
 	}
 
 	if len(g.trustZone.AttestationPolicies) > 0 {
-		csids, ok := getNestedMap(identities, "clusterSPIFFEIDs")
-		if !ok {
-			return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities")
+		csids, err := getOrCreateNestedMap(identities, "clusterSPIFFEIDs")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities: %w", err)
 		}
 
 		// Disables the default ClusterSPIFFEID CR.
@@ -175,14 +175,12 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 					"enabled": true,
 				}
 
-				cftd, ok := getNestedMap(identities, "clusterFederatedTrustDomains")
-				if !ok {
-					identities["clusterFederatedTrustDomains"] = map[string]any{
-						fed.To: federation.NewFederation(tz).GetHelmConfig(),
-					}
-				} else {
-					cftd[fed.To] = federation.NewFederation(tz).GetHelmConfig()
+				cftd, err := getOrCreateNestedMap(identities, "clusterFederatedTrustDomains")
+				if err != nil {
+					return nil, fmt.Errorf("failed to get clusterFederatedTrustDomains map from identities: %w", err)
 				}
+
+				cftd[fed.To] = federation.NewFederation(tz).GetHelmConfig()
 			}
 		}
 	}
@@ -251,14 +249,14 @@ func (g *globalValues) generateValues() (map[string]any, error) {
 	}
 
 	if g.spireJwtIssuer != "" {
-		global, ok := getNestedMap(values, "global")
-		if !ok {
-			return nil, fmt.Errorf("failed to get global map")
+		global, err := getOrCreateNestedMap(values, "global")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get global map: %w", err)
 		}
 
-		spire, ok := getNestedMap(global, "spire")
-		if !ok {
-			return nil, fmt.Errorf("failed to get spire map from global map")
+		spire, err := getOrCreateNestedMap(global, "spire")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get spire map from global map: %w", err)
 		}
 
 		spire["jwtIssuer"] = g.spireJwtIssuer
@@ -391,15 +389,36 @@ func (s *spiffeCSIDriverValues) generateValues() (map[string]any, error) {
 	}, nil
 }
 
-// getNestedMap retrieves a nested map[string]any from a parent map.
-func getNestedMap(m map[string]any, key string) (map[string]any, bool) {
-	value, exists := m[key]
-	if !exists {
-		return nil, false
+// getOrCreateNestedMap retrieves a nested map[string]any from a parent map or creates it
+// if it doesn't exist.
+func getOrCreateNestedMap(m map[string]any, key string) (map[string]any, error) {
+	if m == nil {
+		return nil, fmt.Errorf("input map is nil")
 	}
 
-	nestedMap := value.(map[string]any)
-	return nestedMap, true
+	if key == "" {
+		return nil, fmt.Errorf("key cannot be empty")
+	}
+
+	if value, exists := m[key]; exists {
+		if value == nil {
+			newMap := make(map[string]any)
+			m[key] = newMap
+			return newMap, nil
+		}
+
+		subMap, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("value for key %q is of type %T, expected map[string]any", key, value)
+		}
+
+		return subMap, nil
+	}
+
+	// When the key doesn't exist, create a new map.
+	newMap := make(map[string]any)
+	m[key] = newMap
+	return newMap, nil
 }
 
 // mergeMaps merges the source map into the destination map, returning a new merged map.
