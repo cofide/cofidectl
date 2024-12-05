@@ -578,6 +578,36 @@ func TestMergeMaps(t *testing.T) {
 			},
 		},
 		{
+			name: "valid src and valid dest, src and dest types differ",
+			src: map[string]any{
+				"fizz": "buzz",
+			},
+			dest: map[string]any{
+				"fizz": map[string]any{
+					"fizz nested": "buzz",
+				},
+			},
+			want: map[string]any{
+				"fizz": "buzz",
+			},
+		},
+		{
+			name: "valid src and valid dest, dest and src types differ",
+			src: map[string]any{
+				"fizz": map[string]any{
+					"fizz nested": "buzz",
+				},
+			},
+			dest: map[string]any{
+				"fizz": "buzz",
+			},
+			want: map[string]any{
+				"fizz": map[string]any{
+					"fizz nested": "buzz",
+				},
+			},
+		},
+		{
 			name: "valid src and valid dest, nested",
 			src: map[string]any{
 				"global": map[string]any{
