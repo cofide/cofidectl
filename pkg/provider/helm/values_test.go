@@ -605,6 +605,66 @@ func TestMergeMaps(t *testing.T) {
 			},
 		},
 		{
+			name: "valid src and valid dest, additional nesting, retaining existing",
+			src: map[string]any{
+				"spire-server": map[string]any{
+					"controllerManager": map[string]any{
+						"identities": map[string]any{
+							"clusterFederatedTrustDomains": map[string]any{
+								"cofide": map[string]any{
+									"bundleEndpointProfile": map[string]any{
+										"type": "https_web",
+									},
+									"bundleEndpointURL": "https://td1/connect/bundle",
+									"trustDomain":       "td1",
+								},
+							},
+						},
+					},
+				},
+			},
+			dest: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"controllerManager": map[string]any{
+						"enabled": true,
+						"identities": map[string]any{
+							"clusterSPIFFEIDs": map[string]any{
+								"default": Values{
+									"enabled": true,
+								},
+							},
+						},
+					},
+				},
+			},
+			overwriteExistingKeys: true,
+			want: map[string]any{
+				"spire-server": map[string]any{
+					"caKeyType": "rsa-2048",
+					"controllerManager": map[string]any{
+						"enabled": true,
+						"identities": map[string]any{
+							"clusterSPIFFEIDs": map[string]any{
+								"default": Values{
+									"enabled": true,
+								},
+							},
+							"clusterFederatedTrustDomains": map[string]any{
+								"cofide": map[string]any{
+									"bundleEndpointProfile": map[string]any{
+										"type": "https_web",
+									},
+									"bundleEndpointURL": "https://td1/connect/bundle",
+									"trustDomain":       "td1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "valid src and valid dest, additional nesting, with overwrites",
 			src: map[string]any{
 				"spire-server": map[string]any{
