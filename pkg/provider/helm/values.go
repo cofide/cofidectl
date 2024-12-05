@@ -171,9 +171,12 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 			}
 
 			if tz.GetBundleEndpointUrl() != "" {
-				spireServer["federation"] = map[string]any{
-					"enabled": true,
+				fedMap, err := getOrCreateNestedMap(spireServer, "federation")
+				if err != nil {
+					return nil, fmt.Errorf("failed to get federation map from spireServer: %w", err)
 				}
+
+				fedMap["enabled"] = true
 
 				cftd, err := getOrCreateNestedMap(identities, "clusterFederatedTrustDomains")
 				if err != nil {
