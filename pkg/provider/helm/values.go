@@ -218,16 +218,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		spiffeCSIDriverValues,
 	}
 
-	combinedValues := flattenMaps(valuesMaps)
+	combinedValues := shallowMerge(valuesMaps)
 
 	if g.values != nil {
-		combinedValues = mergeMaps(g.values, combinedValues, true)
+		combinedValues = mergeMaps(combinedValues, g.values)
 	}
 
 	if g.trustZone.ExtraHelmValues != nil {
 		// TODO: Potentially retrieve Helm values as map[string]any directly.
 		extraHelmValues := g.trustZone.ExtraHelmValues.AsMap()
-		combinedValues = mergeMaps(extraHelmValues, combinedValues, true)
+		combinedValues = mergeMaps(combinedValues, extraHelmValues)
 	}
 
 	return combinedValues, nil
@@ -398,7 +398,7 @@ func getNestedMap(m map[string]any, key string) (map[string]any, bool) {
 }
 
 // mergeMaps merges the source map into the destination map, returning a new merged map.
-func mergeMaps(src, dest map[string]any, overwriteExistingKeys bool) map[string]any {
+func mergeMaps(dest, src map[string]any) map[string]any {
 	merged := make(map[string]any)
 
 	for key, value := range dest {
@@ -408,11 +408,12 @@ func mergeMaps(src, dest map[string]any, overwriteExistingKeys bool) map[string]
 	for key, value := range src {
 		if srcMap, isSrcMap := value.(map[string]any); isSrcMap {
 			if destMap, isDestMap := merged[key].(map[string]any); isDestMap {
-				merged[key] = mergeMaps(srcMap, destMap, overwriteExistingKeys)
+				merged[key] = mergeMaps(destMap, srcMap)
 			} else {
 				merged[key] = srcMap
 			}
-		} else if overwriteExistingKeys || merged[key] == nil {
+		} else {
+			// Always overwrite existing keys.
 			merged[key] = value
 		}
 	}
@@ -420,8 +421,8 @@ func mergeMaps(src, dest map[string]any, overwriteExistingKeys bool) map[string]
 	return merged
 }
 
-// flattenMaps flattens a slice of maps into a single map.
-func flattenMaps(maps []map[string]any) map[string]any {
+// shallowMerge flattens a slice of maps into a single map.
+func shallowMerge(maps []map[string]any) map[string]any {
 	flattened := make(map[string]any)
 	for _, m := range maps {
 		for key, value := range m {

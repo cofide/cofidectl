@@ -18,7 +18,6 @@ import (
 )
 
 type Values = map[string]any
-type ValueList = []any
 
 func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 	tests := []struct {
@@ -470,12 +469,7 @@ func TestGetNestedMap(t *testing.T) {
 					"caTTL":     "12h",
 				},
 			},
-			key: "global",
-			want: map[string]any{
-				"spire": map[string]any{
-					"clusterName": "local1",
-				},
-			},
+			key:    "global",
 			exists: false,
 		},
 	}
@@ -493,50 +487,46 @@ func TestGetNestedMap(t *testing.T) {
 
 func TestMergeMaps(t *testing.T) {
 	tests := []struct {
-		name                  string
-		src                   map[string]any
-		dest                  map[string]any
-		overwriteExistingKeys bool
-		want                  map[string]any
+		name string
+		src  map[string]any
+		dest map[string]any
+		want map[string]any
 	}{
 		{
-			name: "valid src and valid dest, no overwrites",
+			name: "valid src and valid dest",
 			src: map[string]any{
 				"foo": "bar",
 			},
 			dest: map[string]any{
 				"fizz": "buzz",
 			},
-			overwriteExistingKeys: false,
 			want: map[string]any{
 				"foo":  "bar",
 				"fizz": "buzz",
 			},
 		},
 		{
-			name: "valid src and empty dest, no overwrites",
+			name: "valid src and empty dest",
 			src: map[string]any{
 				"foo": "bar",
 			},
-			dest:                  map[string]any{},
-			overwriteExistingKeys: false,
+			dest: map[string]any{},
 			want: map[string]any{
 				"foo": "bar",
 			},
 		},
 		{
-			name: "empty src and valid dest, no overwrites",
+			name: "empty src and valid dest",
 			src:  map[string]any{},
 			dest: map[string]any{
 				"fizz": "buzz",
 			},
-			overwriteExistingKeys: false,
 			want: map[string]any{
 				"fizz": "buzz",
 			},
 		},
 		{
-			name: "valid src and valid dest, nested, no overwrites",
+			name: "valid src and valid dest, nested",
 			src: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
@@ -552,18 +542,17 @@ func TestMergeMaps(t *testing.T) {
 					"trustDomain": "td1",
 				},
 			},
-			overwriteExistingKeys: false,
 			want: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
-						"clusterName": "local1",
+						"clusterName": "local1-new",
 					},
 					"trustDomain": "td1",
 				},
 			},
 		},
 		{
-			name: "valid src and valid dest, with overwrites",
+			name: "valid src and valid dest, with existing key",
 			src: map[string]any{
 				"foo":   "bar",
 				"hello": "world",
@@ -571,14 +560,13 @@ func TestMergeMaps(t *testing.T) {
 			dest: map[string]any{
 				"foo": "baz",
 			},
-			overwriteExistingKeys: true,
 			want: map[string]any{
 				"foo":   "bar",
 				"hello": "world",
 			},
 		},
 		{
-			name: "valid src and valid dest, nested, with overwrites",
+			name: "valid src and valid dest, nested, with existing key",
 			src: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
@@ -594,7 +582,6 @@ func TestMergeMaps(t *testing.T) {
 					"trustDomain": "td1",
 				},
 			},
-			overwriteExistingKeys: true,
 			want: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
@@ -605,7 +592,7 @@ func TestMergeMaps(t *testing.T) {
 			},
 		},
 		{
-			name: "valid src and valid dest, additional nesting, retaining existing",
+			name: "valid src and valid dest, additional nesting, existing key",
 			src: map[string]any{
 				"spire-server": map[string]any{
 					"controllerManager": map[string]any{
@@ -638,7 +625,6 @@ func TestMergeMaps(t *testing.T) {
 					},
 				},
 			},
-			overwriteExistingKeys: true,
 			want: map[string]any{
 				"spire-server": map[string]any{
 					"caKeyType": "rsa-2048",
@@ -648,73 +634,6 @@ func TestMergeMaps(t *testing.T) {
 							"clusterSPIFFEIDs": map[string]any{
 								"default": Values{
 									"enabled": true,
-								},
-							},
-							"clusterFederatedTrustDomains": map[string]any{
-								"cofide": map[string]any{
-									"bundleEndpointProfile": map[string]any{
-										"type": "https_web",
-									},
-									"bundleEndpointURL": "https://td1/connect/bundle",
-									"trustDomain":       "td1",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "valid src and valid dest, additional nesting, with overwrites",
-			src: map[string]any{
-				"spire-server": map[string]any{
-					"caKeyType": "rsa-2048",
-					"controllerManager": map[string]any{
-						"enabled": true,
-						"identities": map[string]any{
-							"clusterSPIFFEIDs": map[string]any{
-								"default": Values{
-									"enabled": false,
-								},
-							},
-							"clusterFederatedTrustDomains": map[string]any{
-								"cofide": map[string]any{
-									"bundleEndpointProfile": map[string]any{
-										"type": "https_web",
-									},
-									"bundleEndpointURL": "https://td1/connect/bundle",
-									"trustDomain":       "td1",
-								},
-							},
-						},
-					},
-				},
-			},
-			dest: map[string]any{
-				"spire-server": map[string]any{
-					"caKeyType": "rsa-2048",
-					"controllerManager": map[string]any{
-						"enabled": true,
-						"identities": map[string]any{
-							"clusterSPIFFEIDs": map[string]any{
-								"default": Values{
-									"enabled": true,
-								},
-							},
-						},
-					},
-				},
-			},
-			overwriteExistingKeys: true,
-			want: map[string]any{
-				"spire-server": map[string]any{
-					"caKeyType": "rsa-2048",
-					"controllerManager": map[string]any{
-						"enabled": true,
-						"identities": map[string]any{
-							"clusterSPIFFEIDs": map[string]any{
-								"default": Values{
-									"enabled": false,
 								},
 							},
 							"clusterFederatedTrustDomains": map[string]any{
@@ -734,13 +653,13 @@ func TestMergeMaps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := mergeMaps(tt.src, tt.dest, tt.overwriteExistingKeys)
+			resp := mergeMaps(tt.dest, tt.src)
 			assert.Equal(t, tt.want, resp)
 		})
 	}
 }
 
-func TestFlattenMaps(t *testing.T) {
+func TestShallowMerge(t *testing.T) {
 	tests := []struct {
 		name string
 		maps []map[string]any
@@ -787,7 +706,7 @@ func TestFlattenMaps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := flattenMaps(tt.maps)
+			resp := shallowMerge(tt.maps)
 			assert.Equal(t, tt.want, resp)
 		})
 	}
