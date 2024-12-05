@@ -746,6 +746,59 @@ func TestGlobalValues_GenerateValues(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid global values, empty jwtIssuer value",
+			input: globalValues{
+				spireClusterName: "local1",
+				spireTrustDomain: "td1",
+				spireJwtIssuer:   "",
+			},
+			want: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1",
+						"recommendations": map[string]any{
+							"create": false,
+						},
+						"trustDomain": "td1",
+					},
+					"installAndUpgradeHooks": map[string]any{
+						"enabled": false,
+					},
+					"deleteHooks": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid global values, populated jwtIssuer value",
+			input: globalValues{
+				spireClusterName: "local1",
+				spireTrustDomain: "td1",
+				spireJwtIssuer:   "https://tz1.example.com",
+			},
+			want: map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"clusterName": "local1",
+						"jwtIssuer":   "https://tz1.example.com",
+						"recommendations": map[string]any{
+							"create": false,
+						},
+						"trustDomain": "td1",
+					},
+					"installAndUpgradeHooks": map[string]any{
+						"enabled": false,
+					},
+					"deleteHooks": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "invalid global values, missing spireTrustDomain value",
 			input: globalValues{
 				spireClusterName: "local1",

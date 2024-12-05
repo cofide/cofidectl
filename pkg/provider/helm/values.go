@@ -25,6 +25,7 @@ type globalValues struct {
 	installAndUpgradeHooksEnabled bool
 	spireClusterName              string
 	spireCreateRecommendations    bool
+	spireJwtIssuer                string
 	spireTrustDomain              string
 }
 
@@ -74,27 +75,15 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	gv := globalValues{
 		spireClusterName:              g.trustZone.GetKubernetesCluster(),
 		spireCreateRecommendations:    true,
+		spireJwtIssuer:                g.trustZone.GetJwtIssuer(),
 		spireTrustDomain:              g.trustZone.TrustDomain,
 		installAndUpgradeHooksEnabled: false,
 		deleteHooks:                   false,
 	}
+
 	globalValues, err := gv.generateValues()
 	if err != nil {
 		return nil, err
-	}
-
-	if issuer := g.trustZone.GetJwtIssuer(); issuer != "" {
-		global, ok := getNestedMap(globalValues, "global")
-		if !ok {
-			return nil, fmt.Errorf("failed to get global map from globalValues")
-		}
-
-		spire, ok := getNestedMap(global, "spire")
-		if !ok {
-			return nil, fmt.Errorf("failed to get spire map from global map")
-		}
-
-		spire["jwtIssuer"] = issuer
 	}
 
 	sav := spireAgentValues{
@@ -243,7 +232,7 @@ func (g *globalValues) generateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("spireTrustDomain value is empty")
 	}
 
-	return map[string]any{
+	values := map[string]any{
 		"global": map[string]any{
 			"spire": map[string]any{
 				"clusterName": g.spireClusterName,
@@ -259,7 +248,23 @@ func (g *globalValues) generateValues() (map[string]any, error) {
 				"enabled": g.deleteHooks,
 			},
 		},
-	}, nil
+	}
+
+	if g.spireJwtIssuer != "" {
+		global, ok := getNestedMap(values, "global")
+		if !ok {
+			return nil, fmt.Errorf("failed to get global map")
+		}
+
+		spire, ok := getNestedMap(global, "spire")
+		if !ok {
+			return nil, fmt.Errorf("failed to get spire map from global map")
+		}
+
+		spire["jwtIssuer"] = g.spireJwtIssuer
+	}
+
+	return values, nil
 }
 
 // generateValues generates the spire-agent Helm values map.
