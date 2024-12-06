@@ -75,22 +75,11 @@ func NewHelmSPIREProvider(ctx context.Context, trustZone *trust_zone_proto.Trust
 }
 
 // AddRepository adds the SPIRE Helm repository to the local repositories.yaml.
-// The action is performed asynchronously and status is streamed through the returned status channel.
+// The action is performed synchronously and status is streamed through the provided status channel.
 // This function should be called once, not per-trust zone.
-func (h *HelmSPIREProvider) AddRepository() <-chan *provisionpb.Status {
-	statusCh := make(chan *provisionpb.Status)
-
-	go func() {
-		defer close(statusCh)
-		h.addRepository(statusCh)
-	}()
-
-	return statusCh
-}
-
-// addRepository adds the SPIRE Helm repository to the local repositories.yaml.
-// It attempts to lock the repositories.lock file while making changes.
-func (h *HelmSPIREProvider) addRepository(statusCh chan *provisionpb.Status) {
+// The SPIRE Helm repository is added to the local repositories.yaml, locking the repositories.lock
+// file while making changes.
+func (h *HelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Status) {
 	statusCh <- provision.StatusOk("Preparing", "Adding SPIRE Helm repo")
 	lockCtx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
 	defer cancel()
@@ -168,128 +157,86 @@ func lockPath(filePath string) string {
 	}
 }
 
-// Execute creates a provider status channel and performs the Helm chart installations.
-func (h *HelmSPIREProvider) Execute() <-chan *provisionpb.Status {
-	statusCh := make(chan *provisionpb.Status)
-
-	h.installChart(statusCh)
-
-	return statusCh
-}
-
-// install installs the Cofide-enabled SPIRE stack to the selected Kubernetes context
-// and updates the status channel accordingly.
-func (h *HelmSPIREProvider) installChart(statusCh chan *provisionpb.Status) {
-	go func() {
-		defer close(statusCh)
-
-		msg := fmt.Sprintf("Installing SPIRE CRDs for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusOk("Installing", msg)
-		_, err := h.installSPIRECRDs()
-		if err != nil {
-			msg := fmt.Sprintf("Failed to install SPIRE CRDs for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-			statusCh <- provision.StatusError("Installing", msg, err)
-			return
-		}
-
-		msg = fmt.Sprintf("Installing SPIRE chart for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusOk("Installing", msg)
-		_, err = h.installSPIRE()
-		if err != nil {
-			msg := fmt.Sprintf("Failed to install SPIRE chart for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-			statusCh <- provision.StatusError("Installing", msg, err)
-			return
-		}
-
-		msg = fmt.Sprintf("Installation completed for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusDone("Installed", msg)
-	}()
-}
-
-func (h *HelmSPIREProvider) ExecuteUpgrade(postInstall bool) <-chan *provisionpb.Status {
-	statusCh := make(chan *provisionpb.Status)
-
-	// differentiate between a post-installation upgrade (ie configuration) and a full upgrade
-	if postInstall {
-		h.postInstallUpgrade(statusCh)
-	} else {
-		h.upgradeChart(statusCh)
+// Execute installs the SPIRE Helm stack to the selected Kubernetes context.
+// The action is performed synchronously and status is streamed through the provided status channel.
+func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) {
+	msg := fmt.Sprintf("Installing SPIRE CRDs for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusOk("Installing", msg)
+	_, err := h.installSPIRECRDs()
+	if err != nil {
+		msg := fmt.Sprintf("Failed to install SPIRE CRDs for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+		statusCh <- provision.StatusError("Installing", msg, err)
+		return
 	}
 
-	return statusCh
+	msg = fmt.Sprintf("Installing SPIRE chart for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusOk("Installing", msg)
+	_, err = h.installSPIRE()
+	if err != nil {
+		msg := fmt.Sprintf("Failed to install SPIRE chart for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+		statusCh <- provision.StatusError("Installing", msg, err)
+		return
+	}
+
+	msg = fmt.Sprintf("Installation completed for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusDone("Installed", msg)
 }
 
-func (h *HelmSPIREProvider) postInstallUpgrade(statusCh chan *provisionpb.Status) {
-	go func() {
-		defer close(statusCh)
+// ExecutePostInstallUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
+// The action is performed synchronously and status is streamed through the provided status channel.
+func (h *HelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provisionpb.Status) {
+	msg := fmt.Sprintf("Applying post-installation configuration for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusOk("Configuring", msg)
+	_, err := h.upgradeSPIRE()
+	if err != nil {
+		msg := fmt.Sprintf("Failed to apply post-installation configuration for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+		statusCh <- provision.StatusError("Configuring", msg, err)
+		return
+	}
 
-		msg := fmt.Sprintf("Applying post-installation configuration for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusOk("Configuring", msg)
-		_, err := h.upgradeSPIRE()
-		if err != nil {
-			msg := fmt.Sprintf("Failed to apply post-installation configuration for %s to cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-			statusCh <- provision.StatusError("Configuring", msg, err)
-			return
-		}
-
-		msg = fmt.Sprintf("Post-installation configuration completed for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusDone("Configured", msg)
-	}()
+	msg = fmt.Sprintf("Post-installation configuration completed for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusDone("Configured", msg)
 }
 
-func (h *HelmSPIREProvider) upgradeChart(statusCh chan *provisionpb.Status) {
-	go func() {
-		defer close(statusCh)
+// ExecuteUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
+// The action is performed synchronously and status is streamed through the provided status channel.
+func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) {
+	msg := fmt.Sprintf("Upgrading SPIRE chart for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusOk("Upgrading", msg)
+	_, err := h.upgradeSPIRE()
+	if err != nil {
+		msg := fmt.Sprintf("Failed to upgrade SPIRE chart for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+		statusCh <- provision.StatusError("Upgrading", msg, err)
+		return
+	}
 
-		msg := fmt.Sprintf("Upgrading SPIRE chart for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusOk("Upgrading", msg)
-		_, err := h.upgradeSPIRE()
-		if err != nil {
-			msg := fmt.Sprintf("Failed to upgrade SPIRE chart for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-			statusCh <- provision.StatusError("Upgrading", msg, err)
-			return
-		}
-
-		msg = fmt.Sprintf("Upgrade completed for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusDone("Upgraded", msg)
-	}()
+	msg = fmt.Sprintf("Upgrade completed for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusDone("Upgraded", msg)
 }
 
-func (h *HelmSPIREProvider) ExecuteUninstall() <-chan *provisionpb.Status {
-	statusCh := make(chan *provisionpb.Status)
+// ExecuteUninstall uninstalls the SPIRE stack from the selected Kubernetes context.
+// The action is performed synchronously and status is streamed through the provided status channel.
+func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) {
+	msg := fmt.Sprintf("Uninstalling SPIRE CRDs for %s from cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusOk("Uninstalling", msg)
+	_, err := h.uninstallSPIRECRDs()
+	if err != nil {
+		msg := fmt.Sprintf("Failed to uninstall SPIRE CRDs for %s from cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+		statusCh <- provision.StatusError("Uninstalling", msg, err)
+		return
+	}
 
-	h.uninstall(statusCh)
+	msg = fmt.Sprintf("Uninstalling SPIRE chart for %s from cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusOk("Uninstalling", msg)
+	_, err = h.uninstallSPIRE()
+	if err != nil {
+		msg := fmt.Sprintf("Failed to uninstall SPIRE chart for %s from cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+		statusCh <- provision.StatusError("Uninstalling", msg, err)
+		return
+	}
 
-	return statusCh
-}
-
-// uninstall uninstalls the Cofide-enabled SPIRE stack from the selected Kubernetes context
-// and updates the status channel accordingly.
-func (h *HelmSPIREProvider) uninstall(statusCh chan *provisionpb.Status) {
-	go func() {
-		defer close(statusCh)
-
-		msg := fmt.Sprintf("Uninstalling SPIRE CRDs for %s from cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusOk("Uninstalling", msg)
-		_, err := h.uninstallSPIRECRDs()
-		if err != nil {
-			msg := fmt.Sprintf("Failed to uninstall SPIRE CRDs for %s from cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-			statusCh <- provision.StatusError("Uninstalling", msg, err)
-			return
-		}
-
-		msg = fmt.Sprintf("Uninstalling SPIRE chart for %s from cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusOk("Uninstalling", msg)
-		_, err = h.uninstallSPIRE()
-		if err != nil {
-			msg := fmt.Sprintf("Failed to uninstall SPIRE chart for %s from cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-			statusCh <- provision.StatusError("Uninstalling", msg, err)
-			return
-		}
-
-		msg = fmt.Sprintf("Uninstallation completed for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusDone("Uninstalled", msg)
-	}()
+	msg = fmt.Sprintf("Uninstallation completed for %s on cluster %s", h.trustZone.Name, h.trustZone.GetKubernetesCluster())
+	statusCh <- provision.StatusDone("Uninstalled", msg)
 }
 
 // CheckIfAlreadyInstalled returns true if the SPIRE chart has previously been installed.

@@ -102,13 +102,6 @@ func tearDown(ctx context.Context, ds plugin.DataSource, statusCh chan<- *provis
 	return nil
 }
 
-// statusPipe forwards Status messages from one channel to another.
-func statusPipe(inCh <-chan *provisionpb.Status, outCh chan<- *provisionpb.Status) {
-	for inStatus := range inCh {
-		outCh <- inStatus
-	}
-}
-
 func addSPIRERepository(ctx context.Context, statusCh chan<- *provisionpb.Status) error {
 	emptyValues := map[string]interface{}{}
 	prov, err := helm.NewHelmSPIREProvider(ctx, nil, emptyValues, emptyValues)
@@ -116,7 +109,7 @@ func addSPIRERepository(ctx context.Context, statusCh chan<- *provisionpb.Status
 		return err
 	}
 
-	statusPipe(prov.AddRepository(), statusCh)
+	prov.AddRepository(statusCh)
 	return nil
 }
 
@@ -134,7 +127,7 @@ func installSPIREStack(ctx context.Context, source plugin.DataSource, trustZones
 			return err
 		}
 
-		statusPipe(prov.Execute(), statusCh)
+		prov.Execute(statusCh)
 	}
 	return nil
 }
@@ -142,17 +135,12 @@ func installSPIREStack(ctx context.Context, source plugin.DataSource, trustZones
 func watchAndConfigure(ctx context.Context, source plugin.DataSource, trustZones []*trust_zone_proto.TrustZone, kubeCfgFile string, statusCh chan<- *provisionpb.Status) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
-		providerStatusCh := make(chan *provisionpb.Status)
-
-		go getBundleAndEndpoint(ctx, providerStatusCh, source, trustZone, kubeCfgFile)
-
-		statusPipe(providerStatusCh, statusCh)
+		getBundleAndEndpoint(ctx, statusCh, source, trustZone, kubeCfgFile)
 	}
 	return nil
 }
 
 func getBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Status, source plugin.DataSource, trustZone *trust_zone_proto.TrustZone, kubeCfgFile string) {
-	defer close(statusCh)
 	msg := fmt.Sprintf("Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
 	statusCh <- provision.StatusOk("Waiting", msg)
 
@@ -209,7 +197,7 @@ func applyPostInstallHelmConfig(ctx context.Context, source plugin.DataSource, t
 			return err
 		}
 
-		statusPipe(prov.ExecuteUpgrade(true), statusCh)
+		prov.ExecutePostInstallUpgrade(statusCh)
 	}
 
 	return nil
@@ -222,7 +210,7 @@ func uninstallSPIREStack(ctx context.Context, trustZones []*trust_zone_proto.Tru
 			return err
 		}
 
-		statusPipe(prov.ExecuteUninstall(), statusCh)
+		prov.ExecuteUninstall(statusCh)
 	}
 	return nil
 }
