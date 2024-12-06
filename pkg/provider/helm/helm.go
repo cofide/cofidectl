@@ -274,7 +274,6 @@ func installChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
 	}
 	if alreadyInstalled {
-		fmt.Printf("%v already installed", chartName)
 		return nil, nil
 	}
 
@@ -291,7 +290,6 @@ func installChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, err
 	}
 
-	fmt.Printf("Installing %v...", cr.Name())
 	return client.RunWithContext(ctx, cr, values)
 }
 
@@ -331,7 +329,6 @@ func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, err
 	}
 
-	fmt.Printf("Upgrading %v...", chart.Name())
 	return client.RunWithContext(ctx, chartName, chart, values)
 }
 
@@ -360,7 +357,6 @@ func uninstallChart(cfg *action.Configuration, client *action.Uninstall, chartNa
 		return nil, fmt.Errorf("%v not installed", chartName)
 	}
 
-	fmt.Printf("Uninstalling %v...", chartName)
 	return client.Run(chartName)
 }
 
