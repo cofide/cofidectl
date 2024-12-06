@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +36,11 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			}
 
 			provision := u.cmdCtx.PluginManager.GetProvision()
-			return provision.Deploy(cmd.Context(), ds, kubeCfgFile)
+			statusCh, err := provision.Deploy(cmd.Context(), ds, kubeCfgFile)
+			if err != nil {
+				return err
+			}
+			return statusspinner.WatchProvisionStatus(cmd.Context(), statusCh)
 		},
 	}
 	return cmd

@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +35,11 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 			}
 
 			provision := d.cmdCtx.PluginManager.GetProvision()
-			return provision.TearDown(cmd.Context(), ds)
+			statusCh, err := provision.TearDown(cmd.Context(), ds)
+			if err != nil {
+				return err
+			}
+			return statusspinner.WatchProvisionStatus(cmd.Context(), statusCh)
 		},
 	}
 	return cmd
