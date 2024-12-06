@@ -65,13 +65,23 @@ func (ap *AttestationPolicy) GetHelmConfig(source cofidectl_plugin.DataSource, b
 	return clusterSPIFFEID, nil
 }
 
-func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSelector) map[string]interface{} {
+func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSelector) map[string]any {
 	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
 		return nil
 	}
 
-	return map[string]interface{}{
+	var matchExpressions = []map[string]any{}
+
+	for _, me := range selector.MatchExpressions {
+		matchExpressions = append(matchExpressions, map[string]any{
+			"key":      me.GetKey(),
+			"operator": me.GetOperator(),
+			"values":   me.GetValues(),
+		})
+	}
+
+	return map[string]any{
 		"matchLabels":      selector.MatchLabels,
-		"matchExpressions": selector.MatchExpressions,
+		"matchExpressions": matchExpressions,
 	}
 }
