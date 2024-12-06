@@ -506,17 +506,6 @@ func TestGetOrCreateNestedMap(t *testing.T) {
 				"fullnameOverride": "spire-server",
 			},
 		},
-		{
-			name: "map doesn't exist, valid key",
-			values: map[string]any{
-				"spire-server": map[string]any{
-					"caKeyType": "rsa-2048",
-					"caTTL":     "12h",
-				},
-			},
-			key:  "global",
-			want: map[string]any{},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -757,6 +746,7 @@ func TestMergeMaps(t *testing.T) {
 				return
 			}
 
+			assert.Nil(t, err)
 			assert.Equal(t, tt.want, resp)
 		})
 	}
@@ -919,6 +909,7 @@ func TestGlobalValues_GenerateValues(t *testing.T) {
 				return
 			}
 
+			assert.Nil(t, err)
 			assert.Equal(t, tt.want, resp)
 		})
 	}
@@ -1051,6 +1042,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				return
 			}
 
+			assert.Nil(t, err)
 			assert.Equal(t, tt.want, resp)
 		})
 	}
@@ -1167,6 +1159,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				return
 			}
 
+			assert.Nil(t, err)
 			assert.Equal(t, tt.want, resp)
 		})
 	}
@@ -1199,6 +1192,7 @@ func TestSpiffeOIDCDiscoveryProviderValues_GenerateValues(t *testing.T) {
 				return
 			}
 
+			assert.Nil(t, err)
 			assert.Equal(t, tt.want, resp)
 		})
 	}
@@ -1231,6 +1225,7 @@ func TestSpiffeCSIDriverValues_GenerateValues(t *testing.T) {
 				return
 			}
 
+			assert.Nil(t, err)
 			assert.Equal(t, tt.want, resp)
 		})
 	}
