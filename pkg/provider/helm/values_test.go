@@ -780,7 +780,7 @@ func TestMergeMaps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := mergeMaps(tt.dest, tt.src)
+			resp, err := MergeMaps(tt.dest, tt.src)
 			if tt.wantErr {
 				assert.Equal(t, tt.errString, err.Error())
 				return
