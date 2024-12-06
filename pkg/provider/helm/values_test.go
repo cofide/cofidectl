@@ -801,10 +801,10 @@ func TestShallowMerge(t *testing.T) {
 		{
 			name: "valid slice of maps",
 			maps: []map[string]any{
-				map[string]any{
+				{
 					"foo": "bar",
 				},
-				map[string]any{
+				{
 					"fizz": "buzz",
 				},
 			},
@@ -821,8 +821,8 @@ func TestShallowMerge(t *testing.T) {
 		{
 			name: "slice of empty maps",
 			maps: []map[string]any{
-				map[string]any{},
-				map[string]any{},
+				{},
+				{},
 			},
 			want: map[string]any{},
 		},
