@@ -188,7 +188,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									},
 									"namespaceSelector": Values{
 										"matchExpressions": []map[string]any{},
-										"matchLabels": map[string]string{
+										"matchLabels": map[string]any{
 											"kubernetes.io/metadata.name": "ns1",
 										},
 									},
