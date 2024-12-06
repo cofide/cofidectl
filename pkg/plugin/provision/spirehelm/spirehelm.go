@@ -141,20 +141,18 @@ func watchAndConfigure(ctx context.Context, source plugin.DataSource, trustZones
 }
 
 func getBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Status, source plugin.DataSource, trustZone *trust_zone_proto.TrustZone, kubeCfgFile string) {
-	msg := fmt.Sprintf("Waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
-	statusCh <- provision.StatusOk("Waiting", msg)
+	sb := provision.NewStatusBuilder(trustZone.Name, trustZone.GetKubernetesCluster())
+	statusCh <- sb.Ok("Waiting", "aiting for SPIRE server pod and service")
 
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, trustZone.GetKubernetesContext())
 	if err != nil {
-		msg := fmt.Sprintf("Failed waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusError("Waiting", msg, err)
+		statusCh <- sb.Error("Waiting", "Failed waiting for SPIRE server pod and service", err)
 		return
 	}
 
 	clusterIP, err := spire.WaitForServerIP(ctx, client)
 	if err != nil {
-		msg := fmt.Sprintf("Failed waiting for SPIRE server pod and service for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusError("Waiting", msg, err)
+		statusCh <- sb.Error("Waiting", "Failed waiting for SPIRE server pod and service", err)
 		return
 	}
 
@@ -164,8 +162,7 @@ func getBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Stat
 	// obtain the bundle
 	bundle, err := spire.GetBundle(ctx, client)
 	if err != nil {
-		msg := fmt.Sprintf("Failed obtaining bundle for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
-		statusCh <- provision.StatusError("Waiting", msg, err)
+		statusCh <- sb.Error("Waiting", "Failed obtaining bundle", err)
 		return
 	}
 
@@ -177,8 +174,7 @@ func getBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Stat
 		return
 	}
 
-	msg = fmt.Sprintf("All SPIRE server pods and services are ready for %s in cluster %s", trustZone.Name, trustZone.GetKubernetesCluster())
-	statusCh <- provision.StatusDone("Ready", msg)
+	statusCh <- sb.Done("Ready", "All SPIRE server pods and services are ready")
 }
 
 func applyPostInstallHelmConfig(ctx context.Context, source plugin.DataSource, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
