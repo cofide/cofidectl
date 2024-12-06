@@ -95,7 +95,7 @@ func addSPIRERepository(ctx context.Context) error {
 
 func installSPIREStack(ctx context.Context, source plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, source)
+		generator := helm.NewHelmValuesGenerator(trustZone, source, nil)
 		spireValues, err := generator.GenerateValues()
 		if err != nil {
 			return err
@@ -171,7 +171,7 @@ func getBundleAndEndpoint(ctx context.Context, statusCh chan<- provider.Provider
 
 func applyPostInstallHelmConfig(ctx context.Context, source plugin.DataSource, trustZones []*trust_zone_proto.TrustZone) error {
 	for _, trustZone := range trustZones {
-		generator := helm.NewHelmValuesGenerator(trustZone, source)
+		generator := helm.NewHelmValuesGenerator(trustZone, source, nil)
 
 		spireValues, err := generator.GenerateValues()
 		if err != nil {

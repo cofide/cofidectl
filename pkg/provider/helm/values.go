@@ -4,14 +4,12 @@
 package helm
 
 import (
-	"encoding/json"
 	"fmt"
 
-	"cuelang.org/go/cue"
-	"cuelang.org/go/cue/cuecontext"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
+	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 )
@@ -19,105 +17,190 @@ import (
 type HelmValuesGenerator struct {
 	source    cofidectl_plugin.DataSource
 	trustZone *trust_zone_proto.TrustZone
+	values    map[string]any
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource) *HelmValuesGenerator {
+type globalValues struct {
+	deleteHooks                   bool
+	installAndUpgradeHooksEnabled bool
+	spireClusterName              string
+	spireCreateRecommendations    bool
+	spireJwtIssuer                string
+	spireTrustDomain              string
+}
+
+type spireAgentValues struct {
+	agentConfig        trustprovider.TrustProviderAgentConfig
+	fullnameOverride   string
+	logLevel           string
+	spireServerAddress string
+}
+
+type spireServerValues struct {
+	caKeyType                string
+	caTTL                    string
+	controllerManagerEnabled bool
+	fullnameOverride         string
+	logLevel                 string
+	serverConfig             trustprovider.TrustProviderServerConfig
+	serviceType              string
+}
+
+type spiffeOIDCDiscoveryProviderValues struct {
+	enabled bool
+}
+
+type spiffeCSIDriverValues struct {
+	fullnameOverride string
+}
+
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource, values map[string]any) *HelmValuesGenerator {
 	return &HelmValuesGenerator{
 		trustZone: trustZone,
 		source:    source,
+		values:    values,
 	}
 }
 
-func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
+func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	tz := trustzone.NewTrustZone(g.trustZone)
 	tp, err := tz.GetTrustProvider()
 	if err != nil {
 		return nil, err
 	}
+
 	agentConfig := tp.AgentConfig
 	serverConfig := tp.ServerConfig
 
-	globalValues := map[string]interface{}{
-		"global.spire.clusterName":              g.trustZone.GetKubernetesCluster(),
-		"global.spire.trustDomain":              g.trustZone.TrustDomain,
-		"global.spire.recommendations.create":   true,
-		"global.installAndUpgradeHooks.enabled": false,
-		"global.deleteHooks.enabled":            false,
+	gv := globalValues{
+		spireClusterName:              g.trustZone.GetKubernetesCluster(),
+		spireCreateRecommendations:    true,
+		spireJwtIssuer:                g.trustZone.GetJwtIssuer(),
+		spireTrustDomain:              g.trustZone.TrustDomain,
+		installAndUpgradeHooksEnabled: false,
+		deleteHooks:                   false,
 	}
 
-	if issuer := g.trustZone.GetJwtIssuer(); issuer != "" {
-		globalValues["global.spire.jwtIssuer"] = issuer
+	globalValues, err := gv.generateValues()
+	if err != nil {
+		return nil, err
 	}
 
-	spireAgentValues := map[string]interface{}{
-		`"spire-agent"."fullnameOverride"`: "spire-agent", // NOTE: https://github.com/cue-lang/cue/issues/358
-		`"spire-agent"."logLevel"`:         "DEBUG",
-		fmt.Sprintf(`"spire-agent"."nodeAttestor"."%s"."enabled"`, agentConfig.NodeAttestor):                              agentConfig.NodeAttestorEnabled,
-		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."disableContainerSelectors"`, agentConfig.WorkloadAttestor):   agentConfig.WorkloadAttestorConfig["disableContainerSelectors"],
-		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."enabled"`, agentConfig.WorkloadAttestor):                     agentConfig.WorkloadAttestorConfig["enabled"],
-		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."skipKubeletVerification"`, agentConfig.WorkloadAttestor):     agentConfig.WorkloadAttestorConfig["skipKubeletVerification"],
-		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."useNewContainerLocator"`, agentConfig.WorkloadAttestor):      agentConfig.WorkloadAttestorConfig["useNewContainerLocator"],
-		fmt.Sprintf(`"spire-agent"."workloadAttestors"."%s"."verboseContainerLocatorLogs"`, agentConfig.WorkloadAttestor): agentConfig.WorkloadAttestorConfig["verboseContainerLocatorLogs"],
-		`"spire-agent"."server"."address"`: "spire-server.spire",
+	sav := spireAgentValues{
+		fullnameOverride:   "spire-agent",
+		logLevel:           "DEBUG",
+		agentConfig:        agentConfig,
+		spireServerAddress: "spire-server.spire",
+	}
+	spireAgentValues, err := sav.generateValues()
+	if err != nil {
+		return nil, err
 	}
 
-	spireServerValues := map[string]interface{}{
-		`"spire-server"."service"."type"`:              "LoadBalancer",
-		`"spire-server"."caKeyType"`:                   "rsa-2048",
-		`"spire-server"."controllerManager"."enabled"`: true,
-		`"spire-server"."caTTL"`:                       "12h",
-		`"spire-server"."fullnameOverride"`:            "spire-server",
-		`"spire-server"."logLevel"`:                    "DEBUG",
-		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."audience"`, serverConfig.NodeAttestor):                serverConfig.NodeAttestorConfig["audience"],
-		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."allowedPodLabelKeys"`, serverConfig.NodeAttestor):     serverConfig.NodeAttestorConfig["allowedPodLabelKeys"],
-		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."allowedNodeLabelKeys"`, serverConfig.NodeAttestor):    serverConfig.NodeAttestorConfig["allowedNodeLabelKeys"],
-		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."enabled"`, serverConfig.NodeAttestor):                 serverConfig.NodeAttestorConfig["enabled"],
-		fmt.Sprintf(`"spire-server"."nodeAttestor"."%s"."serviceAccountAllowList"`, serverConfig.NodeAttestor): serverConfig.NodeAttestorConfig["serviceAccountAllowList"],
+	ssv := spireServerValues{
+		caKeyType:                "rsa-2048",
+		caTTL:                    "12h",
+		controllerManagerEnabled: true,
+		fullnameOverride:         "spire-server",
+		logLevel:                 "DEBUG",
+		serverConfig:             serverConfig,
+		serviceType:              "LoadBalancer",
+	}
+	spireServerValues, err := ssv.generateValues()
+	if err != nil {
+		return nil, err
 	}
 
-	// add attestation policies as ClusterSPIFFEIDs to be reconcilced by spire-controller-manager
+	spireServer, err := getOrCreateNestedMap(spireServerValues, "spire-server")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spire-server map from spireServerValues: %w", err)
+	}
+
+	controllerManager, err := getOrCreateNestedMap(spireServer, "controllerManager")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get controllerManager map from spireServer: %w", err)
+	}
+
+	// Enables the default ClusterSPIFFEID CR by default.
+	controllerManager["identities"] = map[string]any{
+		"clusterSPIFFEIDs": map[string]any{
+			"default": map[string]any{
+				"enabled": true,
+			},
+		},
+	}
+
+	identities, err := getOrCreateNestedMap(controllerManager, "identities")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get identities map from controllerManager: %w", err)
+	}
+
 	if len(g.trustZone.AttestationPolicies) > 0 {
-		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = false
+		csids, err := getOrCreateNestedMap(identities, "clusterSPIFFEIDs")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities: %w", err)
+		}
+
+		// Disables the default ClusterSPIFFEID CR.
+		csids["default"] = map[string]any{
+			"enabled": false,
+		}
+
+		// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
 		for _, binding := range g.trustZone.AttestationPolicies {
 			policy, err := g.source.GetAttestationPolicy(binding.Policy)
 			if err != nil {
 				return nil, err
 			}
+
 			clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
 			if err != nil {
 				return nil, err
 			}
-			spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."%s"`, policy.Name)] = clusterSPIFFEIDs
+
+			csids[policy.Name] = clusterSPIFFEIDs
 		}
-	} else {
-		// defaults to true
-		spireServerValues[`"spire-server"."controllerManager"."identities"."clusterSPIFFEIDs"."default"."enabled"`] = true
 	}
 
-	// add federations as clusterFederatedTrustDomains to be reconcilced by spire-controller-manager
+	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by the spire-controller-manager.
 	if len(g.trustZone.Federations) > 0 {
 		for _, fed := range g.trustZone.Federations {
 			tz, err := g.source.GetTrustZone(fed.To)
 			if err != nil {
 				return nil, err
 			}
+
 			if tz.GetBundleEndpointUrl() != "" {
-				spireServerValues[`"spire-server"."federation"."enabled"`] = true
-				config := federation.NewFederation(tz).GetHelmConfig()
-				spireServerValues[fmt.Sprintf(`"spire-server"."controllerManager"."identities"."clusterFederatedTrustDomains"."%s"`, fed.To)] = config
+				fedMap, err := getOrCreateNestedMap(spireServer, "federation")
+				if err != nil {
+					return nil, fmt.Errorf("failed to get federation map from spireServer: %w", err)
+				}
+
+				fedMap["enabled"] = true
+
+				cftd, err := getOrCreateNestedMap(identities, "clusterFederatedTrustDomains")
+				if err != nil {
+					return nil, fmt.Errorf("failed to get clusterFederatedTrustDomains map from identities: %w", err)
+				}
+
+				cftd[fed.To] = federation.NewFederation(tz).GetHelmConfig()
 			}
 		}
 	}
 
-	spiffeOIDCDiscoveryProviderValues := map[string]interface{}{
-		`"spiffe-oidc-discovery-provider"."enabled"`: false,
+	soidcpv := spiffeOIDCDiscoveryProviderValues{enabled: false}
+	spiffeOIDCDiscoveryProviderValues, err := soidcpv.generateValues()
+	if err != nil {
+		return nil, err
 	}
 
-	spiffeCSIDriverValues := map[string]interface{}{
-		`"spiffe-csi-driver"."fullnameOverride"`: "spiffe-csi-driver",
+	scsidv := spiffeCSIDriverValues{fullnameOverride: "spiffe-csi-driver"}
+	spiffeCSIDriverValues, err := scsidv.generateValues()
+	if err != nil {
+		return nil, err
 	}
 
-	valuesMaps := []map[string]interface{}{
+	valuesMaps := []map[string]any{
 		globalValues,
 		spireAgentValues,
 		spireServerValues,
@@ -125,50 +208,267 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]interface{}, error) {
 		spiffeCSIDriverValues,
 	}
 
-	ctx := cuecontext.New()
-	combinedValuesCUE := ctx.CompileBytes([]byte{})
+	combinedValues := shallowMerge(valuesMaps)
 
-	if g.trustZone.ExtraHelmValues != nil {
-		// Extra values are in a structured map format rather than dotted-paths.
-		// These take precedence over the values in cofidectl.
-		extraValues := g.trustZone.ExtraHelmValues.AsMap()
-		extraValuesCUE := ctx.Encode(extraValues)
-		combinedValuesCUE = combinedValuesCUE.Unify(extraValuesCUE)
-		if err := combinedValuesCUE.Err(); err != nil {
+	if g.values != nil {
+		combinedValues, err = mergeMaps(combinedValues, g.values)
+		if err != nil {
 			return nil, err
 		}
 	}
 
-	for _, valuesMap := range valuesMaps {
-		for path, value := range valuesMap {
-			// We need to merge the values generated by this function with the user-specified extra
-			// helm values.
-			// CUE does not easily handle merging values with multiple levels of precedence, since
-			// it sees different concrete values for the same path as a conflict. It supports
-			// disjunctions with defaults, but that would only work for a 2-level merge.
-			// For now we can start with the higher precedence user values, then merge in the
-			// defaults to paths that do not exist.
-			// TODO: Revisit the use of CUE here, consider reworking to use native Go types with a
-			// merge function.
-			if !combinedValuesCUE.LookupPath(cue.ParsePath(path)).Exists() {
-				combinedValuesCUE = combinedValuesCUE.FillPath(cue.ParsePath(path), value)
-				if err := combinedValuesCUE.Err(); err != nil {
-					return nil, err
-				}
-			}
+	if g.trustZone.ExtraHelmValues != nil {
+		// TODO: Potentially retrieve Helm values as map[string]any directly.
+		extraHelmValues := g.trustZone.ExtraHelmValues.AsMap()
+		combinedValues, err = mergeMaps(combinedValues, extraHelmValues)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	combinedValuesJSON, err := combinedValuesCUE.MarshalJSON()
-	if err != nil {
-		return nil, fmt.Errorf("failed marshalling Helm values to JSON: %w", err)
+	return combinedValues, nil
+}
+
+// generateValues generates the global Helm values map.
+func (g *globalValues) generateValues() (map[string]any, error) {
+	if g.spireClusterName == "" {
+		return nil, fmt.Errorf("spireClusterName value is empty")
 	}
 
-	var values map[string]interface{}
-	err = json.Unmarshal([]byte(combinedValuesJSON), &values)
-	if err != nil {
-		return nil, fmt.Errorf("failed unmarshalling Helm values from JSON: %w", err)
+	if g.spireTrustDomain == "" {
+		return nil, fmt.Errorf("spireTrustDomain value is empty")
+	}
+
+	values := map[string]any{
+		"global": map[string]any{
+			"spire": map[string]any{
+				"clusterName": g.spireClusterName,
+				"recommendations": map[string]any{
+					"create": g.spireCreateRecommendations,
+				},
+				"trustDomain": g.spireTrustDomain,
+			},
+			"installAndUpgradeHooks": map[string]any{
+				"enabled": g.installAndUpgradeHooksEnabled,
+			},
+			"deleteHooks": map[string]any{
+				"enabled": g.deleteHooks,
+			},
+		},
+	}
+
+	if g.spireJwtIssuer != "" {
+		global, err := getOrCreateNestedMap(values, "global")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get global map: %w", err)
+		}
+
+		spire, err := getOrCreateNestedMap(global, "spire")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get spire map from global map: %w", err)
+		}
+
+		spire["jwtIssuer"] = g.spireJwtIssuer
 	}
 
 	return values, nil
+}
+
+// generateValues generates the spire-agent Helm values map.
+func (s *spireAgentValues) generateValues() (map[string]any, error) {
+	if s.fullnameOverride == "" {
+		return nil, fmt.Errorf("fullnameOverride value is empty")
+	}
+
+	if s.logLevel == "" {
+		return nil, fmt.Errorf("logLevel value is empty")
+	}
+
+	if s.agentConfig.NodeAttestor == "" {
+		return nil, fmt.Errorf("agentConfig.NodeAttestor value is empty")
+	}
+
+	if s.agentConfig.WorkloadAttestor == "" {
+		return nil, fmt.Errorf("agentConfig.WorkloadAttestor value is empty")
+	}
+
+	if s.agentConfig.WorkloadAttestorConfig == nil {
+		return nil, fmt.Errorf("agentConfig.WorkloadAttestorConfig value is nil")
+	}
+
+	if len(s.agentConfig.WorkloadAttestorConfig) == 0 {
+		return nil, fmt.Errorf("agentConfig.WorkloadAttestorConfig value is empty")
+	}
+
+	if s.spireServerAddress == "" {
+		return nil, fmt.Errorf("spireServerAddress value is empty")
+	}
+
+	return map[string]any{
+		"spire-agent": map[string]any{
+			"fullnameOverride": s.fullnameOverride,
+			"logLevel":         s.logLevel,
+			"nodeAttestor": map[string]any{
+				s.agentConfig.NodeAttestor: map[string]any{
+					"enabled": s.agentConfig.NodeAttestorEnabled,
+				},
+			},
+			"server": map[string]any{
+				"address": s.spireServerAddress,
+			},
+			"workloadAttestors": map[string]any{
+				s.agentConfig.WorkloadAttestor: s.agentConfig.WorkloadAttestorConfig,
+			},
+		},
+	}, nil
+}
+
+// generateValues generates the spire-server Helm values map.
+func (s *spireServerValues) generateValues() (map[string]any, error) {
+	if s.caKeyType == "" {
+		return nil, fmt.Errorf("caKeyType value is empty")
+	}
+
+	if s.caTTL == "" {
+		return nil, fmt.Errorf("caTTL value is empty")
+	}
+
+	if s.fullnameOverride == "" {
+		return nil, fmt.Errorf("fullnameOverride value is empty")
+	}
+
+	if s.logLevel == "" {
+		return nil, fmt.Errorf("logLevel value is empty")
+	}
+
+	if s.serverConfig.NodeAttestor == "" {
+		return nil, fmt.Errorf("serverConfig.NodeAttestor value is empty")
+	}
+
+	if s.serverConfig.NodeAttestorConfig == nil {
+		return nil, fmt.Errorf("serverConfig.NodeAttestorConfig value is nil")
+	}
+
+	if len(s.serverConfig.NodeAttestorConfig) == 0 {
+		return nil, fmt.Errorf("serverConfig.NodeAttestorConfig value is empty")
+	}
+
+	if s.serviceType == "" {
+		return nil, fmt.Errorf("serviceType value is empty")
+	}
+
+	return map[string]any{
+		"spire-server": map[string]any{
+			"caKeyType": s.caKeyType,
+			"caTTL":     s.caTTL,
+			"controllerManager": map[string]any{
+				"enabled": s.controllerManagerEnabled,
+			},
+			"fullnameOverride": s.fullnameOverride,
+			"logLevel":         s.logLevel,
+			"nodeAttestor": map[string]any{
+				s.serverConfig.NodeAttestor: s.serverConfig.NodeAttestorConfig,
+			},
+			"service": map[string]any{
+				"type": s.serviceType,
+			},
+		},
+	}, nil
+}
+
+// generateValues generates the spiffe-oidc-discovery-provider Helm values map.
+func (s *spiffeOIDCDiscoveryProviderValues) generateValues() (map[string]any, error) {
+	return map[string]any{
+		"spiffe-oidc-discovery-provider": map[string]any{
+			"enabled": s.enabled,
+		},
+	}, nil
+}
+
+// generateValues generates the spiffe-csi-driver Helm values map.
+func (s *spiffeCSIDriverValues) generateValues() (map[string]any, error) {
+	if s.fullnameOverride == "" {
+		return nil, fmt.Errorf("fullnameOverride value is empty")
+	}
+
+	return map[string]any{
+		"spiffe-csi-driver": map[string]any{
+			"fullnameOverride": s.fullnameOverride,
+		},
+	}, nil
+}
+
+// getOrCreateNestedMap retrieves a nested map[string]any from a parent map or creates it
+// if it doesn't exist.
+func getOrCreateNestedMap(m map[string]any, key string) (map[string]any, error) {
+	if m == nil {
+		return nil, fmt.Errorf("input map is nil")
+	}
+
+	if key == "" {
+		return nil, fmt.Errorf("key cannot be empty")
+	}
+
+	if value, exists := m[key]; exists {
+		if value == nil {
+			newMap := make(map[string]any)
+			m[key] = newMap
+			return newMap, nil
+		}
+
+		subMap, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("value for key %q is of type %T, expected map[string]any", key, value)
+		}
+
+		return subMap, nil
+	}
+
+	// When the key doesn't exist, create a new map.
+	newMap := make(map[string]any)
+	m[key] = newMap
+	return newMap, nil
+}
+
+// mergeMaps merges the source map into the destination map, returning a new merged map.
+func mergeMaps(dest, src map[string]any) (map[string]any, error) {
+	if src == nil {
+		return nil, fmt.Errorf("source map is nil")
+	}
+
+	if dest == nil {
+		return nil, fmt.Errorf("destination map is nil")
+	}
+
+	for key, value := range src {
+		if srcMap, isSrcMap := value.(map[string]any); isSrcMap {
+			if destMap, isDestMap := dest[key].(map[string]any); isDestMap {
+				merged, err := mergeMaps(destMap, srcMap)
+				if err != nil {
+					return nil, err
+				}
+
+				dest[key] = merged
+			} else {
+				dest[key] = srcMap
+			}
+		} else {
+			// Always overwrite existing keys.
+			dest[key] = value
+		}
+	}
+
+	return dest, nil
+}
+
+// shallowMerge flattens a slice of maps into a single map.
+func shallowMerge(maps []map[string]any) map[string]any {
+	flattened := make(map[string]any)
+	for _, m := range maps {
+		for key, value := range m {
+			flattened[key] = value
+		}
+	}
+
+	return flattened
 }
