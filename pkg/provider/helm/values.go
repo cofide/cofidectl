@@ -183,7 +183,10 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 					return nil, fmt.Errorf("failed to get clusterFederatedTrustDomains map from identities: %w", err)
 				}
 
-				cftd[fed.To] = federation.NewFederation(tz).GetHelmConfig()
+				cftd[fed.To], err = federation.NewFederation(tz).GetHelmConfig()
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
