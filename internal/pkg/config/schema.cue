@@ -12,6 +12,7 @@
 	attestation_policies: [...#APBinding]
 	jwt_issuer?: string
 	extra_helm_values?: #HelmValues
+	bundle_endpoint_profile?: #BundleEndpointProfile
 }
 
 #TrustProvider: {
@@ -57,6 +58,8 @@
 #HelmValues: {
 	[string]: _
 }
+
+#BundleEndpointProfile: string & =~"BUNDLE_ENDPOINT_PROFILE_.*"
 
 #PluginConfig: {
 	[string]: _
