@@ -109,8 +109,7 @@ func addSPIRERepository(ctx context.Context, statusCh chan<- *provisionpb.Status
 		return err
 	}
 
-	prov.AddRepository(statusCh)
-	return nil
+	return prov.AddRepository(statusCh)
 }
 
 func installSPIREStack(ctx context.Context, source plugin.DataSource, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
@@ -127,7 +126,9 @@ func installSPIREStack(ctx context.Context, source plugin.DataSource, trustZones
 			return err
 		}
 
-		prov.Execute(statusCh)
+		if err := prov.Execute(statusCh); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -135,25 +136,27 @@ func installSPIREStack(ctx context.Context, source plugin.DataSource, trustZones
 func watchAndConfigure(ctx context.Context, source plugin.DataSource, trustZones []*trust_zone_proto.TrustZone, kubeCfgFile string, statusCh chan<- *provisionpb.Status) error {
 	// wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
-		getBundleAndEndpoint(ctx, statusCh, source, trustZone, kubeCfgFile)
+		if err := getBundleAndEndpoint(ctx, statusCh, source, trustZone, kubeCfgFile); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func getBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Status, source plugin.DataSource, trustZone *trust_zone_proto.TrustZone, kubeCfgFile string) {
+func getBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Status, source plugin.DataSource, trustZone *trust_zone_proto.TrustZone, kubeCfgFile string) error {
 	sb := provision.NewStatusBuilder(trustZone.Name, trustZone.GetKubernetesCluster())
 	statusCh <- sb.Ok("Waiting", "aiting for SPIRE server pod and service")
 
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, trustZone.GetKubernetesContext())
 	if err != nil {
 		statusCh <- sb.Error("Waiting", "Failed waiting for SPIRE server pod and service", err)
-		return
+		return err
 	}
 
 	clusterIP, err := spire.WaitForServerIP(ctx, client)
 	if err != nil {
 		statusCh <- sb.Error("Waiting", "Failed waiting for SPIRE server pod and service", err)
-		return
+		return err
 	}
 
 	bundleEndpointUrl := fmt.Sprintf("https://%s:8443", clusterIP)
@@ -163,7 +166,7 @@ func getBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Stat
 	bundle, err := spire.GetBundle(ctx, client)
 	if err != nil {
 		statusCh <- sb.Error("Waiting", "Failed obtaining bundle", err)
-		return
+		return err
 	}
 
 	trustZone.Bundle = &bundle
@@ -171,10 +174,11 @@ func getBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Stat
 	if err := source.UpdateTrustZone(trustZone); err != nil {
 		msg := fmt.Sprintf("Failed updating trust zone %s", trustZone.Name)
 		statusCh <- provision.StatusError("Waiting", msg, err)
-		return
+		return err
 	}
 
 	statusCh <- sb.Done("Ready", "All SPIRE server pods and services are ready")
+	return nil
 }
 
 func applyPostInstallHelmConfig(ctx context.Context, source plugin.DataSource, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
@@ -193,7 +197,9 @@ func applyPostInstallHelmConfig(ctx context.Context, source plugin.DataSource, t
 			return err
 		}
 
-		prov.ExecutePostInstallUpgrade(statusCh)
+		if err := prov.ExecutePostInstallUpgrade(statusCh); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -206,7 +212,9 @@ func uninstallSPIREStack(ctx context.Context, trustZones []*trust_zone_proto.Tru
 			return err
 		}
 
-		prov.ExecuteUninstall(statusCh)
+		if err := prov.ExecuteUninstall(statusCh); err != nil {
+			return err
+		}
 	}
 	return nil
 }

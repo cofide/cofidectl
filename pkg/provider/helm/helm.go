@@ -79,7 +79,7 @@ func NewHelmSPIREProvider(ctx context.Context, trustZone *trust_zone_proto.Trust
 // This function should be called once, not per-trust zone.
 // The SPIRE Helm repository is added to the local repositories.yaml, locking the repositories.lock
 // file while making changes.
-func (h *HelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Status) {
+func (h *HelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Status) error {
 	statusCh <- provision.StatusOk("Preparing", "Adding SPIRE Helm repo")
 	lockCtx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
 	defer cancel()
@@ -124,6 +124,7 @@ func (h *HelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Status) {
 	} else {
 		statusCh <- provision.StatusDone("Prepared", "Added SPIRE Helm repo")
 	}
+	return err
 }
 
 // runWithFileLock attempts to lock a file, and if successful calls `f` with the lock held.
@@ -159,72 +160,76 @@ func lockPath(filePath string) string {
 
 // Execute installs the SPIRE Helm stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
-func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) {
+func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) error {
 	sb := provision.NewStatusBuilder(h.trustZone.Name, h.trustZone.GetKubernetesCluster())
 	statusCh <- sb.Ok("Installing", "Installing SPIRE CRDs")
 	_, err := h.installSPIRECRDs()
 	if err != nil {
 		statusCh <- sb.Error("Installing", "Failed to install SPIRE CRDs", err)
-		return
+		return err
 	}
 
 	statusCh <- sb.Ok("Installing", "Installing SPIRE chart")
 	_, err = h.installSPIRE()
 	if err != nil {
 		statusCh <- sb.Error("Installing", "Failed to install SPIRE chart", err)
-		return
+		return err
 	}
 
 	statusCh <- sb.Done("Installed", "Installation completed")
+	return nil
 }
 
 // ExecutePostInstallUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
-func (h *HelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provisionpb.Status) {
+func (h *HelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provisionpb.Status) error {
 	sb := provision.NewStatusBuilder(h.trustZone.Name, h.trustZone.GetKubernetesCluster())
 	statusCh <- sb.Ok("Configuring", "Applying post-installation configuration")
 	_, err := h.upgradeSPIRE()
 	if err != nil {
 		statusCh <- sb.Error("Configuring", "Failed to apply post-installation configuration", err)
-		return
+		return err
 	}
 
 	statusCh <- sb.Done("Configured", "Post-installation configuration completed")
+	return nil
 }
 
 // ExecuteUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
-func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) {
+func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) error {
 	sb := provision.NewStatusBuilder(h.trustZone.Name, h.trustZone.GetKubernetesCluster())
 	statusCh <- sb.Ok("Upgrading", "Upgrading SPIRE chart")
 	_, err := h.upgradeSPIRE()
 	if err != nil {
 		statusCh <- sb.Error("Upgrading", "Failed to upgrade SPIRE chart", err)
-		return
+		return err
 	}
 
 	statusCh <- sb.Done("Upgraded", "Upgrade completed")
+	return nil
 }
 
 // ExecuteUninstall uninstalls the SPIRE stack from the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
-func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) {
+func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) error {
 	sb := provision.NewStatusBuilder(h.trustZone.Name, h.trustZone.GetKubernetesCluster())
 	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE CRDs")
 	_, err := h.uninstallSPIRECRDs()
 	if err != nil {
 		statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE CRDs", err)
-		return
+		return err
 	}
 
 	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE chart")
 	_, err = h.uninstallSPIRE()
 	if err != nil {
 		statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE chart", err)
-		return
+		return err
 	}
 
 	statusCh <- sb.Done("Uninstalled", "Uninstallation completed")
+	return nil
 }
 
 // CheckIfAlreadyInstalled returns true if the SPIRE chart has previously been installed.
