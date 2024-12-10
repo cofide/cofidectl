@@ -173,12 +173,10 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							"clusterFederatedTrustDomains": Values{
 								"tz2": Values{
 									"bundleEndpointProfile": Values{
-										"endpointSPIFFEID": "spiffe://td2/spire/server",
-										"type":             "https_spiffe",
+										"type": "https_web",
 									},
 									"bundleEndpointURL": "127.0.0.2",
 									"trustDomain":       "td2",
-									"trustDomainBundle": "",
 								},
 							},
 							"clusterSPIFFEIDs": Values{
@@ -431,6 +429,48 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			g := &HelmValuesGenerator{
 				source:    source,
 				trustZone: tt.trustZone,
+				values:    nil,
+			}
+			_, err := g.GenerateValues()
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.wantErrString)
+		})
+	}
+}
+
+func TestHelmValuesGenerator_GenerateValues_federationFailure(t *testing.T) {
+	tests := []struct {
+		name          string
+		destTrustZone *trust_zone_proto.TrustZone
+		wantErrString string
+	}{
+		{
+			name: "nil bundle endpoint profile",
+			destTrustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz2")
+				tz.BundleEndpointProfile = nil
+				return tz
+			}(),
+			wantErrString: "unexpected bundle endpoint profile 0",
+		},
+		{
+			name: "unspecified bundle endpoint profile",
+			destTrustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz2")
+				tz.BundleEndpointProfile = trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_UNSPECIFIED.Enum()
+				return tz
+			}(),
+			wantErrString: "unexpected bundle endpoint profile 0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := defaultConfig()
+			cfg.TrustZones[1] = tt.destTrustZone
+			source := newFakeDataSource(t, cfg)
+			g := &HelmValuesGenerator{
+				source:    source,
+				trustZone: cfg.TrustZones[0],
 				values:    nil,
 			}
 			_, err := g.GenerateValues()

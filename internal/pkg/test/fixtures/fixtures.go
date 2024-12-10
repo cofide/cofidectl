@@ -59,6 +59,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			}
 			return value
 		}(),
+		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
 	},
 	"tz2": {
 		Name:              "tz2",
@@ -82,7 +83,8 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				FederatesWith: []string{"tz1"},
 			},
 		},
-		JwtIssuer: StringPtr("https://tz2.example.com"),
+		JwtIssuer:             StringPtr("https://tz2.example.com"),
+		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
 	},
 	// tz3 has no federations or bound attestation policies.
 	"tz3": {
@@ -93,9 +95,10 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
 		},
-		BundleEndpointUrl:   StringPtr("127.0.0.3"),
-		Federations:         []*federation_proto.Federation{},
-		AttestationPolicies: []*ap_binding_proto.APBinding{},
+		BundleEndpointUrl:     StringPtr("127.0.0.3"),
+		Federations:           []*federation_proto.Federation{},
+		AttestationPolicies:   []*ap_binding_proto.APBinding{},
+		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
 	},
 }
 
