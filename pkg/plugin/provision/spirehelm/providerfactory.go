@@ -1,0 +1,36 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
+package spirehelm
+
+import (
+	"context"
+
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+
+	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/provider/helm"
+)
+
+// Type check that HelmSPIREProviderFactory implements the ProviderFactory interface.
+var _ ProviderFactory = &HelmSPIREProviderFactory{}
+
+// ProviderFactory is an interface that abstracts the construction of HelmSPIREProvider objects.
+type ProviderFactory interface {
+	// Build returns a HelmSPIREProvider configured with values for an install/upgrade.
+	Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone) (*helm.HelmSPIREProvider, error)
+}
+
+// HelmSPIREProviderFactory implements the ProviderFactory interface, building a HelmSPIREProvider
+// using the default values generator.
+type HelmSPIREProviderFactory struct{}
+
+func (f *HelmSPIREProviderFactory) Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone) (*helm.HelmSPIREProvider, error) {
+	generator := helm.NewHelmValuesGenerator(trustZone, ds, nil)
+	spireValues, err := generator.GenerateValues()
+	if err != nil {
+		return nil, err
+	}
+	spireCRDsValues := map[string]interface{}{}
+	return helm.NewHelmSPIREProvider(ctx, trustZone, spireValues, spireCRDsValues)
+}

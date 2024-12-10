@@ -221,5 +221,5 @@ func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *struct
 
 // GetProvision returns the provision plugin.
 func (pm *PluginManager) GetProvision() provision.Provision {
-	return spirehelm.NewSpireHelm()
+	return spirehelm.NewSpireHelm(nil)
 }
