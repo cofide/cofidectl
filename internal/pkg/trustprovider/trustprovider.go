@@ -40,7 +40,7 @@ type TrustProvider struct {
 	Kind         string
 	AgentConfig  TrustProviderAgentConfig
 	ServerConfig TrustProviderServerConfig
-	SDSConfig    SDSConfig
+	SDSConfig    map[string]any
 	Proto        *trust_provider_proto.TrustProvider
 }
 
@@ -83,11 +83,11 @@ func (tp *TrustProvider) GetValues() error {
 		}
 		// Uses the Istio recommended values by default.
 		// https://istio.io/latest/docs/ops/integrations/spire/#spiffe-federation
-		tp.SDSConfig = SDSConfig{
-			Enabled:               true,
-			DefaultSVIDName:       "default",
-			DefaultBundleName:     "null",
-			DefaultAllBundlesName: "ROOTCA",
+		tp.SDSConfig = map[string]any{
+			"enabled":               true,
+			"defaultSVIDName":       "default",
+			"defaultBundleName":     "null",
+			"defaultAllBundlesName": "ROOTCA",
 		}
 	default:
 		return fmt.Errorf("an unknown trust provider profile was specified: %s", tp.Kind)

@@ -33,6 +33,7 @@ type spireAgentValues struct {
 	agentConfig        trustprovider.TrustProviderAgentConfig
 	fullnameOverride   string
 	logLevel           string
+	sdsConfig          map[string]any
 	spireServerAddress string
 }
 
@@ -69,9 +70,6 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, err
 	}
 
-	agentConfig := tp.AgentConfig
-	serverConfig := tp.ServerConfig
-
 	gv := globalValues{
 		spireClusterName:              g.trustZone.GetKubernetesCluster(),
 		spireCreateRecommendations:    true,
@@ -89,7 +87,8 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	sav := spireAgentValues{
 		fullnameOverride:   "spire-agent",
 		logLevel:           "DEBUG",
-		agentConfig:        agentConfig,
+		agentConfig:        tp.AgentConfig,
+		sdsConfig:          tp.SDSConfig,
 		spireServerAddress: "spire-server.spire",
 	}
 	spireAgentValues, err := sav.generateValues()
@@ -103,7 +102,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		controllerManagerEnabled: true,
 		fullnameOverride:         "spire-server",
 		logLevel:                 "DEBUG",
-		serverConfig:             serverConfig,
+		serverConfig:             tp.ServerConfig,
 		serviceType:              "LoadBalancer",
 	}
 	spireServerValues, err := ssv.generateValues()
@@ -288,6 +287,18 @@ func (s *spireAgentValues) generateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("agentConfig.NodeAttestor value is empty")
 	}
 
+	if s.sdsConfig == nil {
+		return nil, fmt.Errorf("sdsConfig value is nil")
+	}
+
+	if len(s.sdsConfig) == 0 {
+		return nil, fmt.Errorf("sdsConfig value is empty")
+	}
+
+	if len(s.agentConfig.WorkloadAttestorConfig) == 0 {
+		return nil, fmt.Errorf("agentConfig.WorkloadAttestorConfig value is empty")
+	}
+
 	if s.agentConfig.WorkloadAttestor == "" {
 		return nil, fmt.Errorf("agentConfig.WorkloadAttestor value is empty")
 	}
@@ -313,6 +324,7 @@ func (s *spireAgentValues) generateValues() (map[string]any, error) {
 					"enabled": s.agentConfig.NodeAttestorEnabled,
 				},
 			},
+			"sds": s.sdsConfig,
 			"server": map[string]any{
 				"address": s.spireServerAddress,
 			},
