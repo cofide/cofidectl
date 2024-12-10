@@ -95,7 +95,7 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 }
 
 // overrideValues overrides Helm values for a trust zone.
-func (c *HelmCommand) overrideValues(ds plugin.DataSource, tzName string, values map[string]interface{}) error {
+func (c *HelmCommand) overrideValues(ds plugin.DataSource, tzName string, values map[string]any) error {
 	trustZone, err := ds.GetTrustZone(tzName)
 	if err != nil {
 		return err
@@ -116,9 +116,9 @@ func (c *HelmCommand) overrideValues(ds plugin.DataSource, tzName string, values
 }
 
 // readValues reads values in YAML format from the specified reader.
-func readValues(reader io.Reader) (map[string]interface{}, error) {
+func readValues(reader io.Reader) (map[string]any, error) {
 	decoder := yaml.NewDecoder(reader)
-	var values map[string]interface{}
+	var values map[string]any
 	err := decoder.Decode(&values)
 	return values, err
 }
@@ -177,7 +177,7 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 }
 
 // getValues returns the Helm values for a trust zone.
-func (c *HelmCommand) getValues(ds plugin.DataSource, tzName string) (map[string]interface{}, error) {
+func (c *HelmCommand) getValues(ds plugin.DataSource, tzName string) (map[string]any, error) {
 	trustZone, err := ds.GetTrustZone(tzName)
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ func (c *HelmCommand) getValues(ds plugin.DataSource, tzName string) (map[string
 }
 
 // writeValues writes values in YAML format to the specified writer.
-func writeValues(values map[string]interface{}, writer io.Writer) error {
+func writeValues(values map[string]any, writer io.Writer) error {
 	encoder := yaml.NewEncoder(writer)
 	defer encoder.Close()
 	return encoder.Encode(values)
