@@ -10,11 +10,11 @@ import (
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 
-	"github.com/cofide/cofidectl/internal/pkg/spire"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
+	"github.com/cofide/cofidectl/pkg/spire"
 )
 
 // Control flow and error handling require some care in this package due to the asynchronous nature
@@ -156,7 +156,7 @@ func (h *SpireHelm) WatchAndConfigure(ctx context.Context, ds plugin.DataSource,
 
 func (h *SpireHelm) GetBundleAndEndpoint(ctx context.Context, statusCh chan<- *provisionpb.Status, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone, kubeCfgFile string) error {
 	sb := provision.NewStatusBuilder(trustZone.Name, trustZone.GetKubernetesCluster())
-	statusCh <- sb.Ok("Waiting", "aiting for SPIRE server pod and service")
+	statusCh <- sb.Ok("Waiting", "Waiting for SPIRE server pod and service")
 
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, trustZone.GetKubernetesContext())
 	if err != nil {

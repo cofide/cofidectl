@@ -5,7 +5,7 @@ go 1.22.7
 require (
 	buf.build/go/protoyaml v0.2.0
 	cuelang.org/go v0.10.1
-	github.com/cofide/cofide-api-sdk v0.3.1-0.20241206100419-25af9d3bc0c5
+	github.com/cofide/cofide-api-sdk v0.3.1-0.20241209124727-c60451a4ba77
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.6.0
@@ -15,7 +15,7 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.4.0
 	github.com/spiffe/spire-api-sdk v1.11.0
 	github.com/stretchr/testify v1.10.0
-	google.golang.org/grpc v1.68.0
+	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.35.2
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.3
@@ -167,12 +167,12 @@ require (
 	k8s.io/apiextensions-apiserver v0.31.1 // indirect
 	k8s.io/apimachinery v0.31.3
 	k8s.io/apiserver v0.31.1 // indirect
-	k8s.io/cli-runtime v0.31.1 // indirect
+	k8s.io/cli-runtime v0.31.3 // indirect
 	k8s.io/client-go v0.31.3
-	k8s.io/component-base v0.31.1 // indirect
+	k8s.io/component-base v0.31.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240423202451-8948a665c108 // indirect
-	k8s.io/kubectl v0.31.1
+	k8s.io/kubectl v0.31.3
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect

@@ -28,8 +28,8 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 	}
 }
 
-func (ap *AttestationPolicy) GetHelmConfig(source cofidectl_plugin.DataSource, binding *ap_binding_proto.APBinding) (map[string]interface{}, error) {
-	var clusterSPIFFEID = make(map[string]interface{})
+func (ap *AttestationPolicy) GetHelmConfig(source cofidectl_plugin.DataSource, binding *ap_binding_proto.APBinding) (map[string]any, error) {
+	var clusterSPIFFEID = make(map[string]any)
 	switch policy := ap.AttestationPolicyProto.Policy.(type) {
 	case *attestation_policy_proto.AttestationPolicy_Kubernetes:
 		kubernetes := policy.Kubernetes
@@ -70,8 +70,12 @@ func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSele
 		return nil
 	}
 
-	var matchExpressions = []map[string]any{}
+	matchLabels := map[string]any{}
+	for k, v := range selector.MatchLabels {
+		matchLabels[k] = v
+	}
 
+	matchExpressions := []map[string]any{}
 	for _, me := range selector.MatchExpressions {
 		matchExpressions = append(matchExpressions, map[string]any{
 			"key":      me.GetKey(),
@@ -81,7 +85,7 @@ func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSele
 	}
 
 	return map[string]any{
-		"matchLabels":      selector.MatchLabels,
+		"matchLabels":      matchLabels,
 		"matchExpressions": matchExpressions,
 	}
 }

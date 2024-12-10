@@ -46,12 +46,12 @@ type HelmSPIREProvider struct {
 	cfg              *action.Configuration
 	SPIREVersion     string
 	SPIRECRDsVersion string
-	spireValues      map[string]interface{}
-	spireCRDsValues  map[string]interface{}
+	spireValues      map[string]any
+	spireCRDsValues  map[string]any
 	trustZone        *trust_zone_proto.TrustZone
 }
 
-func NewHelmSPIREProvider(ctx context.Context, trustZone *trust_zone_proto.TrustZone, spireValues, spireCRDsValues map[string]interface{}) (*HelmSPIREProvider, error) {
+func NewHelmSPIREProvider(ctx context.Context, trustZone *trust_zone_proto.TrustZone, spireValues, spireCRDsValues map[string]any) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = trustZone.GetKubernetesContext()
 
@@ -273,7 +273,7 @@ func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
 	return installChart(h.ctx, h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
 }
 
-func installChart(ctx context.Context, cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
+func installChart(ctx context.Context, cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
@@ -311,7 +311,7 @@ func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
 	return upgradeChart(h.ctx, h.cfg, client, SPIREChartName, h.settings, h.spireValues)
 }
 
-func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]interface{}) (*release.Release, error) {
+func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
