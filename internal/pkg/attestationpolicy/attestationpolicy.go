@@ -28,8 +28,8 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 	}
 }
 
-func (ap *AttestationPolicy) GetHelmConfig(source cofidectl_plugin.DataSource, binding *ap_binding_proto.APBinding) (map[string]interface{}, error) {
-	var clusterSPIFFEID = make(map[string]interface{})
+func (ap *AttestationPolicy) GetHelmConfig(source cofidectl_plugin.DataSource, binding *ap_binding_proto.APBinding) (map[string]any, error) {
+	var clusterSPIFFEID = make(map[string]any)
 	switch policy := ap.AttestationPolicyProto.Policy.(type) {
 	case *attestation_policy_proto.AttestationPolicy_Kubernetes:
 		kubernetes := policy.Kubernetes
