@@ -37,6 +37,9 @@ const (
 	SPIRENamespace = "spire"
 )
 
+// Type assertion that HelmSPIREProvider implements the Provider interface.
+var _ Provider = &HelmSPIREProvider{}
+
 // HelmSPIREProvider implements a Helm-based installer for the Cofide stack. It uses the SPIFFE/SPIRE project's own
 // helm-charts-hardened Helm chart to install a SPIRE stack to a given Kubernetes context, making use of the Cofide
 // API concepts and abstractions

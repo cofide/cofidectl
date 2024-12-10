@@ -18,19 +18,23 @@ var _ ProviderFactory = &HelmSPIREProviderFactory{}
 // ProviderFactory is an interface that abstracts the construction of HelmSPIREProvider objects.
 type ProviderFactory interface {
 	// Build returns a HelmSPIREProvider configured with values for an install/upgrade.
-	Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone) (*helm.HelmSPIREProvider, error)
+	Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error)
 }
 
 // HelmSPIREProviderFactory implements the ProviderFactory interface, building a HelmSPIREProvider
 // using the default values generator.
 type HelmSPIREProviderFactory struct{}
 
-func (f *HelmSPIREProviderFactory) Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone) (*helm.HelmSPIREProvider, error) {
-	generator := helm.NewHelmValuesGenerator(trustZone, ds, nil)
-	spireValues, err := generator.GenerateValues()
-	if err != nil {
-		return nil, err
+func (f *HelmSPIREProviderFactory) Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error) {
+	spireValues := map[string]any{}
+	var err error
+	if genValues {
+		generator := helm.NewHelmValuesGenerator(trustZone, ds, nil)
+		spireValues, err = generator.GenerateValues()
+		if err != nil {
+			return nil, err
+		}
 	}
-	spireCRDsValues := map[string]interface{}{}
+	spireCRDsValues := map[string]any{}
 	return helm.NewHelmSPIREProvider(ctx, trustZone, spireValues, spireCRDsValues)
 }

@@ -13,7 +13,6 @@ import (
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
-	"github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/spire"
 )
 
@@ -119,7 +118,7 @@ func (h *SpireHelm) ListTrustZones(ds plugin.DataSource) ([]*trust_zone_proto.Tr
 }
 
 func (h *SpireHelm) AddSPIRERepository(ctx context.Context, statusCh chan<- *provisionpb.Status) error {
-	prov, err := helm.NewHelmSPIREProvider(ctx, nil, nil, nil)
+	prov, err := h.providerFactory.Build(ctx, nil, nil, false)
 	if err != nil {
 		statusCh <- provision.StatusError("Preparing", "Failed to create Helm SPIRE provider", err)
 		return err
@@ -130,7 +129,7 @@ func (h *SpireHelm) AddSPIRERepository(ctx context.Context, statusCh chan<- *pro
 
 func (h *SpireHelm) InstallSPIREStack(ctx context.Context, ds plugin.DataSource, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
 	for _, trustZone := range trustZones {
-		prov, err := h.providerFactory.Build(ctx, ds, trustZone)
+		prov, err := h.providerFactory.Build(ctx, ds, trustZone, true)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, trustZone.GetKubernetesCluster())
 			statusCh <- sb.Error("Deploying", "Failed to create Helm SPIRE provider", err)
@@ -196,7 +195,7 @@ func (h *SpireHelm) GetBundleAndEndpoint(ctx context.Context, statusCh chan<- *p
 
 func (h *SpireHelm) ApplyPostInstallHelmConfig(ctx context.Context, ds plugin.DataSource, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
 	for _, trustZone := range trustZones {
-		prov, err := h.providerFactory.Build(ctx, ds, trustZone)
+		prov, err := h.providerFactory.Build(ctx, ds, trustZone, true)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, trustZone.GetKubernetesCluster())
 			statusCh <- sb.Error("Configuring", "Failed to create Helm SPIRE provider", err)
@@ -213,7 +212,7 @@ func (h *SpireHelm) ApplyPostInstallHelmConfig(ctx context.Context, ds plugin.Da
 
 func (h *SpireHelm) UninstallSPIREStack(ctx context.Context, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
 	for _, trustZone := range trustZones {
-		prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
+		prov, err := h.providerFactory.Build(ctx, nil, trustZone, false)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, trustZone.GetKubernetesCluster())
 			statusCh <- sb.Error("Uninstalling", "Failed to create Helm SPIRE provider", err)
