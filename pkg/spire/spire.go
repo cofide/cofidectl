@@ -442,7 +442,7 @@ func getServerCABundle(ctx context.Context, client *kubeutil.Client) (string, er
 }
 
 func parseServerCABundle(stdout []byte) (string, error) {
-	var data map[string]interface{}
+	var data map[string]any
 	if err := json.Unmarshal(stdout, &data); err != nil {
 		return "", err
 	}
@@ -450,7 +450,7 @@ func parseServerCABundle(stdout []byte) (string, error) {
 }
 
 type federatedBundles struct {
-	Bundles []map[string]interface{} `json:"bundles"`
+	Bundles []map[string]any `json:"bundles"`
 }
 
 func getFederatedBundles(ctx context.Context, client *kubeutil.Client) (map[string]string, error) {

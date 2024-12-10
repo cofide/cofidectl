@@ -10,12 +10,12 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
-	"github.com/cofide/cofidectl/internal/pkg/spire"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/cofide/cofidectl/pkg/provider"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
+	"github.com/cofide/cofidectl/pkg/spire"
 )
 
 // Type check that SpireHelm implements the Provision interface.
@@ -79,7 +79,7 @@ func (h *SpireHelm) TearDown(ctx context.Context, ds plugin.DataSource) error {
 }
 
 func addSPIRERepository(ctx context.Context) error {
-	emptyValues := map[string]interface{}{}
+	emptyValues := map[string]any{}
 	prov, err := helm.NewHelmSPIREProvider(ctx, nil, emptyValues, emptyValues)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func installSPIREStack(ctx context.Context, source plugin.DataSource, trustZones
 			return err
 		}
 
-		spireCRDsValues := map[string]interface{}{}
+		spireCRDsValues := map[string]any{}
 		prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, spireValues, spireCRDsValues)
 		if err != nil {
 			return err
@@ -178,7 +178,7 @@ func applyPostInstallHelmConfig(ctx context.Context, source plugin.DataSource, t
 			return err
 		}
 
-		spireCRDsValues := map[string]interface{}{}
+		spireCRDsValues := map[string]any{}
 
 		prov, err := helm.NewHelmSPIREProvider(ctx, trustZone, spireValues, spireCRDsValues)
 		if err != nil {

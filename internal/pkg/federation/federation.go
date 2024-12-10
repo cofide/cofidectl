@@ -24,12 +24,12 @@ func NewFederation(trustZone *trust_zone_proto.TrustZone) *Federation {
 	}
 }
 
-func (fed *Federation) GetHelmConfig() (map[string]interface{}, error) {
+func (fed *Federation) GetHelmConfig() (map[string]any, error) {
 	switch fed.destTrustZone.GetBundleEndpointProfile() {
 	case trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE:
-		return map[string]interface{}{
+		return map[string]any{
 			"bundleEndpointURL": fed.destTrustZone.GetBundleEndpointUrl(),
-			"bundleEndpointProfile": map[string]interface{}{
+			"bundleEndpointProfile": map[string]any{
 				"type":             bundleEndpointProfileHTTPSSPIFFE,
 				"endpointSPIFFEID": fmt.Sprintf("spiffe://%s/spire/server", fed.destTrustZone.TrustDomain),
 			},
@@ -37,9 +37,9 @@ func (fed *Federation) GetHelmConfig() (map[string]interface{}, error) {
 			"trustDomainBundle": fed.destTrustZone.GetBundle(),
 		}, nil
 	case trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB:
-		return map[string]interface{}{
+		return map[string]any{
 			"bundleEndpointURL": fed.destTrustZone.GetBundleEndpointUrl(),
-			"bundleEndpointProfile": map[string]interface{}{
+			"bundleEndpointProfile": map[string]any{
 				"type": bundleEndpointProfileHTTPSWeb,
 			},
 			"trustDomain": fed.destTrustZone.TrustDomain,

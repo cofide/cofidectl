@@ -41,15 +41,15 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		JwtIssuer: StringPtr("https://tz1.example.com"),
 		ExtraHelmValues: func() *structpb.Struct {
-			ev := map[string]interface{}{
-				"global": map[string]interface{}{
-					"spire": map[string]interface{}{
-						"namespaces": map[string]interface{}{
+			ev := map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						"namespaces": map[string]any{
 							"create": true,
 						},
 					},
 				},
-				"spire-server": map[string]interface{}{
+				"spire-server": map[string]any{
 					"logLevel": "INFO",
 				},
 			}

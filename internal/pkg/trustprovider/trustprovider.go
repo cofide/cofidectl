@@ -38,7 +38,7 @@ func (tp *TrustProvider) GetValues() error {
 		tp.AgentConfig = TrustProviderAgentConfig{
 			WorkloadAttestor:        KubernetesTrustProvider,
 			WorkloadAttestorEnabled: true,
-			WorkloadAttestorConfig: map[string]interface{}{
+			WorkloadAttestorConfig: map[string]any{
 				"enabled":                     true,
 				"skipKubeletVerification":     true,
 				"disableContainerSelectors":   false,
@@ -51,7 +51,7 @@ func (tp *TrustProvider) GetValues() error {
 		tp.ServerConfig = TrustProviderServerConfig{
 			NodeAttestor:        kubernetesPsat,
 			NodeAttestorEnabled: true,
-			NodeAttestorConfig: map[string]interface{}{
+			NodeAttestorConfig: map[string]any{
 				"enabled":                 true,
 				"serviceAccountAllowList": []string{"spire:spire-agent"},
 				"audience":                []string{"spire-server"},
@@ -66,15 +66,15 @@ func (tp *TrustProvider) GetValues() error {
 }
 
 type TrustProviderAgentConfig struct {
-	WorkloadAttestor        string                 `yaml:"workloadAttestor"`
-	WorkloadAttestorEnabled bool                   `yaml:"workloadAttestorEnabled"`
-	WorkloadAttestorConfig  map[string]interface{} `yaml:"workloadAttestorConfig"`
-	NodeAttestor            string                 `yaml:"nodeAttestor"`
-	NodeAttestorEnabled     bool                   `yaml:"nodeAttestorEnabled"`
+	WorkloadAttestor        string         `yaml:"workloadAttestor"`
+	WorkloadAttestorEnabled bool           `yaml:"workloadAttestorEnabled"`
+	WorkloadAttestorConfig  map[string]any `yaml:"workloadAttestorConfig"`
+	NodeAttestor            string         `yaml:"nodeAttestor"`
+	NodeAttestorEnabled     bool           `yaml:"nodeAttestorEnabled"`
 }
 
 type TrustProviderServerConfig struct {
-	NodeAttestor        string                 `yaml:"nodeAttestor"`
-	NodeAttestorEnabled bool                   `yaml:"nodeAttestorEnabled"`
-	NodeAttestorConfig  map[string]interface{} `yaml:"nodeAttestorConfig"`
+	NodeAttestor        string         `yaml:"nodeAttestor"`
+	NodeAttestorEnabled bool           `yaml:"nodeAttestorEnabled"`
+	NodeAttestorConfig  map[string]any `yaml:"nodeAttestorConfig"`
 }

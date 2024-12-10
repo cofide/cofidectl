@@ -13,8 +13,8 @@ import (
 
 func TestHelmSPIREProvider(t *testing.T) {
 	trustZoneProto := &trust_zone_proto.TrustZone{TrustDomain: "foo.bar"}
-	spireValues := map[string]interface{}{}
-	spireCRDsValues := map[string]interface{}{}
+	spireValues := map[string]any{}
+	spireCRDsValues := map[string]any{}
 
 	p, err := NewHelmSPIREProvider(context.Background(), trustZoneProto, spireValues, spireCRDsValues)
 	assert.Nil(t, err)
