@@ -63,7 +63,7 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 		Long:  helmOverrideCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -139,7 +139,7 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 		Long:  helmValuesCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}

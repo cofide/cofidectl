@@ -30,12 +30,12 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 		Long:  upCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := u.cmdCtx.PluginManager.GetDataSource()
+			ds, err := u.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
 
-			provision, err := u.cmdCtx.PluginManager.GetProvision()
+			provision, err := u.cmdCtx.PluginManager.GetProvision(cmd.Context())
 			if err != nil {
 				return err
 			}

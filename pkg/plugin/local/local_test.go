@@ -4,6 +4,7 @@
 package local
 
 import (
+	"context"
 	"slices"
 	"testing"
 
@@ -79,7 +80,7 @@ func TestNewLocalDataSource(t *testing.T) {
 func TestLocalDataSource_Validate(t *testing.T) {
 	lds, _ := buildLocalDataSource(t, config.NewConfig())
 
-	err := lds.Validate()
+	err := lds.Validate(context.Background())
 	require.Nil(t, err)
 }
 

@@ -27,8 +27,8 @@ func NewDataSourcePluginClientGRPC(ctx context.Context, client cofidectl_proto.D
 	return &DataSourcePluginClientGRPC{ctx: ctx, client: client}
 }
 
-func (c *DataSourcePluginClientGRPC) Validate() error {
-	_, err := c.client.Validate(c.ctx, &cofidectl_proto.ValidateRequest{})
+func (c *DataSourcePluginClientGRPC) Validate(ctx context.Context) error {
+	_, err := c.client.Validate(ctx, &cofidectl_proto.ValidateRequest{})
 	return err
 }
 

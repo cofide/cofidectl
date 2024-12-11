@@ -12,6 +12,7 @@ import (
 
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/cofide/cofidectl/pkg/spire"
 )
@@ -40,7 +41,7 @@ func (h *SpireHelm) Validate(_ context.Context) error {
 	return nil
 }
 
-func (h *SpireHelm) Deploy(ctx context.Context, ds plugin.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (h *SpireHelm) Deploy(ctx context.Context, ds datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
 	statusCh := make(chan *provisionpb.Status)
 
 	go func() {
@@ -52,7 +53,7 @@ func (h *SpireHelm) Deploy(ctx context.Context, ds plugin.DataSource, kubeCfgFil
 	return statusCh, nil
 }
 
-func (h *SpireHelm) TearDown(ctx context.Context, ds plugin.DataSource) (<-chan *provisionpb.Status, error) {
+func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource) (<-chan *provisionpb.Status, error) {
 	statusCh := make(chan *provisionpb.Status)
 
 	go func() {

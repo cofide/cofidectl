@@ -48,8 +48,8 @@ type GRPCServer struct {
 	Impl DataSource
 }
 
-func (s *GRPCServer) Validate(_ context.Context, req *cofidectl_proto.ValidateRequest) (*cofidectl_proto.ValidateResponse, error) {
-	err := s.Impl.Validate()
+func (s *GRPCServer) Validate(ctx context.Context, req *cofidectl_proto.ValidateRequest) (*cofidectl_proto.ValidateResponse, error) {
+	err := s.Impl.Validate(ctx)
 	if err != nil {
 		return nil, err
 	}

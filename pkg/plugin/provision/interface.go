@@ -8,12 +8,12 @@ import (
 
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+	"github.com/cofide/cofidectl/pkg/plugin/validator"
 )
 
 // Provision is the interface that provision plugins have to implement.
 type Provision interface {
-	// Validate checks whether the plugin is configured correctly.
-	Validate(ctx context.Context) error
+	validator.Validator
 
 	// Deploy deploys the workload identity configuration to the clusters in the system.
 	// The method is asynchronous, returning a channel over which Status messages are sent

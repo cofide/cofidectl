@@ -54,8 +54,7 @@ func (i *InitCommand) GetRootCommand() *cobra.Command {
 				os.Exit(1)
 			}
 
-			_, err := i.cmdCtx.PluginManager.Init(plugins, nil)
-			return err
+			return i.cmdCtx.PluginManager.Init(cmd.Context(), plugins, nil)
 		},
 	}
 
