@@ -8,7 +8,7 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 )
 
 type AttestationPolicy struct {
@@ -28,7 +28,7 @@ func NewAttestationPolicy(attestationPolicy *attestation_policy_proto.Attestatio
 	}
 }
 
-func (ap *AttestationPolicy) GetHelmConfig(source cofidectl_plugin.DataSource, binding *ap_binding_proto.APBinding) (map[string]any, error) {
+func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding *ap_binding_proto.APBinding) (map[string]any, error) {
 	var clusterSPIFFEID = make(map[string]any)
 	switch policy := ap.AttestationPolicyProto.Policy.(type) {
 	case *attestation_policy_proto.AttestationPolicy_Kubernetes:

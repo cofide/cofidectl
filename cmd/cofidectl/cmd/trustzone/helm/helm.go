@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
-	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
 )
 
@@ -95,7 +95,7 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 }
 
 // overrideValues overrides Helm values for a trust zone.
-func (c *HelmCommand) overrideValues(ds plugin.DataSource, tzName string, values map[string]any) error {
+func (c *HelmCommand) overrideValues(ds datasource.DataSource, tzName string, values map[string]any) error {
 	trustZone, err := ds.GetTrustZone(tzName)
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 }
 
 // getValues returns the Helm values for a trust zone.
-func (c *HelmCommand) getValues(ds plugin.DataSource, tzName string) (map[string]any, error) {
+func (c *HelmCommand) getValues(ds datasource.DataSource, tzName string) (map[string]any, error) {
 	trustZone, err := ds.GetTrustZone(tzName)
 	if err != nil {
 		return nil, err

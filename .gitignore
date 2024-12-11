@@ -11,6 +11,7 @@ cofide.yaml
 
 # Plugins
 cofidectl-connect
+cofidectl-test-plugin
 
 # cofide-demos repository
 demos/cofide-demos/

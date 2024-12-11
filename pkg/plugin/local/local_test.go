@@ -8,7 +8,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +25,7 @@ import (
 
 func TestLocalDataSource_ImplementsDataSource(t *testing.T) {
 	local := LocalDataSource{}
-	var _ plugin.DataSource = &local
+	var _ datasource.DataSource = &local
 }
 
 func TestNewLocalDataSource(t *testing.T) {

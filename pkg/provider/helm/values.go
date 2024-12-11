@@ -11,11 +11,11 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 )
 
 type HelmValuesGenerator struct {
-	source    cofidectl_plugin.DataSource
+	source    datasource.DataSource
 	trustZone *trust_zone_proto.TrustZone
 	values    map[string]any
 }
@@ -54,7 +54,7 @@ type spiffeCSIDriverValues struct {
 	fullnameOverride string
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource, values map[string]any) *HelmValuesGenerator {
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source datasource.DataSource, values map[string]any) *HelmValuesGenerator {
 	return &HelmValuesGenerator{
 		trustZone: trustZone,
 		source:    source,

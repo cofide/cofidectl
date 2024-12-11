@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	"github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/manager"
@@ -33,7 +34,9 @@ directory
 `
 
 type Opts struct {
-	enableConnect bool
+	enableConnect    bool
+	dataSourcePlugin string
+	provisionPlugin  string
 }
 
 func (i *InitCommand) GetRootCommand() *cobra.Command {
@@ -44,7 +47,6 @@ func (i *InitCommand) GetRootCommand() *cobra.Command {
 		Long:  initRootCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			plugins := manager.GetDefaultPlugins()
 			if opts.enableConnect {
 				if ok, _ := plugin.PluginExists(connectPluginName); ok {
 					fmt.Println(`Please run "cofidectl connect init"`)
@@ -54,12 +56,19 @@ func (i *InitCommand) GetRootCommand() *cobra.Command {
 				os.Exit(1)
 			}
 
+			plugins := &pluginspb.Plugins{
+				DataSource: &opts.dataSourcePlugin,
+				Provision:  &opts.provisionPlugin,
+			}
 			return i.cmdCtx.PluginManager.Init(cmd.Context(), plugins, nil)
 		},
 	}
 
+	defaultPlugins := manager.GetDefaultPlugins()
 	f := cmd.Flags()
 	f.BoolVar(&opts.enableConnect, "enable-connect", false, "Enables Cofide Connect")
+	f.StringVar(&opts.dataSourcePlugin, "data-source-plugin", defaultPlugins.GetDataSource(), "Data source plugin")
+	f.StringVar(&opts.provisionPlugin, "provision-plugin", defaultPlugins.GetProvision(), "Provision plugin")
 
 	return cmd
 }

@@ -11,7 +11,6 @@ import (
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
@@ -132,7 +131,7 @@ func TestManager_Init_failure(t *testing.T) {
 		dsName         string
 		provisionName  string
 		pluginConfig   map[string]*structpb.Struct
-		want           func(config.Loader) cofidectl_plugin.DataSource
+		want           func(config.Loader) datasource.DataSource
 		wantErrMessage string
 	}{
 		{
@@ -185,12 +184,12 @@ func TestManager_GetDataSource_success(t *testing.T) {
 	tests := []struct {
 		name   string
 		config config.Config
-		want   func(config.Loader) cofidectl_plugin.DataSource
+		want   func(config.Loader) datasource.DataSource
 	}{
 		{
 			name:   "defaults",
 			config: config.Config{Plugins: GetDefaultPlugins()},
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
+			want: func(cl config.Loader) datasource.DataSource {
 				lds, err := local.NewLocalDataSource(cl)
 				assert.Nil(t, err)
 				return lds
@@ -199,7 +198,7 @@ func TestManager_GetDataSource_success(t *testing.T) {
 		{
 			name:   "gRPC",
 			config: config.Config{Plugins: fixtures.Plugins("plugins1")},
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
+			want: func(cl config.Loader) datasource.DataSource {
 				fcds := newFakeGrpcDataSource(t, cl)
 				return fcds
 			},
@@ -207,7 +206,7 @@ func TestManager_GetDataSource_success(t *testing.T) {
 		{
 			name:   "gRPC with provision",
 			config: config.Config{Plugins: fixtures.Plugins("plugins2")},
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
+			want: func(cl config.Loader) datasource.DataSource {
 				fcds := newFakeGrpcDataSource(t, cl)
 				return fcds
 			},
@@ -400,7 +399,7 @@ func TestManager_Shutdown(t *testing.T) {
 	tests := []struct {
 		name   string
 		config config.Config
-		want   func(config.Loader) cofidectl_plugin.DataSource
+		want   func(config.Loader) datasource.DataSource
 	}{
 		{
 			name:   "defaults",

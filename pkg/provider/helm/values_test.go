@@ -11,7 +11,7 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
-	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1271,7 +1271,7 @@ func TestSpiffeCSIDriverValues_GenerateValues(t *testing.T) {
 	}
 }
 
-func newFakeDataSource(t *testing.T, cfg *config.Config) plugin.DataSource {
+func newFakeDataSource(t *testing.T, cfg *config.Config) datasource.DataSource {
 	configLoader, err := config.NewMemoryLoader(cfg)
 	require.Nil(t, err)
 	lds, err := local.NewLocalDataSource(configLoader)

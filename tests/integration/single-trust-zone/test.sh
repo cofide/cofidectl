@@ -5,6 +5,9 @@
 
 set -euxo pipefail
 
+DATA_SOURCE_PLUGIN=${DATA_SOURCE_PLUGIN:-}
+PROVISION_PLUGIN=${PROVISION_PLUGIN:-}
+
 K8S_CLUSTER_NAME=${K8S_CLUSTER_NAME:-local1}
 K8S_CLUSTER_CONTEXT=${K8S_CLUSTER_CONTEXT:-kind-$K8S_CLUSTER_NAME}
 
@@ -14,9 +17,19 @@ TRUST_DOMAIN=${TRUST_DOMAIN:-td1}
 NAMESPACE_POLICY_NAMESPACE=${NAMESPACE_POLICY_NAMESPACE:-demo}
 POD_POLICY_POD_LABEL=${POD_POLICY_POD_LABEL:-"foo=bar"}
 
-function configure() {
+function init() {
   rm -f cofide.yaml
-  ./cofidectl init
+  args=""
+  if [[ -n "$DATA_SOURCE_PLUGIN" ]]; then
+    args="$args --data-source-plugin $DATA_SOURCE_PLUGIN"
+  fi
+  if [[ -n "$PROVISION_PLUGIN" ]]; then
+    args="$args --provision-plugin $PROVISION_PLUGIN"
+  fi
+  ./cofidectl init $args
+}
+
+function configure() {
   ./cofidectl trust-zone add $TRUST_ZONE --trust-domain $TRUST_DOMAIN --kubernetes-context $K8S_CLUSTER_CONTEXT --kubernetes-cluster $K8S_CLUSTER_NAME --profile kubernetes
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
@@ -72,6 +85,7 @@ function down() {
 }
 
 function main() {
+  init
   configure
   up
   list_resources
