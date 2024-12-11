@@ -229,7 +229,7 @@ func loadGrpcPlugin(ctx context.Context, logger hclog.Logger, pluginName string,
 		pluginSet[provision.ProvisionPluginName] = &provision.ProvisionPlugin{}
 	}
 
-	cmd := exec.Command(pluginPath, cofidectl_plugin.DataSourcePluginArgs...)
+	cmd := exec.Command(pluginPath, cofidectl_plugin.PluginServeArgs...)
 	client := go_plugin.NewClient(&go_plugin.ClientConfig{
 		Cmd:              cmd,
 		HandshakeConfig:  cofidectl_plugin.HandshakeConfig,

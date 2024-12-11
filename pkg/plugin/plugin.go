@@ -17,13 +17,13 @@ const (
 	DataSourcePluginName = "data_source"
 )
 
-// DataSourcePluginArgs contains the arguments passed to plugins when executing them as a data source.
-// TODO: change to plugin serve
-var DataSourcePluginArgs []string = []string{"data-source", "serve"}
+// PluginServeArgs contains the arguments passed to plugins when executing them as a gRPC plugin.
+var PluginServeArgs []string = []string{"plugin", "serve"}
 
-// IsDataSourceServeCmd returns whether the provided command line arguments indicate that a plugin should serve a data source.
-func IsDataSourceServeCmd(args []string) bool {
-	return slices.Equal(args, DataSourcePluginArgs)
+// IsPluginServeCmd returns whether the provided command line arguments indicate that a plugin
+// should serve gRPC plugins.
+func IsPluginServeCmd(args []string) bool {
+	return slices.Equal(args, PluginServeArgs)
 }
 
 // DataSourcePlugin implements the plugin.Plugin interface to provide the GRPC
