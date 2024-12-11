@@ -65,11 +65,16 @@
 	[string]: _
 }
 
+#Plugins: {
+	data_source?: string
+	provision?: string
+}
+
 #Config: {
-	data_source!: #DataSource
 	trust_zones: [...#TrustZone]
 	attestation_policies: [...#AttestationPolicy]
 	plugin_config?: #PluginConfig
+	plugins!: #Plugins
 }
 
 #Config

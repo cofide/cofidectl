@@ -47,11 +47,6 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			wantErr: "foo: field not allowed",
 		},
 		{
-			name:    "data source not a string",
-			data:    "data_source: 123",
-			wantErr: "data_source: conflicting values 123 and string",
-		},
-		{
 			name:    "trust zones not a list",
 			data:    "trust_zones: \"not-a-list\"",
 			wantErr: "trust_zones: conflicting values \"not-a-list\" and [...#TrustZone]",
@@ -85,6 +80,11 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			name:    "missing attestation policy field",
 			data:    string(readTestConfig(t, "missing_attestation_policy_field.yaml")),
 			wantErr: "attestation_policies.0.kubernetes: field is required but not present",
+		},
+		{
+			name:    "plugins not a map",
+			data:    "plugins: 123",
+			wantErr: "plugins: conflicting values 123 and ",
 		},
 	}
 	for _, tt := range tests {

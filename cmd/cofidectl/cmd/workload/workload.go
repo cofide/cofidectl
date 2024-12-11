@@ -63,7 +63,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
-			ds, err := w.cmdCtx.PluginManager.GetDataSource()
+			ds, err := w.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -162,7 +162,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
-			ds, err := w.cmdCtx.PluginManager.GetDataSource()
+			ds, err := w.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
