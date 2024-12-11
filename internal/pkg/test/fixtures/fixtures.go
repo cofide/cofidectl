@@ -103,7 +103,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		AttestationPolicies:   []*ap_binding_proto.APBinding{},
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
 	},
-	// tz3 has no federations or bound attestation policies and uses the istio profile.
+	// tz4 has no federations or bound attestation policies and uses the istio profile.
 	"tz4": {
 		Name:              "tz4",
 		TrustDomain:       "td4",

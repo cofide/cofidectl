@@ -14,20 +14,6 @@ const (
 	kubernetesPsat          string = "k8sPsat"
 )
 
-type TrustProviderAgentConfig struct {
-	WorkloadAttestor        string         `yaml:"workloadAttestor"`
-	WorkloadAttestorEnabled bool           `yaml:"workloadAttestorEnabled"`
-	WorkloadAttestorConfig  map[string]any `yaml:"workloadAttestorConfig"`
-	NodeAttestor            string         `yaml:"nodeAttestor"`
-	NodeAttestorEnabled     bool           `yaml:"nodeAttestorEnabled"`
-}
-
-type TrustProviderServerConfig struct {
-	NodeAttestor        string         `yaml:"nodeAttestor"`
-	NodeAttestorEnabled bool           `yaml:"nodeAttestorEnabled"`
-	NodeAttestorConfig  map[string]any `yaml:"nodeAttestorConfig"`
-}
-
 type TrustProvider struct {
 	Name         string
 	Kind         string
@@ -77,4 +63,18 @@ func (tp *TrustProvider) GetValues() error {
 		return fmt.Errorf("an unknown trust provider kind was specified: %s", tp.Kind)
 	}
 	return nil
+}
+
+type TrustProviderAgentConfig struct {
+	WorkloadAttestor        string         `yaml:"workloadAttestor"`
+	WorkloadAttestorEnabled bool           `yaml:"workloadAttestorEnabled"`
+	WorkloadAttestorConfig  map[string]any `yaml:"workloadAttestorConfig"`
+	NodeAttestor            string         `yaml:"nodeAttestor"`
+	NodeAttestorEnabled     bool           `yaml:"nodeAttestorEnabled"`
+}
+
+type TrustProviderServerConfig struct {
+	NodeAttestor        string         `yaml:"nodeAttestor"`
+	NodeAttestorEnabled bool           `yaml:"nodeAttestorEnabled"`
+	NodeAttestorConfig  map[string]any `yaml:"nodeAttestorConfig"`
 }

@@ -303,10 +303,6 @@ func (s *spireAgentValues) generateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("sdsConfig value is empty")
 	}
 
-	if len(s.agentConfig.WorkloadAttestorConfig) == 0 {
-		return nil, fmt.Errorf("agentConfig.WorkloadAttestorConfig value is empty")
-	}
-
 	if s.agentConfig.WorkloadAttestor == "" {
 		return nil, fmt.Errorf("agentConfig.WorkloadAttestor value is empty")
 	}
