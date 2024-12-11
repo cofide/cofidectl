@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
@@ -24,7 +25,7 @@ import (
 )
 
 const (
-	LocalPluginName              = "local"
+	LocalDSPluginName            = "local"
 	SpireHelmProvisionPluginName = "spire-helm"
 )
 
@@ -45,19 +46,25 @@ func NewManager(configLoader config.Loader) *PluginManager {
 	}
 }
 
-// Init initialises the configuration for the specified data source plugin.
-func (pm *PluginManager) Init(dsName string, provisionName string, pluginConfig map[string]*structpb.Struct) (cofidectl_plugin.DataSource, error) {
+// Init initialises the configuration for the specified plugins.
+func (pm *PluginManager) Init(plugins *pluginspb.Plugins, pluginConfig map[string]*structpb.Struct) (cofidectl_plugin.DataSource, error) {
+	if plugins == nil {
+		plugins = GetDefaultPlugins()
+	}
+
 	if exists, _ := pm.configLoader.Exists(); exists {
 		// Check that existing plugin config matches.
 		cfg, err := pm.configLoader.Read()
 		if err != nil {
 			return nil, err
 		}
-		if cfg.DataSource != dsName {
-			return nil, fmt.Errorf("existing config file uses a different data source plugin: %s vs %s", cfg.DataSource, dsName)
+		ds := plugins.GetDataSource()
+		provision := plugins.GetProvision()
+		if ds != cfg.Plugins.GetDataSource() {
+			return nil, fmt.Errorf("existing config file uses a different data source plugin: %s vs %s", cfg.Plugins.GetDataSource(), ds)
 		}
-		if cfg.ProvisionPlugin != provisionName {
-			return nil, fmt.Errorf("existing config file uses a different provision plugin: %s vs %s", cfg.ProvisionPlugin, provisionName)
+		if cfg.Plugins.GetProvision() != provision {
+			return nil, fmt.Errorf("existing config file uses a different provision plugin: %s vs %s", cfg.Plugins.GetProvision(), provision)
 		}
 		if !maps.EqualFunc(cfg.PluginConfig, pluginConfig, proto.StructsEqual) {
 			return nil, fmt.Errorf("existing config file has different plugin config:\n%v\nvs\n\n%v", cfg.PluginConfig, pluginConfig)
@@ -65,8 +72,11 @@ func (pm *PluginManager) Init(dsName string, provisionName string, pluginConfig 
 		fmt.Println("the config file already exists")
 	} else {
 		cfg := config.NewConfig()
-		cfg.DataSource = dsName
-		cfg.ProvisionPlugin = provisionName
+		plugins, err := proto.ClonePlugins(plugins)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Plugins = plugins
 		if pluginConfig != nil {
 			cfg.PluginConfig = pluginConfig
 		}
@@ -96,14 +106,15 @@ func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
 		return nil, err
 	}
 
-	if cfg.DataSource == "" {
+	dsName := cfg.Plugins.GetDataSource()
+	if dsName == "" {
 		return nil, errors.New("plugin name cannot be empty")
 	}
 
 	var ds cofidectl_plugin.DataSource
 	var client *go_plugin.Client
-	switch cfg.DataSource {
-	case LocalPluginName:
+	switch dsName {
+	case LocalDSPluginName:
 		ds, err = local.NewLocalDataSource(pm.configLoader)
 		if err != nil {
 			return nil, err
@@ -115,7 +126,7 @@ func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
 			Level:  hclog.Error,
 		})
 
-		client, ds, _, err = pm.loadGrpcPlugin(logger, cfg.DataSource)
+		client, ds, _, err = pm.loadGrpcPlugin(logger, dsName)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +139,7 @@ func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
 		return nil, err
 	}
 	pm.source = ds
-	pm.clients[cfg.DataSource] = client
+	pm.clients[dsName] = client
 	return ds, nil
 }
 
@@ -149,13 +160,14 @@ func (pm *PluginManager) loadProvision() (provision.Provision, error) {
 		return nil, err
 	}
 
-	if cfg.ProvisionPlugin == "" {
+	provisionName := cfg.Plugins.GetProvision()
+	if provisionName == "" {
 		return nil, errors.New("provision plugin name cannot be empty")
 	}
 
 	var provision provision.Provision
 	var client *go_plugin.Client
-	switch cfg.ProvisionPlugin {
+	switch provisionName {
 	case SpireHelmProvisionPluginName:
 		return spirehelm.NewSpireHelm(nil), nil
 	default:
@@ -165,7 +177,7 @@ func (pm *PluginManager) loadProvision() (provision.Provision, error) {
 			Level:  hclog.Error,
 		})
 
-		client, _, provision, err = pm.loadGrpcPlugin(logger, cfg.ProvisionPlugin)
+		client, _, provision, err = pm.loadGrpcPlugin(logger, provisionName)
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +190,7 @@ func (pm *PluginManager) loadProvision() (provision.Provision, error) {
 		return nil, err
 	}
 	pm.provision = provision
-	pm.clients[cfg.ProvisionPlugin] = client
+	pm.clients[provisionName] = client
 	return provision, nil
 }
 
@@ -292,4 +304,13 @@ func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *struct
 	}
 	cfg.PluginConfig[pluginName] = pluginConfig
 	return pm.configLoader.Write(cfg)
+}
+
+func GetDefaultPlugins() *pluginspb.Plugins {
+	ds := LocalDSPluginName
+	provision := SpireHelmProvisionPluginName
+	return &pluginspb.Plugins{
+		DataSource: &ds,
+		Provision:  &provision,
+	}
 }

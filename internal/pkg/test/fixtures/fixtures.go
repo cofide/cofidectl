@@ -9,6 +9,7 @@ import (
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
@@ -193,6 +194,19 @@ var pluginConfigFixtures map[string]*structpb.Struct = map[string]*structpb.Stru
 	}(),
 }
 
+var pluginsFixtures map[string]*pluginspb.Plugins = map[string]*pluginspb.Plugins{
+	// Data source and provision use different plugins.
+	"plugins1": {
+		DataSource: StringPtr("fake-datasource"),
+		Provision:  StringPtr("fake-provision"),
+	},
+	// Data source and provision use the same plugin.
+	"plugins2": {
+		DataSource: StringPtr("fake-plugin"),
+		Provision:  StringPtr("fake-plugin"),
+	},
+}
+
 func TrustZone(name string) *trust_zone_proto.TrustZone {
 	tz, ok := trustZoneFixtures[name]
 	if !ok {
@@ -227,6 +241,18 @@ func PluginConfig(name string) *structpb.Struct {
 		panic(fmt.Sprintf("failed to clone plugin config: %s", err))
 	}
 	return pc
+}
+
+func Plugins(name string) *pluginspb.Plugins {
+	p, ok := pluginsFixtures[name]
+	if !ok {
+		panic(fmt.Sprintf("invalid plugins fixture %s", name))
+	}
+	p, err := proto.ClonePlugins(p)
+	if err != nil {
+		panic(fmt.Sprintf("failed to clone plugins: %s", err))
+	}
+	return p
 }
 
 func StringPtr(s string) *string {

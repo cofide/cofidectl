@@ -7,46 +7,47 @@ import (
 	"buf.build/go/protoyaml"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	config_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/config/v1alpha1"
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Config describes the cofide.yaml configuration file format.
 type Config struct {
-	DataSource          string
 	TrustZones          []*trust_zone_proto.TrustZone
 	AttestationPolicies []*attestation_policy_proto.AttestationPolicy
 	PluginConfig        map[string]*structpb.Struct
-	ProvisionPlugin     string
+	Plugins             *pluginspb.Plugins
 }
 
 func NewConfig() *Config {
 	return &Config{
-		DataSource:          "",
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 		PluginConfig:        map[string]*structpb.Struct{},
-		ProvisionPlugin:     "",
+		Plugins:             &pluginspb.Plugins{},
 	}
 }
 
 func newConfigFromProto(proto *config_proto.Config) *Config {
+	plugins := proto.GetPlugins()
+	if plugins == nil {
+		plugins = &pluginspb.Plugins{}
+	}
 	return &Config{
-		DataSource:          proto.GetDataSource(),
 		TrustZones:          proto.TrustZones,
 		AttestationPolicies: proto.AttestationPolicies,
 		PluginConfig:        proto.PluginConfig,
-		ProvisionPlugin:     proto.GetProvisionPlugin(),
+		Plugins:             plugins,
 	}
 }
 
 func (c *Config) toProto() *config_proto.Config {
 	return &config_proto.Config{
-		DataSource:          &c.DataSource,
 		TrustZones:          c.TrustZones,
 		AttestationPolicies: c.AttestationPolicies,
 		PluginConfig:        c.PluginConfig,
-		ProvisionPlugin:     &c.ProvisionPlugin,
+		Plugins:             c.Plugins,
 	}
 }
 

@@ -44,23 +44,17 @@ func (i *InitCommand) GetRootCommand() *cobra.Command {
 		Long:  initRootCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var dsName string
-			var provisionName string
+			plugins := manager.GetDefaultPlugins()
 			if opts.enableConnect {
 				if ok, _ := plugin.PluginExists(connectPluginName); ok {
-					dsName = connectPluginName
-					provisionName = connectPluginName
+					fmt.Println(`Please run "cofidectl connect init"`)
 				} else {
 					fmt.Println("👀 get in touch with us at hello@cofide.io to find out more")
-					os.Exit(1)
 				}
-			} else {
-				// Default to the local file data source.
-				dsName = manager.LocalPluginName
-				provisionName = manager.SpireHelmProvisionPluginName
+				os.Exit(1)
 			}
 
-			_, err := i.cmdCtx.PluginManager.Init(dsName, provisionName, nil)
+			_, err := i.cmdCtx.PluginManager.Init(plugins, nil)
 			return err
 		},
 	}

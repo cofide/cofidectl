@@ -1,2 +1,1 @@
-data_source: local
-provision_plugin: ""
+plugins: {}

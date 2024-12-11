@@ -6,12 +6,10 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/testing/protocmp"
+	"github.com/stretchr/testify/require"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -29,21 +27,14 @@ func TestFileLoaderNonExistentConfig(t *testing.T) {
 	loader := NewFileLoader(filepath.Join(tempDir, "non-existent.yaml"))
 
 	gotExists, err := loader.Exists()
-	if err != nil {
-		t.Errorf("FileLoader.Exists() error = %v", err)
-	} else if gotExists {
-		t.Errorf("FileLoader.Exists() returned true")
-	}
+	require.NoError(t, err, err)
+	assert.False(t, gotExists, "FileLoader.Exists() returned true")
 
 	_, gotErr := loader.Read()
-	if gotErr == nil {
-		t.Fatal("FileLoader.Read() did not return error")
-	}
+	require.Error(t, gotErr, "FileLoader.Read() did not return error")
 
 	wantErr := "non-existent.yaml: no such file or directory"
-	if !strings.Contains(gotErr.Error(), wantErr) {
-		t.Fatalf("FileLoader.Read() err = %v, want %v", gotErr.Error(), wantErr)
-	}
+	assert.ErrorContains(t, gotErr, wantErr)
 }
 
 func TestFileLoaderWriteEmptyConfig(t *testing.T) {
@@ -53,26 +44,17 @@ func TestFileLoaderWriteEmptyConfig(t *testing.T) {
 
 	config := NewConfig()
 	err := loader.Write(config)
-	if err != nil {
-		t.Fatalf("FileLoader.Write() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	gotExists, err := loader.Exists()
-	if err != nil {
-		t.Errorf("FileLoader.Exists() error = %v", err)
-	} else if !gotExists {
-		t.Errorf("FileLoader.Exists() returned false")
-	}
+	require.NoError(t, err, err)
+	assert.True(t, gotExists, "FileLoader.Exists() returned false")
 
 	got, err := loader.Read()
-	if err != nil {
-		t.Fatalf("FileLoader.Read() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	want := NewConfig()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("FileLoader.Read() mismatch (-want,+got):\n%s", diff)
-	}
+	assert.EqualExportedValues(t, want, got)
 }
 
 func TestFileLoaderNonEmptyConfig(t *testing.T) {
@@ -81,7 +63,6 @@ func TestFileLoaderNonEmptyConfig(t *testing.T) {
 	loader := NewFileLoader(filepath.Join(tempDir, "config.yaml"))
 
 	config := NewConfig()
-	config.DataSource = "fake-plugin"
 	config.TrustZones = []*trust_zone_proto.TrustZone{
 		fixtures.TrustZone("tz1"),
 		fixtures.TrustZone("tz2"),
@@ -90,21 +71,16 @@ func TestFileLoaderNonEmptyConfig(t *testing.T) {
 		fixtures.AttestationPolicy("ap1"),
 		fixtures.AttestationPolicy("ap2"),
 	}
+	config.Plugins = fixtures.Plugins("plugins1")
 
 	err := loader.Write(config)
-	if err != nil {
-		t.Fatalf("FileLoader.Write() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	got, err := loader.Read()
-	if err != nil {
-		t.Fatalf("FileLoader.Read() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	want := config
-	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
-		t.Errorf("FileLoader.Read() mismatch (-want,+got):\n%s", diff)
-	}
+	assert.EqualExportedValues(t, want, got)
 }
 
 func TestFileLoaderReadInvalid(t *testing.T) {
@@ -112,16 +88,13 @@ func TestFileLoaderReadInvalid(t *testing.T) {
 	tempFile := filepath.Join(t.TempDir(), "config.yaml")
 	loader := NewFileLoader(tempFile)
 
-	if err := os.WriteFile(tempFile, []byte(`data_source: 123`), 0o600); err != nil {
-		t.Fatalf("Failed to write to temp file: %v", err)
-	}
+	err := os.WriteFile(tempFile, []byte(`plugins: 123`), 0o600)
+	require.NoError(t, err, err)
 
 	_, gotErr := loader.Read()
-	if gotErr == nil {
-		t.Fatalf("FileLoader.Read() did not return error")
-	}
+	require.Error(t, gotErr, "FileLoader.Read() did not return error")
 
-	wantErr := `error validating configuration YAML: data_source: conflicting values 123 and string (mismatched types int and string)`
+	wantErr := `error validating configuration YAML: plugins: conflicting values 123 and`
 	assert.ErrorContains(t, gotErr, wantErr)
 }
 
@@ -133,68 +106,45 @@ func TestMemoryLoaderImplementsLoader(t *testing.T) {
 func TestMemoryLoaderReadEmptyConfig(t *testing.T) {
 	// First read without a write should return an error.
 	loader, err := NewMemoryLoader(nil)
-	if err != nil {
-		t.Fatalf("NewMemoryLoader() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	gotExists, err := loader.Exists()
-	if err != nil {
-		t.Errorf("MemoryLoader.Exists() error = %v", err)
-	} else if gotExists {
-		t.Errorf("MemoryLoader.Exists() returned true")
-	}
+	require.NoError(t, err, err)
+	assert.False(t, gotExists, "MemoryLoader.Exists() returned true")
 
 	_, gotErr := loader.Read()
-	if gotErr == nil {
-		t.Fatal("MemoryLoader.Read() did not return error")
-	}
+	require.Error(t, gotErr, gotErr)
 
 	wantErr := "in-memory configuration does not exist"
-	if gotErr.Error() != wantErr {
-		t.Fatalf("MemoryLoader.Read() err = %v, want %v", gotErr.Error(), wantErr)
-	}
+	assert.ErrorContains(t, gotErr, wantErr)
 }
 
 func TestMemoryLoaderWriteEmptyConfig(t *testing.T) {
 	// Reading after writing an empty Config should return an identical empty Config.
 	loader, err := NewMemoryLoader(nil)
-	if err != nil {
-		t.Fatalf("NewMemoryLoader() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	config := NewConfig()
 	err = loader.Write(config)
-	if err != nil {
-		t.Fatalf("MemoryLoader.Write() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	gotExists, err := loader.Exists()
-	if err != nil {
-		t.Errorf("MemoryLoader.Exists() error = %v", err)
-	} else if !gotExists {
-		t.Errorf("MemoryLoader.Exists() returned false")
-	}
+	require.NoError(t, err, err)
+	assert.True(t, gotExists, "MemoryLoader.Exists() returned false")
 
 	got, err := loader.Read()
-	if err != nil {
-		t.Fatalf("MemoryLoader.Read() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	want := NewConfig()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("MemoryLoader.Read() mismatch (-want,+got):\n%s", diff)
-	}
+	assert.EqualExportedValues(t, want, got)
 }
 
 func TestMemoryLoaderNonEmptyConfig(t *testing.T) {
 	// Reading after writing a non-empty Config should return an identical non-empty Config.
 	loader, err := NewMemoryLoader(nil)
-	if err != nil {
-		t.Fatalf("NewMemoryLoader() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	config := NewConfig()
-	config.DataSource = "fake-plugin"
 	config.TrustZones = []*trust_zone_proto.TrustZone{
 		fixtures.TrustZone("tz1"),
 		fixtures.TrustZone("tz2"),
@@ -203,27 +153,21 @@ func TestMemoryLoaderNonEmptyConfig(t *testing.T) {
 		fixtures.AttestationPolicy("ap1"),
 		fixtures.AttestationPolicy("ap2"),
 	}
+	config.Plugins = fixtures.Plugins("plugins1")
 
 	err = loader.Write(config)
-	if err != nil {
-		t.Fatalf("MemoryLoader.Write() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	got, err := loader.Read()
-	if err != nil {
-		t.Fatalf("MemoryLoader.Read() returned error: %v", err)
-	}
+	require.NoError(t, err, err)
 
 	want := config
-	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
-		t.Errorf("MemoryLoader.Read() mismatch (-want,+got):\n%s", diff)
-	}
+	assert.EqualExportedValues(t, want, got)
 }
 
 func TestMemoryLoaderInitialConfig(t *testing.T) {
 	// Creating a MemoryLoader with an initial Config should return an identical Config on Read.
 	config := NewConfig()
-	config.DataSource = "fake-plugin"
 	config.TrustZones = []*trust_zone_proto.TrustZone{
 		fixtures.TrustZone("tz1"),
 		fixtures.TrustZone("tz2"),
@@ -232,6 +176,7 @@ func TestMemoryLoaderInitialConfig(t *testing.T) {
 		fixtures.AttestationPolicy("ap1"),
 		fixtures.AttestationPolicy("ap2"),
 	}
+	config.Plugins = fixtures.Plugins("plugins1")
 
 	loader, err := NewMemoryLoader(config)
 	if err != nil {
@@ -251,9 +196,7 @@ func TestMemoryLoaderInitialConfig(t *testing.T) {
 	}
 
 	want := config
-	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
-		t.Errorf("MemoryLoader.Read() mismatch (-want,+got):\n%s", diff)
-	}
+	assert.EqualExportedValues(t, want, got)
 }
 
 func TestMemoryLoaderReadInvalid(t *testing.T) {
@@ -263,7 +206,7 @@ func TestMemoryLoaderReadInvalid(t *testing.T) {
 		t.Fatalf("NewMemoryLoader() returned error: %v", err)
 	}
 
-	loader.data = []byte(`data_source: 123`)
+	loader.data = []byte(`plugins: 123`)
 	loader.exists = true
 
 	_, gotErr := loader.Read()
@@ -271,6 +214,6 @@ func TestMemoryLoaderReadInvalid(t *testing.T) {
 		t.Fatalf("MemoryLoader.Read() did not return error")
 	}
 
-	wantErr := `error validating configuration YAML: data_source: conflicting values 123 and string (mismatched types int and string)`
+	wantErr := `error validating configuration YAML: plugins: conflicting values 123 and`
 	assert.ErrorContains(t, gotErr, wantErr)
 }
