@@ -23,8 +23,8 @@ trust_zones:
                     create: true
         spire-server:
             logLevel: INFO
-      profile: kubernetes
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
+      profile: kubernetes
     - name: tz2
       trust_domain: td2
       kubernetes_cluster: local2
@@ -41,8 +41,8 @@ trust_zones:
           federates_with:
             - tz1
       jwt_issuer: https://tz2.example.com
-      profile: kubernetes
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
+      profile: kubernetes
 attestation_policies:
     - name: ap1
       kubernetes:
