@@ -15,9 +15,9 @@ import (
 // Type check that HelmSPIREProviderFactory implements the ProviderFactory interface.
 var _ ProviderFactory = &HelmSPIREProviderFactory{}
 
-// ProviderFactory is an interface that abstracts the construction of HelmSPIREProvider objects.
+// ProviderFactory is an interface that abstracts the construction of helm.Provider objects.
 type ProviderFactory interface {
-	// Build returns a HelmSPIREProvider configured with values for an install/upgrade.
+	// Build returns a helm.Provider configured with values for an install/upgrade.
 	Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error)
 }
 
