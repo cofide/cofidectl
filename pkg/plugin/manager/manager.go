@@ -14,7 +14,7 @@ import (
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
@@ -106,7 +106,7 @@ func (pm *PluginManager) Init(ctx context.Context, plugins *pluginspb.Plugins, p
 }
 
 // GetDataSource returns the data source plugin, loading it if necessary.
-func (pm *PluginManager) GetDataSource(ctx context.Context) (cofidectl_plugin.DataSource, error) {
+func (pm *PluginManager) GetDataSource(ctx context.Context) (datasource.DataSource, error) {
 	if pm.source != nil {
 		return pm.source, nil
 	}
@@ -114,7 +114,7 @@ func (pm *PluginManager) GetDataSource(ctx context.Context) (cofidectl_plugin.Da
 }
 
 // loadDataSource loads the data source plugin, which may be an in-process or gRPC plugin.
-func (pm *PluginManager) loadDataSource(ctx context.Context) (cofidectl_plugin.DataSource, error) {
+func (pm *PluginManager) loadDataSource(ctx context.Context) (datasource.DataSource, error) {
 	if pm.source != nil {
 		return nil, errors.New("data source has already been loaded")
 	}
@@ -216,23 +216,23 @@ func (pm *PluginManager) loadGrpcPlugin(ctx context.Context, pluginName string, 
 
 // loadGrpcPlugin is the default grpcPluginLoader.
 func loadGrpcPlugin(ctx context.Context, logger hclog.Logger, pluginName string, plugins *pluginspb.Plugins) (*grpcPlugin, error) {
-	pluginPath, err := cofidectl_plugin.GetPluginPath(pluginName)
+	pluginPath, err := plugin.GetPluginPath(pluginName)
 	if err != nil {
 		return nil, err
 	}
 
 	pluginSet := map[string]go_plugin.Plugin{}
 	if plugins.GetDataSource() == pluginName {
-		pluginSet[cofidectl_plugin.DataSourcePluginName] = &cofidectl_plugin.DataSourcePlugin{}
+		pluginSet[datasource.DataSourcePluginName] = &datasource.DataSourcePlugin{}
 	}
 	if plugins.GetProvision() == pluginName {
 		pluginSet[provision.ProvisionPluginName] = &provision.ProvisionPlugin{}
 	}
 
-	cmd := exec.Command(pluginPath, cofidectl_plugin.PluginServeArgs...)
+	cmd := exec.Command(pluginPath, plugin.PluginServeArgs...)
 	client := go_plugin.NewClient(&go_plugin.ClientConfig{
 		Cmd:              cmd,
-		HandshakeConfig:  cofidectl_plugin.HandshakeConfig,
+		HandshakeConfig:  plugin.HandshakeConfig,
 		Plugins:          pluginSet,
 		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
 		Logger:           logger,
@@ -258,7 +258,7 @@ func startGrpcPlugin(ctx context.Context, client *go_plugin.Client, pluginName s
 
 	grpcPlugin := &grpcPlugin{client: client}
 	if plugins.GetDataSource() == pluginName {
-		source, err := dispensePlugin[datasource.DataSource](ctx, grpcClient, cofidectl_plugin.DataSourcePluginName)
+		source, err := dispensePlugin[datasource.DataSource](ctx, grpcClient, datasource.DataSourcePluginName)
 		if err != nil {
 			return nil, err
 		}

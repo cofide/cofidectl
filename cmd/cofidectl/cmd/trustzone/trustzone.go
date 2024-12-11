@@ -18,7 +18,7 @@ import (
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/spire"
 	"github.com/olekukonko/tablewriter"
@@ -202,7 +202,7 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *TrustZoneCommand) status(ctx context.Context, source cofidectl_plugin.DataSource, kubeConfig, tzName string) error {
+func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string) error {
 	trustZone, err := source.GetTrustZone(tzName)
 	if err != nil {
 		return err
