@@ -84,11 +84,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, err
 	}
 
+	sdsConfig, err := getSDSConfig(tz.TrustZoneProto.GetProfile())
+	if err != nil {
+		return nil, err
+	}
+
 	sav := spireAgentValues{
 		fullnameOverride:   "spire-agent",
 		logLevel:           "DEBUG",
 		agentConfig:        tp.AgentConfig,
-		sdsConfig:          tp.SDSConfig,
+		sdsConfig:          sdsConfig,
 		spireServerAddress: "spire-server.spire",
 	}
 	spireAgentValues, err := sav.generateValues()
@@ -483,4 +488,29 @@ func shallowMerge(maps []map[string]any) map[string]any {
 	}
 
 	return flattened
+}
+
+// getSDSConfig returns the appropriate SPIRE agent Envoy SDS configuration for the
+// specified profile.
+func getSDSConfig(profile string) (map[string]any, error) {
+	switch profile {
+	case "istio":
+		// https://istio.io/latest/docs/ops/integrations/spire/#spiffe-federation
+		return map[string]any{
+			"enabled":               true,
+			"defaultSVIDName":       "default",
+			"defaultBundleName":     "null",
+			"defaultAllBundlesName": "ROOTCA",
+		}, nil
+	case "kubernetes":
+		// https://github.com/spiffe/spire/blob/main/doc/spire_agent.md#sds-configuration
+		return map[string]any{
+			"enabled":               true,
+			"defaultSVIDName":       "default",
+			"defaultBundleName":     "ROOTCA",
+			"defaultAllBundlesName": "ALL",
+		}, nil
+	default:
+		return nil, fmt.Errorf("an unknown profile was specified: %s", profile)
+	}
 }

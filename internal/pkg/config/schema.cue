@@ -6,6 +6,7 @@
 	kubernetes_cluster!: string
 	kubernetes_context!: string
 	trust_provider!: #TrustProvider
+	profile!: string
 	bundle_endpoint_url?: string
 	bundle?: string
 	federations: [...#Federation]

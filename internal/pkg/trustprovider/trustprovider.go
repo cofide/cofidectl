@@ -28,19 +28,11 @@ type TrustProviderServerConfig struct {
 	NodeAttestorConfig  map[string]any `yaml:"nodeAttestorConfig"`
 }
 
-type SDSConfig struct {
-	Enabled               bool   `yaml:"enabled"`
-	DefaultSVIDName       string `yaml:"defaultSVIDName"`
-	DefaultBundleName     string `yaml:"defaultBundleName"`
-	DefaultAllBundlesName string `yaml:"defaultAllBundlesName"`
-}
-
 type TrustProvider struct {
 	Name         string
 	Kind         string
 	AgentConfig  TrustProviderAgentConfig
 	ServerConfig TrustProviderServerConfig
-	SDSConfig    map[string]any
 	Proto        *trust_provider_proto.TrustProvider
 }
 
@@ -81,16 +73,8 @@ func (tp *TrustProvider) GetValues() error {
 				"allowedPodLabelKeys":     []string{},
 			},
 		}
-		// Uses the Istio recommended values by default.
-		// https://istio.io/latest/docs/ops/integrations/spire/#spiffe-federation
-		tp.SDSConfig = map[string]any{
-			"enabled":               true,
-			"defaultSVIDName":       "default",
-			"defaultBundleName":     "null",
-			"defaultAllBundlesName": "ROOTCA",
-		}
 	default:
-		return fmt.Errorf("an unknown trust provider profile was specified: %s", tp.Kind)
+		return fmt.Errorf("an unknown trust provider kind was specified: %s", tp.Kind)
 	}
 	return nil
 }

@@ -25,6 +25,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
 		},
+		Profile:           StringPtr("kubernetes"),
 		BundleEndpointUrl: StringPtr("127.0.0.1"),
 		Federations: []*federation_proto.Federation{
 			{
@@ -68,6 +69,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
 		},
+		Profile:           StringPtr("kubernetes"),
 		BundleEndpointUrl: StringPtr("127.0.0.2"),
 		Federations: []*federation_proto.Federation{
 			{
@@ -93,6 +95,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
 		},
+		Profile:             StringPtr("kubernetes"),
 		BundleEndpointUrl:   StringPtr("127.0.0.3"),
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},

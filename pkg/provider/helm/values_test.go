@@ -70,8 +70,8 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"sds": map[string]any{
 						"enabled":               true,
 						"defaultSVIDName":       "default",
-						"defaultBundleName":     "null",
-						"defaultAllBundlesName": "ROOTCA",
+						"defaultBundleName":     "ROOTCA",
+						"defaultAllBundlesName": "ALL",
 					},
 					"server": Values{
 						"address": "spire-server.spire",
@@ -160,8 +160,8 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"sds": map[string]any{
 						"enabled":               true,
 						"defaultSVIDName":       "default",
-						"defaultBundleName":     "null",
-						"defaultAllBundlesName": "ROOTCA",
+						"defaultBundleName":     "ROOTCA",
+						"defaultAllBundlesName": "ALL",
 					},
 					"server": Values{
 						"address": "spire-server.spire",
@@ -322,8 +322,8 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 					"sds": map[string]any{
 						"enabled":               true,
 						"defaultSVIDName":       "default",
-						"defaultBundleName":     "null",
-						"defaultAllBundlesName": "ROOTCA",
+						"defaultBundleName":     "ROOTCA",
+						"defaultAllBundlesName": "ALL",
 					},
 					"server": Values{
 						"address": "spire-server.spire",
@@ -421,7 +421,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 				tz.TrustProvider.Kind = fixtures.StringPtr("invalid-tp")
 				return tz
 			}(),
-			wantErrString: "an unknown trust provider profile was specified: invalid-tp",
+			wantErrString: "an unknown trust provider kind was specified: invalid-tp",
 		},
 		{
 			name: "unknown attestation policy",
@@ -962,8 +962,8 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				sdsConfig: map[string]any{
 					"enabled":               true,
 					"defaultSVIDName":       "default",
-					"defaultBundleName":     "null",
-					"defaultAllBundlesName": "ROOTCA",
+					"defaultBundleName":     "ROOTCA",
+					"defaultAllBundlesName": "ALL",
 				},
 				spireServerAddress: "spire-server.spire",
 			},
@@ -979,8 +979,8 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					"sds": map[string]any{
 						"enabled":               true,
 						"defaultSVIDName":       "default",
-						"defaultBundleName":     "null",
-						"defaultAllBundlesName": "ROOTCA",
+						"defaultBundleName":     "ROOTCA",
+						"defaultAllBundlesName": "ALL",
 					},
 					"server": map[string]any{
 						"address": "spire-server.spire",
@@ -1018,8 +1018,8 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				sdsConfig: map[string]any{
 					"enabled":               true,
 					"defaultSVIDName":       "default",
-					"defaultBundleName":     "null",
-					"defaultAllBundlesName": "ROOTCA",
+					"defaultBundleName":     "ROOTCA",
+					"defaultAllBundlesName": "ALL",
 				},
 				spireServerAddress: "spire-server.spire",
 			},
@@ -1042,8 +1042,8 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				sdsConfig: map[string]any{
 					"enabled":               true,
 					"defaultSVIDName":       "default",
-					"defaultBundleName":     "null",
-					"defaultAllBundlesName": "ROOTCA",
+					"defaultBundleName":     "ROOTCA",
+					"defaultAllBundlesName": "ALL",
 				},
 				spireServerAddress: "spire-server.spire",
 			},
@@ -1072,8 +1072,8 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				sdsConfig: map[string]any{
 					"enabled":               true,
 					"defaultSVIDName":       "default",
-					"defaultBundleName":     "null",
-					"defaultAllBundlesName": "ROOTCA",
+					"defaultBundleName":     "ROOTCA",
+					"defaultAllBundlesName": "ALL",
 				},
 				spireServerAddress: "spire-server.spire",
 			},

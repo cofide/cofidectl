@@ -111,6 +111,7 @@ type addOpts struct {
 	trustDomain       string
 	kubernetesCluster string
 	context           string
+	trustProvider     string
 	profile           string
 	jwtIssuer         string
 }
@@ -145,7 +146,8 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				TrustDomain:       opts.trustDomain,
 				KubernetesCluster: &opts.kubernetesCluster,
 				KubernetesContext: &opts.context,
-				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &opts.profile},
+				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &opts.trustProvider},
+				Profile:           &opts.profile,
 				JwtIssuer:         &opts.jwtIssuer,
 			}
 
@@ -162,7 +164,8 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.trustDomain, "trust-domain", "", "Trust domain to use for this trust zone")
 	f.StringVar(&opts.kubernetesCluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
 	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
-	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio). Defaults to kubernetes")
+	f.StringVar(&opts.trustProvider, "trust-provider", "kubernetes", "Cofide trust provider used in the installation (e.g. kubernetes, unix)")
+	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 	f.StringVar(&opts.jwtIssuer, "jwt-issuer", "", "JWT issuer to use for this trust zone")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
