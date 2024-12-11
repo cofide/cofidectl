@@ -141,14 +141,16 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
+			bundleEndpointProfile := trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
 			newTrustZone := &trust_zone_proto.TrustZone{
-				Name:              opts.name,
-				TrustDomain:       opts.trustDomain,
-				KubernetesCluster: &opts.kubernetesCluster,
-				KubernetesContext: &opts.context,
-				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &opts.trustProvider},
-				Profile:           &opts.profile,
-				JwtIssuer:         &opts.jwtIssuer,
+				Name:                  opts.name,
+				TrustDomain:           opts.trustDomain,
+				KubernetesCluster:     &opts.kubernetesCluster,
+				KubernetesContext:     &opts.context,
+				TrustProvider:         &trust_provider_proto.TrustProvider{Kind: &opts.trustProvider},
+				Profile:               &opts.profile,
+				JwtIssuer:             &opts.jwtIssuer,
+				BundleEndpointProfile: &bundleEndpointProfile,
 			}
 
 			_, err = ds.AddTrustZone(newTrustZone)
