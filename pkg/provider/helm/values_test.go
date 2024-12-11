@@ -235,6 +235,92 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "tz4 using the istio profile",
+			trustZone: fixtures.TrustZone("tz4"),
+			want: Values{
+				"global": Values{
+					"deleteHooks": Values{
+						"enabled": false,
+					},
+					"installAndUpgradeHooks": Values{
+						"enabled": false,
+					},
+					"spire": Values{
+						"clusterName": "local4",
+						"recommendations": Values{
+							"create": true,
+						},
+						"trustDomain": "td4",
+					},
+				},
+				"spiffe-csi-driver": Values{
+					"fullnameOverride": "spiffe-csi-driver",
+				},
+				"spiffe-oidc-discovery-provider": Values{
+					"enabled": false,
+				},
+				"spire-agent": Values{
+					"fullnameOverride": "spire-agent",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPsat": Values{
+							"enabled": true,
+						},
+					},
+					"sds": map[string]any{
+						"enabled":               true,
+						"defaultSVIDName":       "default",
+						"defaultBundleName":     "null",
+						"defaultAllBundlesName": "ROOTCA",
+					},
+					"server": Values{
+						"address": "spire-server.spire",
+					},
+					"workloadAttestors": Values{
+						"k8s": Values{
+							"disableContainerSelectors":   false,
+							"enabled":                     true,
+							"skipKubeletVerification":     true,
+							"useNewContainerLocator":      false,
+							"verboseContainerLocatorLogs": false,
+						},
+					},
+				},
+				"spire-server": Values{
+					"caKeyType": "rsa-2048",
+					"caTTL":     "12h",
+					"controllerManager": Values{
+						"enabled": true,
+						"identities": Values{
+							"clusterSPIFFEIDs": Values{
+								"default": Values{
+									"enabled": true,
+								},
+							},
+						},
+					},
+					"fullnameOverride": "spire-server",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPsat": Values{
+							"allowedNodeLabelKeys": []string{},
+							"allowedPodLabelKeys":  []string{},
+							"audience": []string{
+								"spire-server",
+							},
+							"enabled": true,
+							"serviceAccountAllowList": []string{
+								"spire:spire-agent",
+							},
+						},
+					},
+					"service": Values{
+						"type": "LoadBalancer",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1081,6 +1167,56 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 			wantErr:   true,
 			errString: "agentConfig.WorkloadAttestor value is empty",
 		},
+		{
+			name: "invalid SPIRE agent values, empty sdsConfig value",
+			input: spireAgentValues{
+				fullnameOverride: "spire-agent",
+				logLevel:         "DEBUG",
+				agentConfig: trustprovider.TrustProviderAgentConfig{
+					WorkloadAttestor:        "",
+					WorkloadAttestorEnabled: true,
+					WorkloadAttestorConfig: map[string]any{
+						"enabled":                     true,
+						"skipKubeletVerification":     true,
+						"disableContainerSelectors":   false,
+						"useNewContainerLocator":      false,
+						"verboseContainerLocatorLogs": false,
+					},
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+				},
+				sdsConfig:          map[string]any{},
+				spireServerAddress: "spire-server.spire",
+			},
+			want:      nil,
+			wantErr:   true,
+			errString: "sdsConfig value is empty",
+		},
+		{
+			name: "invalid SPIRE agent values, nil sdsConfig value",
+			input: spireAgentValues{
+				fullnameOverride: "spire-agent",
+				logLevel:         "DEBUG",
+				agentConfig: trustprovider.TrustProviderAgentConfig{
+					WorkloadAttestor:        "",
+					WorkloadAttestorEnabled: true,
+					WorkloadAttestorConfig: map[string]any{
+						"enabled":                     true,
+						"skipKubeletVerification":     true,
+						"disableContainerSelectors":   false,
+						"useNewContainerLocator":      false,
+						"verboseContainerLocatorLogs": false,
+					},
+					NodeAttestor:        "k8sPsat",
+					NodeAttestorEnabled: true,
+				},
+				sdsConfig:          nil,
+				spireServerAddress: "spire-server.spire",
+			},
+			want:      nil,
+			wantErr:   true,
+			errString: "sdsConfig value is nil",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1268,6 +1404,57 @@ func TestSpiffeCSIDriverValues_GenerateValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := tt.input.generateValues()
+			if tt.wantErr {
+				assert.Equal(t, tt.errString, err.Error())
+				return
+			}
+
+			assert.Nil(t, err)
+			assert.Equal(t, tt.want, resp)
+		})
+	}
+}
+
+func TestGetSDSConfig(t *testing.T) {
+	tests := []struct {
+		name      string
+		profile   string
+		want      map[string]any
+		wantErr   bool
+		errString string
+	}{
+		{
+			name:    "valid kubernetes profile",
+			profile: "kubernetes",
+			want: map[string]any{
+				"enabled":               true,
+				"defaultSVIDName":       "default",
+				"defaultBundleName":     "ROOTCA",
+				"defaultAllBundlesName": "ALL",
+			},
+			wantErr: false,
+		},
+		{
+			name:    "valid istio profile",
+			profile: "istio",
+			want: map[string]any{
+				"enabled":               true,
+				"defaultSVIDName":       "default",
+				"defaultBundleName":     "null",
+				"defaultAllBundlesName": "ROOTCA",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "invalid profile",
+			profile:   "invalid",
+			wantErr:   true,
+			errString: "an unknown profile was specified: invalid",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := getSDSConfig(tt.profile)
 			if tt.wantErr {
 				assert.Equal(t, tt.errString, err.Error())
 				return

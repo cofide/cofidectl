@@ -100,6 +100,20 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
 	},
+	// tz3 has no federations or bound attestation policies and uses the istio profile.
+	"tz4": {
+		Name:              "tz4",
+		TrustDomain:       "td4",
+		KubernetesCluster: StringPtr("local4"),
+		KubernetesContext: StringPtr("kind-local4"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile:             StringPtr("istio"),
+		BundleEndpointUrl:   StringPtr("127.0.0.4"),
+		Federations:         []*federation_proto.Federation{},
+		AttestationPolicies: []*ap_binding_proto.APBinding{},
+	},
 }
 
 var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPolicy = map[string]*attestation_policy_proto.AttestationPolicy{
