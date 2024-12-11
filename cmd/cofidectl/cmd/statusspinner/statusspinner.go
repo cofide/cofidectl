@@ -4,13 +4,15 @@
 package statusspinner
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 
-	"github.com/cofide/cofidectl/pkg/provider"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
 )
 
 // statusSpinner implements a CLI spinner that displays messages from `provider.ProviderStatus`.
@@ -18,22 +20,8 @@ type statusSpinner struct {
 	spinner *spinner.Spinner
 }
 
-func New() *statusSpinner {
+func new() *statusSpinner {
 	return &statusSpinner{spinner: spinner.New(spinner.CharSets[9], 100*time.Millisecond)}
-}
-
-// watch starts the spinner and updates it status info read from `statusCh`.
-// The spinner is stopped before returning and any error status is returned.
-func (ss *statusSpinner) Watch(statusCh <-chan provider.ProviderStatus) error {
-	ss.start()
-	defer ss.stop()
-	for status := range statusCh {
-		ss.update(&status)
-		if status.Error != nil {
-			return status.Error
-		}
-	}
-	return nil
 }
 
 func (ss *statusSpinner) start() {
@@ -44,15 +32,43 @@ func (ss *statusSpinner) stop() {
 	ss.spinner.Stop()
 }
 
-func (ss *statusSpinner) update(status *provider.ProviderStatus) {
-	ss.spinner.Suffix = fmt.Sprintf(" %s: %s\n", status.Stage, status.Message)
-	if status.Done {
+func (ss *statusSpinner) update(status *provisionpb.Status) {
+	ss.spinner.Suffix = fmt.Sprintf(" %s: %s\n", status.GetStage(), status.GetMessage())
+	if status.GetDone() {
 		ss.spinner.Stop()
-		if status.Error != nil {
-			fmt.Printf("❌ %s: %s\n", status.Stage, status.Message)
+		if status.GetError() != "" {
+			fmt.Printf("❌ %s: %s\n", status.GetStage(), status.GetMessage())
 		} else {
 			green := color.New(color.FgGreen).SprintFunc()
-			fmt.Printf("%s %s: %s\n\n", green("✅"), status.Stage, status.Message)
+			fmt.Printf("%s %s: %s\n\n", green("✅"), status.GetStage(), status.GetMessage())
+		}
+	}
+}
+
+// WatchProvisionStatus reads Status objects from a channel and manages status spinners to consume the events.
+// The channel may receive status objects for multiple sequential operations, each of which should use its own spinner.
+func WatchProvisionStatus(ctx context.Context, statusCh <-chan *provisionpb.Status) error {
+	var spinner *statusSpinner
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case status, ok := <-statusCh:
+			if !ok {
+				return nil
+			}
+			if spinner == nil {
+				spinner = new()
+				spinner.start()
+			}
+			spinner.update(status)
+			if status.GetError() != "" {
+				return errors.New(status.GetError())
+			}
+			if status.GetDone() {
+				spinner.stop()
+				spinner = nil
+			}
 		}
 	}
 }
