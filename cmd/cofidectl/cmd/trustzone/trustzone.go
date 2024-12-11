@@ -13,7 +13,6 @@ import (
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
-	"github.com/cofide/cofidectl/pkg/spire"
 	"github.com/manifoldco/promptui"
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
@@ -21,6 +20,7 @@ import (
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
+	"github.com/cofide/cofidectl/pkg/spire"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
