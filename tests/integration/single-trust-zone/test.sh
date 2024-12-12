@@ -25,7 +25,7 @@ function configure() {
 }
 
 function up() {
-  ./cofidectl up
+  ./cofidectl up --quiet
 }
 
 function list_resources() {

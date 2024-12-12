@@ -39,7 +39,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return statusspinner.WatchProvisionStatus(cmd.Context(), statusCh)
+			return statusspinner.WatchProvisionStatus(cmd.Context(), statusCh, false)
 		},
 	}
 	return cmd
