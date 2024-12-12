@@ -86,6 +86,6 @@ func GetTrustProviderKindFromProfile(profile string) (string, error) {
 	case "istio", "kubernetes":
 		return "kubernetes", nil
 	default:
-		return "", fmt.Errorf("an invalid profile was specified: %s", profile)
+		return "", fmt.Errorf("failed to get trust provider kind, an invalid profile was specified: %s", profile)
 	}
 }

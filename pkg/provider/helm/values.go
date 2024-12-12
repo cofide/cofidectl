@@ -510,6 +510,6 @@ func getSDSConfig(profile string) (map[string]any, error) {
 			"defaultAllBundlesName": "ALL",
 		}, nil
 	default:
-		return nil, fmt.Errorf("an unknown profile was specified: %s", profile)
+		return nil, fmt.Errorf("an invalid profile was specified: %s", profile)
 	}
 }

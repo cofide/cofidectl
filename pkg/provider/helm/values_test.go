@@ -1489,7 +1489,7 @@ func TestGetSDSConfig(t *testing.T) {
 			name:      "invalid profile",
 			profile:   "invalid",
 			wantErr:   true,
-			errString: "an unknown profile was specified: invalid",
+			errString: "an invalid profile was specified: invalid",
 		},
 	}
 	for _, tt := range tests {

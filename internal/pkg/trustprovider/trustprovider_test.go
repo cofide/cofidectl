@@ -33,19 +33,19 @@ func TestGetTrustProviderKindFromProfile(t *testing.T) {
 			name:      "invalid profile specified",
 			profile:   "invalid",
 			wantErr:   true,
-			errString: "an invalid profile was specified: invalid",
+			errString: "failed to get trust provider kind, an invalid profile was specified: invalid",
 		},
 		{
 			name:      "invalid profile specified, Kubernetes",
 			profile:   "Kubernetes",
 			wantErr:   true,
-			errString: "an invalid profile was specified: Kubernetes",
+			errString: "failed to get trust provider kind, an invalid profile was specified: Kubernetes",
 		},
 		{
 			name:      "invalid profile specified, ISTIO",
 			profile:   "ISTIO",
 			wantErr:   true,
-			errString: "an invalid profile was specified: ISTIO",
+			errString: "failed to get trust provider kind, an invalid profile was specified: ISTIO",
 		},
 	}
 	for _, tt := range tests {
