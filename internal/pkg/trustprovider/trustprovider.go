@@ -78,3 +78,14 @@ type TrustProviderServerConfig struct {
 	NodeAttestorEnabled bool           `yaml:"nodeAttestorEnabled"`
 	NodeAttestorConfig  map[string]any `yaml:"nodeAttestorConfig"`
 }
+
+// GetTrustProviderKindFromProfile returns the valid kind of trust provider for the
+// corresponding profile.
+func GetTrustProviderKindFromProfile(profile string) (string, error) {
+	switch profile {
+	case "istio", "kubernetes":
+		return "kubernetes", nil
+	default:
+		return "", fmt.Errorf("an invalid profile was specified: %s", profile)
+	}
+}

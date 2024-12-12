@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
+	trustprovider "github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/manifoldco/promptui"
 
@@ -111,7 +112,6 @@ type addOpts struct {
 	trustDomain       string
 	kubernetesCluster string
 	context           string
-	trustProvider     string
 	profile           string
 	jwtIssuer         string
 }
@@ -141,13 +141,18 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
+			trustProviderKind, err := trustprovider.GetTrustProviderKindFromProfile(opts.profile)
+			if err != nil {
+				return err
+			}
+
 			bundleEndpointProfile := trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:                  opts.name,
 				TrustDomain:           opts.trustDomain,
 				KubernetesCluster:     &opts.kubernetesCluster,
 				KubernetesContext:     &opts.context,
-				TrustProvider:         &trust_provider_proto.TrustProvider{Kind: &opts.trustProvider},
+				TrustProvider:         &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
 				Profile:               &opts.profile,
 				JwtIssuer:             &opts.jwtIssuer,
 				BundleEndpointProfile: &bundleEndpointProfile,
@@ -166,7 +171,6 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.trustDomain, "trust-domain", "", "Trust domain to use for this trust zone")
 	f.StringVar(&opts.kubernetesCluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
 	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
-	f.StringVar(&opts.trustProvider, "trust-provider", "kubernetes", "Cofide trust provider used in the installation (e.g. kubernetes, unix)")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 	f.StringVar(&opts.jwtIssuer, "jwt-issuer", "", "JWT issuer to use for this trust zone")
 
