@@ -84,7 +84,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, err
 	}
 
-	sdsConfig, err := getSDSConfig(tz.TrustZoneProto.GetProfile())
+	sdsConfig, err := getSDSConfig(g.trustZone.GetProfile())
 	if err != nil {
 		return nil, err
 	}
