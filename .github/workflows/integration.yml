@@ -42,7 +42,9 @@ jobs:
       - name: Save pulled Docker images to cache
         run: |
           mkdir -p /tmp/docker-cache
-          docker save $(docker images --filter=reference='*:*' --format='{{.Repository}}:{{.Tag}}') > /tmp/docker-cache/pulled-images.tar
+          # Caches all images
+          # docker save $(docker images --filter=reference='*:*' --format='{{.Repository}}:{{.Tag}}') > /tmp/docker-cache/pulled-images.tar
+          docker save cloud-provider-kind-cloud-provider:latest > /tmp/docker-cache/pulled-images.tar
 
       - name: Install ko
         uses: ko-build/setup-ko@v0.6
