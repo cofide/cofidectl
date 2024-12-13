@@ -23,7 +23,7 @@ jobs:
       - name: Build and run tests
         run: just build
 
-      - uses: ./.github/actions/docker-cache
+      - uses: ./
         with:
           images: cloud-provider-kind-cloud-provider:latest
 
