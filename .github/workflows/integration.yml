@@ -24,8 +24,25 @@ jobs:
       - name: Build and run tests
         run: just build
 
+      - name: Cache Docker images
+        id: docker-cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/docker-cache
+          key: ${{ runner.os }}-docker-${{ hashFiles('docker-images.txt') }}
+
+      - name: Load cached Docker images
+        if: steps.docker-cache.outputs.cache-hit == 'true'
+        run: |
+          docker load < /tmp/docker-cache/pulled-images.tar || true
+
       - name: Install kind
         run: just install-kind
+
+      - name: Save pulled Docker images to cache
+        run: |
+          mkdir -p /tmp/docker-cache
+          docker save $(docker images --filter=reference'*:*' --format='{{.Repository}}:{{.Tag}}') > /tmp/docker-cache/pulled-images.tar
 
       - name: Install ko
         uses: ko-build/setup-ko@v0.6
