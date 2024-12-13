@@ -497,7 +497,7 @@ func getSDSConfig(profile string) (map[string]any, error) {
 		// https://istio.io/latest/docs/ops/integrations/spire/#spiffe-federation
 		return map[string]any{
 			"enabled":               true,
-			"defaultSVIDName":       "default",
+			"defaultSvidName":       "default",
 			"defaultBundleName":     "null",
 			"defaultAllBundlesName": "ROOTCA",
 		}, nil
@@ -505,7 +505,7 @@ func getSDSConfig(profile string) (map[string]any, error) {
 		// https://github.com/spiffe/spire/blob/main/doc/spire_agent.md#sds-configuration
 		return map[string]any{
 			"enabled":               true,
-			"defaultSVIDName":       "default",
+			"defaultSvidName":       "default",
 			"defaultBundleName":     "ROOTCA",
 			"defaultAllBundlesName": "ALL",
 		}, nil
