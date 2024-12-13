@@ -182,11 +182,11 @@ func (h *SpireHelm) GetBundleAndEndpoint(ctx context.Context, statusCh chan<- *p
 
 		trustZone.Bundle = &bundle
 
-		if err := ds.UpdateTrustZone(trustZone); err != nil {
-			msg := fmt.Sprintf("Failed updating trust zone %s", trustZone.Name)
-			statusCh <- provision.StatusError("Waiting", msg, err)
-			return err
-		}
+		// if err := ds.UpdateTrustZone(trustZone); err != nil {
+		// 	msg := fmt.Sprintf("Failed updating trust zone %s", trustZone.Name)
+		// 	statusCh <- provision.StatusError("Waiting", msg, err)
+		// 	return err
+		// }
 	}
 
 	statusCh <- sb.Done("Ready", "All SPIRE server pods and services are ready")
