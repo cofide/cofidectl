@@ -52,7 +52,7 @@ func (h *SpireHelm) Deploy(ctx context.Context, ds datasource.DataSource, kubeCf
 	return statusCh, nil
 }
 
-func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource) (<-chan *provisionpb.Status, error) {
+func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
 	statusCh := make(chan *provisionpb.Status)
 
 	go func() {
