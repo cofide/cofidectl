@@ -23,7 +23,12 @@ var upCmdDesc = `
 This command installs a Cofide configuration
 `
 
+type UpOpts struct {
+	quiet bool
+}
+
 func (u *UpCommand) UpCmd() *cobra.Command {
+	opts := UpOpts{}
 	cmd := &cobra.Command{
 		Use:   "up [ARGS]",
 		Short: "Installs a Cofide configuration",
@@ -43,8 +48,17 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return statusspinner.WatchProvisionStatus(cmd.Context(), statusCh)
+
+			return statusspinner.WatchProvisionStatus(
+				cmd.Context(),
+				statusCh,
+				opts.quiet,
+			)
 		},
 	}
+
+	f := cmd.Flags()
+	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from installation")
+
 	return cmd
 }

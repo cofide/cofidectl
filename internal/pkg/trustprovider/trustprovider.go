@@ -60,7 +60,7 @@ func (tp *TrustProvider) GetValues() error {
 			},
 		}
 	default:
-		return fmt.Errorf("an unknown trust provider profile was specified: %s", tp.Kind)
+		return fmt.Errorf("an unknown trust provider kind was specified: %s", tp.Kind)
 	}
 	return nil
 }
@@ -77,4 +77,15 @@ type TrustProviderServerConfig struct {
 	NodeAttestor        string         `yaml:"nodeAttestor"`
 	NodeAttestorEnabled bool           `yaml:"nodeAttestorEnabled"`
 	NodeAttestorConfig  map[string]any `yaml:"nodeAttestorConfig"`
+}
+
+// GetTrustProviderKindFromProfile returns the valid kind of trust provider for the
+// corresponding profile.
+func GetTrustProviderKindFromProfile(profile string) (string, error) {
+	switch profile {
+	case "istio", "kubernetes":
+		return "kubernetes", nil
+	default:
+		return "", fmt.Errorf("failed to get trust provider kind, an invalid profile was specified: %s", profile)
+	}
 }
