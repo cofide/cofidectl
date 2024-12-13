@@ -47,7 +47,7 @@ func (ss *statusSpinner) update(status *provisionpb.Status) {
 
 // WatchProvisionStatus reads Status objects from a channel and manages status spinners to consume the events.
 // The channel may receive status objects for multiple sequential operations, each of which should use its own spinner.
-func WatchProvisionStatus(ctx context.Context, statusCh <-chan *provisionpb.Status) error {
+func WatchProvisionStatus(ctx context.Context, statusCh <-chan *provisionpb.Status, quiet bool) error {
 	var spinner *statusSpinner
 	for {
 		select {
@@ -57,10 +57,14 @@ func WatchProvisionStatus(ctx context.Context, statusCh <-chan *provisionpb.Stat
 			if !ok {
 				return nil
 			}
+
 			if spinner == nil {
 				spinner = new()
-				spinner.start()
+				if !quiet {
+					spinner.start()
+				}
 			}
+
 			spinner.update(status)
 			if status.GetError() != "" {
 				return errors.New(status.GetError())

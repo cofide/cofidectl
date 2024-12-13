@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
+	trustprovider "github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/manifoldco/promptui"
 
@@ -140,13 +141,19 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
+			trustProviderKind, err := trustprovider.GetTrustProviderKindFromProfile(opts.profile)
+			if err != nil {
+				return err
+			}
+
 			bundleEndpointProfile := trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:                  opts.name,
 				TrustDomain:           opts.trustDomain,
 				KubernetesCluster:     &opts.kubernetesCluster,
 				KubernetesContext:     &opts.context,
-				TrustProvider:         &trust_provider_proto.TrustProvider{Kind: &opts.profile},
+				TrustProvider:         &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
+				Profile:               &opts.profile,
 				JwtIssuer:             &opts.jwtIssuer,
 				BundleEndpointProfile: &bundleEndpointProfile,
 			}
