@@ -43,7 +43,7 @@ type PluginManager struct {
 // grpcPluginLoader is a function that loads a gRPC plugin. The function should load a single
 // plugin that implements all cofidectl plugins with the specified name in pluginCfg.
 // All cofidectl plugins in the returned grpcPlugin object should be validated using the
-// Validate RPC before returing.
+// Validate RPC before returning.
 // It is primarily used for mocking in unit tests.
 type grpcPluginLoader func(ctx context.Context, logger hclog.Logger, pluginName string, pluginCfg *pluginspb.Plugins) (*grpcPlugin, error)
 
