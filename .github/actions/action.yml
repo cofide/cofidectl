@@ -1,0 +1,23 @@
+name: Docker Image Cache
+description: Cache Docker images
+
+inputs:
+  images:
+    description: List of Docker images to cache (space-separated)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Docker images
+      id: docker-cache
+      uses: actions/cache@v3
+      with:
+        path: /tmp/docker-cache
+        key: ${{ runner.os }}-docker-${{ hashFiles('docker-images.txt') }}
+
+    - name: Load cached Docker images
+      if: steps.docker-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        docker load < /tmp/docker-cache/pulled-images.tar || true

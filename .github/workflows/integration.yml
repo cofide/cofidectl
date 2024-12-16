@@ -1,4 +1,3 @@
----
 name: integration
 on:
   push:
@@ -24,8 +23,20 @@ jobs:
       - name: Build and run tests
         run: just build
 
+      - name: Cache Docker images
+        uses: ./.github/actions/
+        with:
+          images: cloud-provider-kind-cloud-provider:latest
+
       - name: Install kind
         run: just install-kind
+
+      - name: Save Docker images to cache
+        run: |
+          mkdir -p /tmp/docker-cache
+          # Caches all images
+          # docker save $(docker images --filter=reference='*:*' --format='{{.Repository}}:{{.Tag}}') > /tmp/docker-cache/pulled-images.tar
+          docker save cloud-provider-kind-cloud-provider:latest > /tmp/docker-cache/pulled-images.tar
 
       - name: Install ko
         uses: ko-build/setup-ko@v0.6
@@ -56,8 +67,20 @@ jobs:
       - name: Build and run tests
         run: just build
 
+      - name: Cache Docker images
+        uses: ./.github/actions/
+        with:
+          images: cloud-provider-kind-cloud-provider:latest
+
       - name: Install kind
         run: just install-kind
+
+      - name: Save Docker images to cache
+        run: |
+          mkdir -p /tmp/docker-cache
+          # Caches all images
+          # docker save $(docker images --filter=reference='*:*' --format='{{.Repository}}:{{.Tag}}') > /tmp/docker-cache/pulled-images.tar
+          docker save cloud-provider-kind-cloud-provider:latest > /tmp/docker-cache/pulled-images.tar
 
       - name: Install ko
         uses: ko-build/setup-ko@v0.6
