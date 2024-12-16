@@ -22,22 +22,22 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type fakeGrpcDataSource struct {
+type fakeGRPCDataSource struct {
 	local.LocalDataSource
 }
 
-func newFakeGrpcDataSource(t *testing.T, configLoader config.Loader) *fakeGrpcDataSource {
+func newFakeGRPCDataSource(t *testing.T, configLoader config.Loader) *fakeGRPCDataSource {
 	lds, err := local.NewLocalDataSource(configLoader)
 	assert.Nil(t, err)
-	return &fakeGrpcDataSource{LocalDataSource: *lds}
+	return &fakeGRPCDataSource{LocalDataSource: *lds}
 }
 
-type fakeGrpcProvision struct {
+type fakeGRPCProvision struct {
 	spirehelm.SpireHelm
 }
 
-func newFakeGrpcProvision() *fakeGrpcProvision {
-	return &fakeGrpcProvision{}
+func newFakeGRPCProvision() *fakeGRPCProvision {
+	return &fakeGRPCProvision{}
 }
 
 func TestManager_Init_success(t *testing.T) {
@@ -93,7 +93,7 @@ func TestManager_Init_success(t *testing.T) {
 			m := NewManager(configLoader)
 			// Mock out the gRPC plugin loader function.
 			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
-				return &grpcPlugin{nil, newFakeGrpcDataSource(t, configLoader), newFakeGrpcProvision()}, nil
+				return &grpcPlugin{nil, newFakeGRPCDataSource(t, configLoader), newFakeGRPCProvision()}, nil
 			}
 
 			err = m.Init(context.Background(), tt.plugins, tt.pluginConfig)
@@ -199,7 +199,7 @@ func TestManager_GetDataSource_success(t *testing.T) {
 			name:   "gRPC",
 			config: config.Config{Plugins: fixtures.Plugins("plugins1")},
 			want: func(cl config.Loader) datasource.DataSource {
-				fcds := newFakeGrpcDataSource(t, cl)
+				fcds := newFakeGRPCDataSource(t, cl)
 				return fcds
 			},
 		},
@@ -207,7 +207,7 @@ func TestManager_GetDataSource_success(t *testing.T) {
 			name:   "gRPC with provision",
 			config: config.Config{Plugins: fixtures.Plugins("plugins2")},
 			want: func(cl config.Loader) datasource.DataSource {
-				fcds := newFakeGrpcDataSource(t, cl)
+				fcds := newFakeGRPCDataSource(t, cl)
 				return fcds
 			},
 		},
@@ -225,9 +225,9 @@ func TestManager_GetDataSource_success(t *testing.T) {
 			if tt.config.Plugins.GetDataSource() != LocalDSPluginName {
 				client = &go_plugin.Client{}
 				m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
-					ds := newFakeGrpcDataSource(t, configLoader)
+					ds := newFakeGRPCDataSource(t, configLoader)
 					if tt.config.Plugins.GetProvision() == tt.config.Plugins.GetDataSource() {
-						provision = newFakeGrpcProvision()
+						provision = newFakeGRPCProvision()
 					}
 					return &grpcPlugin{client, ds, provision}, nil
 				}
@@ -307,12 +307,12 @@ func TestManager_GetProvision_success(t *testing.T) {
 		{
 			name:   "gRPC",
 			config: config.Config{Plugins: fixtures.Plugins("plugins1")},
-			want:   newFakeGrpcProvision(),
+			want:   newFakeGRPCProvision(),
 		},
 		{
 			name:   "gRPC with provision",
 			config: config.Config{Plugins: fixtures.Plugins("plugins2")},
-			want:   newFakeGrpcProvision(),
+			want:   newFakeGRPCProvision(),
 		},
 	}
 	for _, tt := range tests {
@@ -328,9 +328,9 @@ func TestManager_GetProvision_success(t *testing.T) {
 			if tt.config.Plugins.GetDataSource() != LocalDSPluginName {
 				client = &go_plugin.Client{}
 				m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
-					provision := newFakeGrpcProvision()
+					provision := newFakeGRPCProvision()
 					if tt.config.Plugins.GetDataSource() == tt.config.Plugins.GetProvision() {
-						source = newFakeGrpcDataSource(t, configLoader)
+						source = newFakeGRPCDataSource(t, configLoader)
 					}
 					return &grpcPlugin{client, source, provision}, nil
 				}
@@ -419,7 +419,7 @@ func TestManager_Shutdown(t *testing.T) {
 			// Mock out the gRPC plugin loader function.
 			client := &go_plugin.Client{}
 			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
-				return &grpcPlugin{client, newFakeGrpcDataSource(t, configLoader), nil}, nil
+				return &grpcPlugin{client, newFakeGRPCDataSource(t, configLoader), nil}, nil
 			}
 
 			_, err = m.GetDataSource(context.Background())

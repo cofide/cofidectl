@@ -54,7 +54,7 @@ func CloneFederation(federation *federation_proto.Federation) (*federation_proto
 		return nil, fmt.Errorf("bug: type assertion failed for federation %s-%s", federation.From, federation.To)
 	} else {
 		if clone == federation {
-			return nil, fmt.Errorf("bug: federation %s-%s clones are the same", federation.To, federation.To)
+			return nil, fmt.Errorf("bug: federation %s-%s clones are the same", federation.From, federation.To)
 		}
 		return clone, nil
 	}
