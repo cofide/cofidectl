@@ -38,6 +38,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			statusCh, err := provision.TearDown(cmd.Context(), ds)
 			if err != nil {
 				return err
