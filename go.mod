@@ -3,7 +3,7 @@ module github.com/cofide/cofidectl
 go 1.22.7
 
 require (
-	buf.build/go/protoyaml v0.2.0
+	buf.build/go/protoyaml v0.3.0
 	cuelang.org/go v0.10.1
 	github.com/cofide/cofide-api-sdk v0.3.1-0.20241211140859-1388b27cdec8
 	github.com/fatih/color v1.18.0
@@ -21,11 +21,13 @@ require (
 	helm.sh/helm/v3 v3.16.3
 )
 
+require cel.dev/expr v0.18.0 // indirect
+
 // Uncomment the following for development with local Cofide API SDK changes:
 //replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240717164558-a6c49f84cc0f.2 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.35.2-20241127180247-a33202765966.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
@@ -40,7 +42,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/briandowns/spinner v1.23.1
-	github.com/bufbuild/protovalidate-go v0.6.3 // indirect
+	github.com/bufbuild/protovalidate-go v0.8.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
@@ -74,7 +76,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.0.1 // indirect
-	github.com/google/cel-go v0.21.0 // indirect
+	github.com/google/cel-go v0.22.1 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
