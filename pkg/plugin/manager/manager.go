@@ -43,7 +43,7 @@ type PluginManager struct {
 // grpcPluginLoader is a function that loads a gRPC plugin. The function should load a single
 // plugin that implements all cofidectl plugins with the specified name in pluginCfg.
 // All cofidectl plugins in the returned grpcPlugin object should be validated using the
-// Validate RPC before returing.
+// Validate RPC before returning.
 // It is primarily used for mocking in unit tests.
 type grpcPluginLoader func(ctx context.Context, logger hclog.Logger, pluginName string, pluginCfg *pluginspb.Plugins) (*grpcPlugin, error)
 
@@ -58,7 +58,7 @@ type grpcPlugin struct {
 func NewManager(configLoader config.Loader) *PluginManager {
 	return &PluginManager{
 		configLoader:     configLoader,
-		grpcPluginLoader: loadGrpcPlugin,
+		grpcPluginLoader: loadGRPCPlugin,
 		clients:          map[string]*go_plugin.Client{},
 	}
 }
@@ -142,7 +142,7 @@ func (pm *PluginManager) loadDataSource(ctx context.Context) (datasource.DataSou
 		return pm.source, nil
 	}
 
-	if err := pm.loadGrpcPlugin(ctx, dsName, cfg.Plugins); err != nil {
+	if err := pm.loadGRPCPlugin(ctx, dsName, cfg.Plugins); err != nil {
 		return nil, err
 	}
 	return pm.source, nil
@@ -182,17 +182,17 @@ func (pm *PluginManager) loadProvision(ctx context.Context) (provision.Provision
 		return pm.provision, nil
 	}
 
-	if err := pm.loadGrpcPlugin(ctx, provisionName, cfg.Plugins); err != nil {
+	if err := pm.loadGRPCPlugin(ctx, provisionName, cfg.Plugins); err != nil {
 		return nil, err
 	}
 	return pm.provision, nil
 }
 
-// loadGrpcPlugin loads a gRPC plugin.
+// loadGRPCPlugin loads a gRPC plugin.
 // The gRPC plugin may provide one or more cofidectl plugins (e.g. data source, provision), and
 // all cofidectl plugins configured to use this gRPC plugin will be loaded in a single plugin
 // client and server process.
-func (pm *PluginManager) loadGrpcPlugin(ctx context.Context, pluginName string, pluginCfg *pluginspb.Plugins) error {
+func (pm *PluginManager) loadGRPCPlugin(ctx context.Context, pluginName string, pluginCfg *pluginspb.Plugins) error {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
@@ -214,8 +214,8 @@ func (pm *PluginManager) loadGrpcPlugin(ctx context.Context, pluginName string, 
 	return nil
 }
 
-// loadGrpcPlugin is the default grpcPluginLoader.
-func loadGrpcPlugin(ctx context.Context, logger hclog.Logger, pluginName string, plugins *pluginspb.Plugins) (*grpcPlugin, error) {
+// loadGRPCPlugin is the default grpcPluginLoader.
+func loadGRPCPlugin(ctx context.Context, logger hclog.Logger, pluginName string, plugins *pluginspb.Plugins) (*grpcPlugin, error) {
 	pluginPath, err := plugin.GetPluginPath(pluginName)
 	if err != nil {
 		return nil, err
@@ -238,7 +238,7 @@ func loadGrpcPlugin(ctx context.Context, logger hclog.Logger, pluginName string,
 		Logger:           logger,
 	})
 
-	grpcPlugin, err := startGrpcPlugin(ctx, client, pluginName, plugins)
+	grpcPlugin, err := startGRPCPlugin(ctx, client, pluginName, plugins)
 	if err != nil {
 		client.Kill()
 		return nil, err
@@ -246,7 +246,7 @@ func loadGrpcPlugin(ctx context.Context, logger hclog.Logger, pluginName string,
 	return grpcPlugin, nil
 }
 
-func startGrpcPlugin(ctx context.Context, client *go_plugin.Client, pluginName string, plugins *pluginspb.Plugins) (*grpcPlugin, error) {
+func startGRPCPlugin(ctx context.Context, client *go_plugin.Client, pluginName string, plugins *pluginspb.Plugins) (*grpcPlugin, error) {
 	grpcClient, err := client.Client()
 	if err != nil {
 		return nil, fmt.Errorf("cannot create interface to plugin: %w", err)

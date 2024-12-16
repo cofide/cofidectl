@@ -44,6 +44,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			statusCh, err := provision.Deploy(cmd.Context(), ds, kubeCfgFile)
 			if err != nil {
 				return err

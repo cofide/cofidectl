@@ -35,6 +35,19 @@ function init() {
   ./cofidectl init $args
 }
 
+function check_init() {
+  data_source_plugin="$(yq '.plugins.data_source' cofide.yaml -r)"
+  provision_plugin="$(yq '.plugins.provision' cofide.yaml -r)"
+  if [[ "$data_source_plugin" != "${DATA_SOURCE_PLUGIN:-local}" ]]; then
+    echo "Unexpected data source plugin in cofide.yaml: $data_source_plugin vs ${DATA_SOURCE_PLUGIN:-local}"
+    exit 1
+  fi
+  if [[ "$provision_plugin" != "${PROVISION_PLUGIN:-spire-helm}" ]]; then
+    echo "Unexpected provision plugin in cofide.yaml: $provision_plugin vs ${PROVISION_PLUGIN:-spire-helm}"
+    exit 1
+  fi
+}
+
 function configure() {
   ./cofidectl trust-zone add $TRUST_ZONE_1 --trust-domain $TRUST_DOMAIN_1 --kubernetes-context $K8S_CLUSTER_1_CONTEXT --kubernetes-cluster $K8S_CLUSTER_1_NAME --profile kubernetes
   ./cofidectl trust-zone add $TRUST_ZONE_2 --trust-domain $TRUST_DOMAIN_2 --kubernetes-context $K8S_CLUSTER_2_CONTEXT --kubernetes-cluster $K8S_CLUSTER_2_NAME --profile kubernetes
@@ -105,6 +118,7 @@ function down() {
 
 function main() {
   init
+  check_init
   configure
   up
   list_resources

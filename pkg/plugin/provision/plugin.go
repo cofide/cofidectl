@@ -149,9 +149,8 @@ func wrapError(err error) error {
 	}
 	if status, ok := status.FromError(err); ok {
 		return &clientError{status: status}
-	} else {
-		return err
 	}
+	return err
 }
 
 func (ce *clientError) Error() string {
