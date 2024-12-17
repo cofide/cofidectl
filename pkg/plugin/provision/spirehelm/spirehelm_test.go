@@ -146,5 +146,6 @@ func defaultConfig() *config.Config {
 			fixtures.AttestationPolicy("ap1"),
 			fixtures.AttestationPolicy("ap2"),
 		},
+		Plugins: fixtures.Plugins("plugins1"),
 	}
 }

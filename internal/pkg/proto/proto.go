@@ -12,6 +12,7 @@ import (
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 )
 
@@ -48,6 +49,28 @@ func CloneAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBi
 	}
 }
 
+func CloneFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error) {
+	if clone, ok := proto.Clone(federation).(*federation_proto.Federation); !ok {
+		return nil, fmt.Errorf("bug: type assertion failed for federation %s-%s", federation.From, federation.To)
+	} else {
+		if clone == federation {
+			return nil, fmt.Errorf("bug: federation %s-%s clones are the same", federation.From, federation.To)
+		}
+		return clone, nil
+	}
+}
+
+func ClonePlugins(p *pluginspb.Plugins) (*pluginspb.Plugins, error) {
+	if clone, ok := proto.Clone(p).(*pluginspb.Plugins); !ok {
+		return nil, fmt.Errorf("bug: type assertion failed for plugins %s", p)
+	} else {
+		if clone == p {
+			return nil, fmt.Errorf("bug: plugins %s clones are the same", p)
+		}
+		return clone, nil
+	}
+}
+
 func CloneStruct(spb *structpb.Struct) (*structpb.Struct, error) {
 	if clone, ok := proto.Clone(spb).(*structpb.Struct); !ok {
 		return nil, fmt.Errorf("bug: type assertion failed for struct %s", spb)
@@ -61,17 +84,6 @@ func CloneStruct(spb *structpb.Struct) (*structpb.Struct, error) {
 
 func APBindingsEqual(apb1, apb2 *ap_binding_proto.APBinding) bool {
 	return proto.Equal(apb1, apb2)
-}
-
-func CloneFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error) {
-	if clone, ok := proto.Clone(federation).(*federation_proto.Federation); !ok {
-		return nil, fmt.Errorf("bug: type assertion failed for federation %s-%s", federation.From, federation.To)
-	} else {
-		if clone == federation {
-			return nil, fmt.Errorf("bug: federation %s-%s clones are the same", federation.To, federation.To)
-		}
-		return clone, nil
-	}
 }
 
 func FederationsEqual(f1, f2 *federation_proto.Federation) bool {

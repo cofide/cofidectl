@@ -207,7 +207,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	combinedValues := shallowMerge(valuesMaps)
 
 	if g.values != nil {
-		combinedValues, err = mergeMaps(combinedValues, g.values)
+		combinedValues, err = MergeMaps(combinedValues, g.values)
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +216,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	if g.trustZone.ExtraHelmValues != nil {
 		// TODO: Potentially retrieve Helm values as map[string]any directly.
 		extraHelmValues := g.trustZone.ExtraHelmValues.AsMap()
-		combinedValues, err = mergeMaps(combinedValues, extraHelmValues)
+		combinedValues, err = MergeMaps(combinedValues, extraHelmValues)
 		if err != nil {
 			return nil, err
 		}
@@ -435,8 +435,8 @@ func getOrCreateNestedMap(m map[string]any, key string) (map[string]any, error) 
 	return newMap, nil
 }
 
-// mergeMaps merges the source map into the destination map, returning a new merged map.
-func mergeMaps(dest, src map[string]any) (map[string]any, error) {
+// MergeMaps merges the source map into the destination map, returning a new merged map.
+func MergeMaps(dest, src map[string]any) (map[string]any, error) {
 	if src == nil {
 		return nil, fmt.Errorf("source map is nil")
 	}
@@ -448,7 +448,7 @@ func mergeMaps(dest, src map[string]any) (map[string]any, error) {
 	for key, value := range src {
 		if srcMap, isSrcMap := value.(map[string]any); isSrcMap {
 			if destMap, isDestMap := dest[key].(map[string]any); isDestMap {
-				merged, err := mergeMaps(destMap, srcMap)
+				merged, err := MergeMaps(destMap, srcMap)
 				if err != nil {
 					return nil, err
 				}

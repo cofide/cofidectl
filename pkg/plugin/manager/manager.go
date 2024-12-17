@@ -4,18 +4,22 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
 	"os"
 	"os/exec"
 
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
 	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/cofide/cofidectl/pkg/plugin/provision/spirehelm"
+	"github.com/cofide/cofidectl/pkg/plugin/validator"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -23,142 +27,226 @@ import (
 )
 
 const (
-	LocalPluginName = "local"
+	LocalDSPluginName            = "local"
+	SpireHelmProvisionPluginName = "spire-helm"
 )
 
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
 type PluginManager struct {
-	configLoader   config.Loader
-	loadGrpcPlugin func(hclog.Logger, string) (*go_plugin.Client, cofidectl_plugin.DataSource, error)
-	source         cofidectl_plugin.DataSource
-	client         *go_plugin.Client
+	configLoader     config.Loader
+	grpcPluginLoader grpcPluginLoader
+	source           datasource.DataSource
+	provision        provision.Provision
+	clients          map[string]*go_plugin.Client
+}
+
+// grpcPluginLoader is a function that loads a gRPC plugin. The function should load a single
+// plugin that implements all cofidectl plugins with the specified name in pluginCfg.
+// All cofidectl plugins in the returned grpcPlugin object should be validated using the
+// Validate RPC before returning.
+// It is primarily used for mocking in unit tests.
+type grpcPluginLoader func(ctx context.Context, logger hclog.Logger, pluginName string, pluginCfg *pluginspb.Plugins) (*grpcPlugin, error)
+
+// grpcPlugin is used when loading loading gRPC plugins. It collects the client and any cofidectl
+// plugins that the gRPC plugin implements.
+type grpcPlugin struct {
+	client    *go_plugin.Client
+	source    datasource.DataSource
+	provision provision.Provision
 }
 
 func NewManager(configLoader config.Loader) *PluginManager {
 	return &PluginManager{
-		configLoader:   configLoader,
-		loadGrpcPlugin: loadGrpcPlugin,
+		configLoader:     configLoader,
+		grpcPluginLoader: loadGRPCPlugin,
+		clients:          map[string]*go_plugin.Client{},
 	}
 }
 
-// Init initialises the configuration for the specified data source plugin.
-func (pm *PluginManager) Init(dsName string, pluginConfig map[string]*structpb.Struct) (cofidectl_plugin.DataSource, error) {
+// Init initialises the configuration for the specified plugins.
+func (pm *PluginManager) Init(ctx context.Context, plugins *pluginspb.Plugins, pluginConfig map[string]*structpb.Struct) error {
+	if plugins == nil {
+		plugins = GetDefaultPlugins()
+	}
+
 	if exists, _ := pm.configLoader.Exists(); exists {
 		// Check that existing plugin config matches.
 		cfg, err := pm.configLoader.Read()
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if cfg.DataSource != dsName {
-			return nil, fmt.Errorf("existing config file uses a different plugin: %s vs %s", cfg.DataSource, dsName)
+		ds := plugins.GetDataSource()
+		if ds != cfg.Plugins.GetDataSource() {
+			return fmt.Errorf("existing config file uses a different data source plugin: %s vs %s", cfg.Plugins.GetDataSource(), ds)
+		}
+		provision := plugins.GetProvision()
+		if cfg.Plugins.GetProvision() != provision {
+			return fmt.Errorf("existing config file uses a different provision plugin: %s vs %s", cfg.Plugins.GetProvision(), provision)
 		}
 		if !maps.EqualFunc(cfg.PluginConfig, pluginConfig, proto.StructsEqual) {
-			return nil, fmt.Errorf("existing config file has different plugin config:\n%v\nvs\n\n%v", cfg.PluginConfig, pluginConfig)
+			return fmt.Errorf("existing config file has different plugin config:\n%v\nvs\n\n%v", cfg.PluginConfig, pluginConfig)
 		}
 		fmt.Println("the config file already exists")
 	} else {
 		cfg := config.NewConfig()
-		cfg.DataSource = dsName
+		plugins, err := proto.ClonePlugins(plugins)
+		if err != nil {
+			return err
+		}
+		cfg.Plugins = plugins
 		if pluginConfig != nil {
 			cfg.PluginConfig = pluginConfig
 		}
 		if err := pm.configLoader.Write(cfg); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return pm.loadDataSource()
+	return nil
 }
 
-func (pm *PluginManager) GetDataSource() (cofidectl_plugin.DataSource, error) {
+// GetDataSource returns the data source plugin, loading it if necessary.
+func (pm *PluginManager) GetDataSource(ctx context.Context) (cofidectl_plugin.DataSource, error) {
 	if pm.source != nil {
 		return pm.source, nil
 	}
-
-	return pm.loadDataSource()
+	return pm.loadDataSource(ctx)
 }
 
-func (pm *PluginManager) loadDataSource() (cofidectl_plugin.DataSource, error) {
+// loadDataSource loads the data source plugin, which may be an in-process or gRPC plugin.
+func (pm *PluginManager) loadDataSource(ctx context.Context) (cofidectl_plugin.DataSource, error) {
 	if pm.source != nil {
 		return nil, errors.New("data source has already been loaded")
 	}
 
-	exists, err := pm.configLoader.Exists()
+	cfg, err := pm.readConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	if !exists {
-		return nil, fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
-	}
-
-	cfg, err := pm.configLoader.Read()
-	if err != nil {
-		return nil, err
-	}
-
-	if cfg.DataSource == "" {
+	dsName := cfg.Plugins.GetDataSource()
+	if dsName == "" {
 		return nil, errors.New("plugin name cannot be empty")
 	}
 
-	var ds cofidectl_plugin.DataSource
-	var client *go_plugin.Client
-	switch cfg.DataSource {
-	case LocalPluginName:
-		ds, err = local.NewLocalDataSource(pm.configLoader)
+	// Check if an in-process data source implementation has been requested.
+	if dsName == LocalDSPluginName {
+		ds, err := local.NewLocalDataSource(pm.configLoader)
 		if err != nil {
 			return nil, err
 		}
-	default:
-		logger := hclog.New(&hclog.LoggerOptions{
-			Name:   "plugin",
-			Output: os.Stdout,
-			Level:  hclog.Error,
-		})
-
-		client, ds, err = pm.loadGrpcPlugin(logger, cfg.DataSource)
-		if err != nil {
+		if err := ds.Validate(ctx); err != nil {
 			return nil, err
 		}
+		pm.source = ds
+		return pm.source, nil
 	}
 
-	if err := ds.Validate(); err != nil {
-		if client != nil {
-			client.Kill()
-		}
+	if err := pm.loadGRPCPlugin(ctx, dsName, cfg.Plugins); err != nil {
 		return nil, err
 	}
-	pm.source = ds
-	pm.client = client
-	return ds, nil
+	return pm.source, nil
 }
 
-func loadGrpcPlugin(logger hclog.Logger, pluginName string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
-	pluginPath, err := cofidectl_plugin.GetPluginPath(pluginName)
-	if err != nil {
-		return nil, nil, err
+// GetProvision returns the provision plugin, loading it if necessary.
+func (pm *PluginManager) GetProvision(ctx context.Context) (provision.Provision, error) {
+	if pm.provision != nil {
+		return pm.provision, nil
+	}
+	return pm.loadProvision(ctx)
+}
+
+// loadProvision loads the provision plugin, which may be an in-process or gRPC plugin.
+func (pm *PluginManager) loadProvision(ctx context.Context) (provision.Provision, error) {
+	if pm.provision != nil {
+		return nil, errors.New("provision plugin has already been loaded")
 	}
 
-	cmd := exec.Command(pluginPath, cofidectl_plugin.DataSourcePluginArgs...)
+	cfg, err := pm.readConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	provisionName := cfg.Plugins.GetProvision()
+	if provisionName == "" {
+		return nil, errors.New("provision plugin name cannot be empty")
+	}
+
+	// Check if an in-process provision implementation has been requested.
+	if provisionName == SpireHelmProvisionPluginName {
+		spireHelm := spirehelm.NewSpireHelm(nil)
+		if err := spireHelm.Validate(ctx); err != nil {
+			return nil, err
+		}
+		pm.provision = spireHelm
+		return pm.provision, nil
+	}
+
+	if err := pm.loadGRPCPlugin(ctx, provisionName, cfg.Plugins); err != nil {
+		return nil, err
+	}
+	return pm.provision, nil
+}
+
+// loadGRPCPlugin loads a gRPC plugin.
+// The gRPC plugin may provide one or more cofidectl plugins (e.g. data source, provision), and
+// all cofidectl plugins configured to use this gRPC plugin will be loaded in a single plugin
+// client and server process.
+func (pm *PluginManager) loadGRPCPlugin(ctx context.Context, pluginName string, pluginCfg *pluginspb.Plugins) error {
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:   "plugin",
+		Output: os.Stdout,
+		Level:  hclog.Error,
+	})
+
+	grpcPlugin, err := pm.grpcPluginLoader(ctx, logger, pluginName, pluginCfg)
+	if err != nil {
+		return err
+	}
+
+	if grpcPlugin.source != nil {
+		pm.source = grpcPlugin.source
+	}
+	if grpcPlugin.provision != nil {
+		pm.provision = grpcPlugin.provision
+	}
+	pm.clients[pluginName] = grpcPlugin.client
+	return nil
+}
+
+// loadGRPCPlugin is the default grpcPluginLoader.
+func loadGRPCPlugin(ctx context.Context, logger hclog.Logger, pluginName string, plugins *pluginspb.Plugins) (*grpcPlugin, error) {
+	pluginPath, err := cofidectl_plugin.GetPluginPath(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	pluginSet := map[string]go_plugin.Plugin{}
+	if plugins.GetDataSource() == pluginName {
+		pluginSet[cofidectl_plugin.DataSourcePluginName] = &cofidectl_plugin.DataSourcePlugin{}
+	}
+	if plugins.GetProvision() == pluginName {
+		pluginSet[provision.ProvisionPluginName] = &provision.ProvisionPlugin{}
+	}
+
+	cmd := exec.Command(pluginPath, cofidectl_plugin.PluginServeArgs...)
 	client := go_plugin.NewClient(&go_plugin.ClientConfig{
-		Cmd:             cmd,
-		HandshakeConfig: cofidectl_plugin.HandshakeConfig,
-		Plugins: map[string]go_plugin.Plugin{
-			cofidectl_plugin.DataSourcePluginName: &cofidectl_plugin.DataSourcePlugin{},
-		},
+		Cmd:              cmd,
+		HandshakeConfig:  cofidectl_plugin.HandshakeConfig,
+		Plugins:          pluginSet,
 		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
 		Logger:           logger,
 	})
 
-	source, err := startGrpcPlugin(client, pluginName)
+	grpcPlugin, err := startGRPCPlugin(ctx, client, pluginName, plugins)
 	if err != nil {
 		client.Kill()
-		return nil, nil, err
+		return nil, err
 	}
-	return client, source, nil
+	return grpcPlugin, nil
 }
 
-func startGrpcPlugin(client *go_plugin.Client, pluginName string) (cofidectl_plugin.DataSource, error) {
+func startGRPCPlugin(ctx context.Context, client *go_plugin.Client, pluginName string, plugins *pluginspb.Plugins) (*grpcPlugin, error) {
 	grpcClient, err := client.Client()
 	if err != nil {
 		return nil, fmt.Errorf("cannot create interface to plugin: %w", err)
@@ -168,24 +256,66 @@ func startGrpcPlugin(client *go_plugin.Client, pluginName string) (cofidectl_plu
 		return nil, fmt.Errorf("failed to ping the gRPC client: %w", err)
 	}
 
-	raw, err := grpcClient.Dispense(cofidectl_plugin.DataSourcePluginName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to dispense an instance of the plugin: %w", err)
+	grpcPlugin := &grpcPlugin{client: client}
+	if plugins.GetDataSource() == pluginName {
+		source, err := dispensePlugin[datasource.DataSource](ctx, grpcClient, cofidectl_plugin.DataSourcePluginName)
+		if err != nil {
+			return nil, err
+		}
+		grpcPlugin.source = source
 	}
 
-	source, ok := raw.(cofidectl_plugin.DataSource)
-	if !ok {
-		return nil, fmt.Errorf("gRPC data source plugin %s does not implement plugin interface", pluginName)
+	if plugins.GetProvision() == pluginName {
+		provision, err := dispensePlugin[provision.Provision](ctx, grpcClient, provision.ProvisionPluginName)
+		if err != nil {
+			return nil, err
+		}
+		grpcPlugin.provision = provision
 	}
-	return source, nil
+	return grpcPlugin, nil
+}
+
+// dispensePlugin dispenses a gRPC plugin from a client, ensuring that it implements the specified interface T.
+func dispensePlugin[T validator.Validator](ctx context.Context, grpcClient go_plugin.ClientProtocol, name string) (T, error) {
+	var zero T
+	raw, err := grpcClient.Dispense(name)
+	if err != nil {
+		return zero, fmt.Errorf("failed to dispense an instance of the gRPC %s plugin: %w", name, err)
+	}
+
+	plugin, ok := raw.(T)
+	if !ok {
+		return zero, fmt.Errorf("gRPC %s plugin (%T) does not implement plugin interface ", name, plugin)
+	}
+
+	if err := plugin.Validate(ctx); err != nil {
+		return zero, err
+	}
+	return plugin, nil
+}
+
+func (pm *PluginManager) readConfig() (*config.Config, error) {
+	exists, err := pm.configLoader.Exists()
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, fmt.Errorf("the config file doesn't exist. Please run cofidectl init")
+	}
+
+	return pm.configLoader.Read()
 }
 
 func (pm *PluginManager) Shutdown() {
-	if pm.client != nil {
-		pm.client.Kill()
-		pm.client = nil
+	for name, client := range pm.clients {
+		if client != nil {
+			client.Kill()
+		}
+		delete(pm.clients, name)
 	}
 	pm.source = nil
+	pm.provision = nil
 }
 
 // GetPluginConfig returns a `Struct` message containing per-plugin configuration from the config file.
@@ -219,7 +349,12 @@ func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *struct
 	return pm.configLoader.Write(cfg)
 }
 
-// GetProvision returns the provision plugin.
-func (pm *PluginManager) GetProvision() provision.Provision {
-	return spirehelm.NewSpireHelm(nil)
+// GetDefaultPlugins returns a `Plugins` message containing the default plugins.
+func GetDefaultPlugins() *pluginspb.Plugins {
+	ds := LocalDSPluginName
+	provision := SpireHelmProvisionPluginName
+	return &pluginspb.Plugins{
+		DataSource: &ds,
+		Provision:  &provision,
+	}
 }

@@ -1,4 +1,3 @@
-data_source: fake-plugin
 trust_zones:
     - name: tz1
       trust_domain: td1
@@ -92,3 +91,6 @@ plugin_config:
     plugin2:
         number-cfg: 123
         string-cfg: fake-string
+plugins:
+    data_source: fake-datasource
+    provision: fake-provision

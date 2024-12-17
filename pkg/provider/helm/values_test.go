@@ -884,7 +884,7 @@ func TestMergeMaps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := mergeMaps(tt.dest, tt.src)
+			resp, err := MergeMaps(tt.dest, tt.src)
 			if tt.wantErr {
 				assert.Equal(t, tt.errString, err.Error())
 				return
@@ -905,10 +905,10 @@ func TestShallowMerge(t *testing.T) {
 		{
 			name: "valid slice of maps",
 			maps: []map[string]any{
-				map[string]any{
+				{
 					"foo": "bar",
 				},
-				map[string]any{
+				{
 					"fizz": "buzz",
 				},
 			},
@@ -925,8 +925,8 @@ func TestShallowMerge(t *testing.T) {
 		{
 			name: "slice of empty maps",
 			maps: []map[string]any{
-				map[string]any{},
-				map[string]any{},
+				{},
+				{},
 			},
 			want: map[string]any{},
 		},
@@ -1524,5 +1524,6 @@ func defaultConfig() *config.Config {
 			fixtures.AttestationPolicy("ap1"),
 			fixtures.AttestationPolicy("ap2"),
 		},
+		Plugins: fixtures.Plugins("plugins1"),
 	}
 }
