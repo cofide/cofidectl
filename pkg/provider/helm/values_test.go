@@ -94,7 +94,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"identities": Values{
 							"clusterSPIFFEIDs": Values{
 								"default": Values{
-									"enabled": true,
+									"enabled": false,
 								},
 							},
 						},
@@ -293,7 +293,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"identities": Values{
 							"clusterSPIFFEIDs": Values{
 								"default": Values{
-									"enabled": true,
+									"enabled": false,
 								},
 							},
 						},
@@ -430,7 +430,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 						"identities": Values{
 							"clusterSPIFFEIDs": Values{
 								"default": Values{
-									"enabled": true,
+									"enabled": false,
 								},
 							},
 							"clusterFederatedTrustDomains": Values{

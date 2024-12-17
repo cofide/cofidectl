@@ -72,7 +72,7 @@ function run_tests() {
 
 function wait_for_pong() {
   for i in $(seq 30); do
-    if kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client | grep pong; then
+    if kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client | grep '\.\.\.pong'; then
       return 0
     fi
     sleep 2

@@ -125,45 +125,34 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("failed to get controllerManager map from spireServer: %w", err)
 	}
 
-	// Enables the default ClusterSPIFFEID CR by default.
-	controllerManager["identities"] = map[string]any{
-		"clusterSPIFFEIDs": map[string]any{
-			"default": map[string]any{
-				"enabled": true,
-			},
-		},
-	}
-
 	identities, err := getOrCreateNestedMap(controllerManager, "identities")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get identities map from controllerManager: %w", err)
 	}
 
-	if len(g.trustZone.AttestationPolicies) > 0 {
-		csids, err := getOrCreateNestedMap(identities, "clusterSPIFFEIDs")
+	csids, err := getOrCreateNestedMap(identities, "clusterSPIFFEIDs")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities: %w", err)
+	}
+
+	// Disables the default ClusterSPIFFEID CR.
+	csids["default"] = map[string]any{
+		"enabled": false,
+	}
+
+	// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
+	for _, binding := range g.trustZone.AttestationPolicies {
+		policy, err := g.source.GetAttestationPolicy(binding.Policy)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities: %w", err)
+			return nil, err
 		}
 
-		// Disables the default ClusterSPIFFEID CR.
-		csids["default"] = map[string]any{
-			"enabled": false,
+		clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+		if err != nil {
+			return nil, err
 		}
 
-		// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
-		for _, binding := range g.trustZone.AttestationPolicies {
-			policy, err := g.source.GetAttestationPolicy(binding.Policy)
-			if err != nil {
-				return nil, err
-			}
-
-			clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
-			if err != nil {
-				return nil, err
-			}
-
-			csids[policy.Name] = clusterSPIFFEIDs
-		}
+		csids[policy.Name] = clusterSPIFFEIDs
 	}
 
 	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by the spire-controller-manager.
