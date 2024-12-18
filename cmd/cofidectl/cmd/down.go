@@ -39,7 +39,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return err
 			}
 
-			statusCh, err := provision.TearDown(cmd.Context(), ds)
+			statusCh, err := provision.TearDown(cmd.Context(), ds, kubeCfgFile)
 			if err != nil {
 				return err
 			}

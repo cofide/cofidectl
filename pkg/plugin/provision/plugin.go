@@ -82,10 +82,10 @@ func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasourc
 	return statusCh, nil
 }
 
-func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource) (<-chan *provisionpb.Status, error) {
+func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
 	server, brokerID := c.startDataSourceServer(source)
 
-	req := provisionpb.TearDownRequest{DataSource: &brokerID}
+	req := provisionpb.TearDownRequest{DataSource: &brokerID, KubeCfgFile: &kubeCfgFile}
 	stream, err := c.client.TearDown(ctx, &req)
 	if err != nil {
 		err := wrapError(err)
@@ -201,7 +201,7 @@ func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.Serv
 	}
 	defer conn.Close()
 
-	statusCh, err := s.impl.TearDown(stream.Context(), client)
+	statusCh, err := s.impl.TearDown(stream.Context(), client, req.GetKubeCfgFile())
 	if err != nil {
 		return err
 	}

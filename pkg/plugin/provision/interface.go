@@ -23,5 +23,5 @@ type Provision interface {
 	// TearDown tears down the workload identity configuration from the clusters in the system.
 	// The method is asynchronous, returning a channel over which Status messages are sent
 	// describing the various stages of tear down and their outcomes.
-	TearDown(ctx context.Context, ds datasource.DataSource) (<-chan *provisionpb.Status, error)
+	TearDown(ctx context.Context, ds datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error)
 }

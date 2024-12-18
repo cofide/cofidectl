@@ -69,7 +69,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSVIDName":       "default",
+						"defaultSvidName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -159,7 +159,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSVIDName":       "default",
+						"defaultSvidName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -268,7 +268,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSVIDName":       "default",
+						"defaultSvidName":       "default",
 						"defaultBundleName":     "null",
 						"defaultAllBundlesName": "ROOTCA",
 					},
@@ -405,7 +405,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSVIDName":       "default",
+						"defaultSvidName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -1087,7 +1087,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSVIDName":       "default",
+					"defaultSvidName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1104,7 +1104,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSVIDName":       "default",
+						"defaultSvidName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -1143,7 +1143,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSVIDName":       "default",
+					"defaultSvidName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1167,7 +1167,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSVIDName":       "default",
+					"defaultSvidName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1197,7 +1197,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSVIDName":       "default",
+					"defaultSvidName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1468,7 +1468,7 @@ func TestGetSDSConfig(t *testing.T) {
 			profile: "kubernetes",
 			want: map[string]any{
 				"enabled":               true,
-				"defaultSVIDName":       "default",
+				"defaultSvidName":       "default",
 				"defaultBundleName":     "ROOTCA",
 				"defaultAllBundlesName": "ALL",
 			},
@@ -1479,7 +1479,7 @@ func TestGetSDSConfig(t *testing.T) {
 			profile: "istio",
 			want: map[string]any{
 				"enabled":               true,
-				"defaultSVIDName":       "default",
+				"defaultSvidName":       "default",
 				"defaultBundleName":     "null",
 				"defaultAllBundlesName": "ROOTCA",
 			},

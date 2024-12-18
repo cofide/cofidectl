@@ -55,7 +55,7 @@ func TestSpireHelm_TearDown(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	statusCh, err := spireHelm.TearDown(context.Background(), ds)
+	statusCh, err := spireHelm.TearDown(context.Background(), ds, "fake-kube.cfg")
 	require.NoError(t, err, err)
 
 	statuses := collectStatuses(statusCh)
