@@ -10,7 +10,6 @@ import (
 
 	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
-	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
@@ -83,10 +82,10 @@ func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasourc
 	return statusCh, nil
 }
 
-func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource) (<-chan *provisionpb.Status, error) {
+func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
 	server, brokerID := c.startDataSourceServer(source)
 
-	req := provisionpb.TearDownRequest{DataSource: &brokerID}
+	req := provisionpb.TearDownRequest{DataSource: &brokerID, KubeCfgFile: &kubeCfgFile}
 	stream, err := c.client.TearDown(ctx, &req)
 	if err != nil {
 		err := wrapError(err)
@@ -120,7 +119,7 @@ func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasou
 // This uses the bidirectional communication feature of go-plugin. See
 // https://pkg.go.dev/github.com/hashicorp/go-plugin/examples/bidirectional for an example.
 func (c *ProvisionPluginClientGRPC) startDataSourceServer(source datasource.DataSource) (*grpc.Server, uint32) {
-	dsServer := &plugin.GRPCServer{Impl: source}
+	dsServer := &datasource.GRPCServer{Impl: source}
 
 	serverCh := make(chan *grpc.Server)
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
@@ -202,7 +201,7 @@ func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.Serv
 	}
 	defer conn.Close()
 
-	statusCh, err := s.impl.TearDown(stream.Context(), client)
+	statusCh, err := s.impl.TearDown(stream.Context(), client, req.GetKubeCfgFile())
 	if err != nil {
 		return err
 	}
@@ -229,6 +228,6 @@ func (s *GRPCServer) getDataSourceClient(ctx context.Context, dataSourceID uint3
 		return nil, nil, err
 	}
 
-	client := plugin.NewDataSourcePluginClientGRPC(ctx, cofidectl_proto.NewDataSourcePluginServiceClient(conn))
+	client := datasource.NewDataSourcePluginClientGRPC(ctx, cofidectl_proto.NewDataSourcePluginServiceClient(conn))
 	return client, conn, nil
 }

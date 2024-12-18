@@ -13,7 +13,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
-	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
@@ -55,7 +55,7 @@ func TestSpireHelm_TearDown(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	statusCh, err := spireHelm.TearDown(context.Background(), ds)
+	statusCh, err := spireHelm.TearDown(context.Background(), ds, "fake-kube.cfg")
 	require.NoError(t, err, err)
 
 	statuses := collectStatuses(statusCh)
@@ -82,7 +82,7 @@ func newFakeHelmSPIREProviderFactory() *fakeHelmSPIREProviderFactory {
 	return &fakeHelmSPIREProviderFactory{}
 }
 
-func (f *fakeHelmSPIREProviderFactory) Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error) {
+func (f *fakeHelmSPIREProviderFactory) Build(ctx context.Context, ds datasource.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error) {
 	return newFakeHelmSPIREProvider(trustZone), nil
 }
 
@@ -128,7 +128,7 @@ func (p *fakeHelmSPIREProvider) CheckIfAlreadyInstalled() (bool, error) {
 	return false, nil
 }
 
-func newFakeDataSource(t *testing.T, cfg *config.Config) plugin.DataSource {
+func newFakeDataSource(t *testing.T, cfg *config.Config) datasource.DataSource {
 	configLoader, err := config.NewMemoryLoader(cfg)
 	require.Nil(t, err)
 	lds, err := local.NewLocalDataSource(configLoader)

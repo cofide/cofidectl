@@ -7,7 +7,7 @@ toolchain go1.23.4
 require (
 	buf.build/go/protoyaml v0.3.0
 	cuelang.org/go v0.10.1
-	github.com/cofide/cofide-api-sdk v0.4.1-0.20241212134830-527e2164f012
+	github.com/cofide/cofide-api-sdk v0.4.1-0.20241213113045-864bfb581c91
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.6.0
@@ -23,13 +23,9 @@ require (
 	helm.sh/helm/v3 v3.16.3
 )
 
-require cel.dev/expr v0.18.0 // indirect
-
-// Uncomment the following for development with local Cofide API SDK changes:
-//replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
-
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.35.2-20241127180247-a33202765966.1 // indirect
+  cel.dev/expr v0.18.0 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
@@ -183,3 +179,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+// Uncomment the following for development with local Cofide API SDK changes:
+// replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk

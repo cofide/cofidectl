@@ -11,11 +11,11 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 )
 
 type HelmValuesGenerator struct {
-	source    cofidectl_plugin.DataSource
+	source    datasource.DataSource
 	trustZone *trust_zone_proto.TrustZone
 	values    map[string]any
 }
@@ -56,7 +56,7 @@ type spiffeCSIDriverValues struct {
 	fullnameOverride string
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source cofidectl_plugin.DataSource, values map[string]any) *HelmValuesGenerator {
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source datasource.DataSource, values map[string]any) *HelmValuesGenerator {
 	return &HelmValuesGenerator{
 		trustZone: trustZone,
 		source:    source,
@@ -494,7 +494,7 @@ func getSDSConfig(profile string) (map[string]any, error) {
 		// https://istio.io/latest/docs/ops/integrations/spire/#spiffe-federation
 		return map[string]any{
 			"enabled":               true,
-			"defaultSVIDName":       "default",
+			"defaultSvidName":       "default",
 			"defaultBundleName":     "null",
 			"defaultAllBundlesName": "ROOTCA",
 		}, nil
@@ -502,7 +502,7 @@ func getSDSConfig(profile string) (map[string]any, error) {
 		// https://github.com/spiffe/spire/blob/main/doc/spire_agent.md#sds-configuration
 		return map[string]any{
 			"enabled":               true,
-			"defaultSVIDName":       "default",
+			"defaultSvidName":       "default",
 			"defaultBundleName":     "ROOTCA",
 			"defaultAllBundlesName": "ALL",
 		}, nil
