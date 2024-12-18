@@ -338,6 +338,14 @@ func (s *spireAgentValues) generateValues() (map[string]any, error) {
 
 // generateValues generates the spire-server Helm values map.
 func (s *spireServerValues) generateValues() (map[string]any, error) {
+	if !s.enabled {
+		return map[string]any{
+			"spire-server": map[string]any{
+				"enabled": s.enabled,
+			},
+		}, nil
+	}
+
 	if s.caKeyType == "" {
 		return nil, fmt.Errorf("caKeyType value is empty")
 	}
@@ -372,6 +380,7 @@ func (s *spireServerValues) generateValues() (map[string]any, error) {
 
 	return map[string]any{
 		"spire-server": map[string]any{
+			"enabled":   s.enabled,
 			"caKeyType": s.caKeyType,
 			"caTTL":     s.caTTL,
 			"controllerManager": map[string]any{
