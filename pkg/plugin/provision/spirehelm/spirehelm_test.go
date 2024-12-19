@@ -50,6 +50,36 @@ func TestSpireHelm_Deploy(t *testing.T) {
 	assert.EqualExportedValues(t, want, statuses)
 }
 
+func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
+	providerFactory := newFakeHelmSPIREProviderFactory()
+	spireHelm := NewSpireHelm(providerFactory)
+
+	config := &config.Config{
+		TrustZones: []*trust_zone_proto.TrustZone{
+			fixtures.TrustZone("tz5"),
+		},
+		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+		Plugins:             fixtures.Plugins("plugins1"),
+	}
+
+	ds := newFakeDataSource(t, config)
+
+	statusCh, err := spireHelm.Deploy(context.Background(), ds, "fake-kube.cfg")
+	require.NoError(t, err, err)
+
+	statuses := collectStatuses(statusCh)
+	want := []*provisionpb.Status{
+		provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
+		provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
+		provision.StatusOk("Installing", "Installing SPIRE CRDs for local5 in tz5"),
+		provision.StatusOk("Installing", "Installing SPIRE chart for local5 in tz5"),
+		provision.StatusDone("Installed", "Installation completed for local5 in tz5"),
+		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
+		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
+	}
+	assert.EqualExportedValues(t, want, statuses)
+}
+
 func TestSpireHelm_TearDown(t *testing.T) {
 	providerFactory := newFakeHelmSPIREProviderFactory()
 	spireHelm := NewSpireHelm(providerFactory)

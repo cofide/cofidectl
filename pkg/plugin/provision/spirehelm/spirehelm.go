@@ -150,10 +150,17 @@ func (h *SpireHelm) InstallSPIREStack(ctx context.Context, ds datasource.DataSou
 func (h *SpireHelm) WatchAndConfigure(ctx context.Context, ds datasource.DataSource, trustZones []*trust_zone_proto.TrustZone, kubeCfgFile string, statusCh chan<- *provisionpb.Status) error {
 	// Wait for SPIRE servers to be available and update status before applying federation(s)
 	for _, trustZone := range trustZones {
+		if trustZone.GetExternalServer() {
+			sb := provision.NewStatusBuilder(trustZone.Name, trustZone.GetKubernetesCluster())
+			statusCh <- sb.Done("Ready", "Skipped waiting for external SPIRE server pod and service")
+			continue
+		}
+
 		if err := h.GetBundleAndEndpoint(ctx, statusCh, ds, trustZone, kubeCfgFile); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

@@ -62,6 +62,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			return value
 		}(),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
+		ExternalServer:        BoolPtr(false),
 	},
 	"tz2": {
 		Name:              "tz2",
@@ -88,6 +89,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
+		ExternalServer:        BoolPtr(false),
 	},
 	// tz3 has no federations or bound attestation policies.
 	"tz3": {
@@ -117,6 +119,21 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl:   StringPtr("127.0.0.4"),
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
+	},
+	// tz5 has no federations or bound attestation policies and has an external SPIRE server.
+	"tz5": {
+		Name:              "tz5",
+		TrustDomain:       "td5",
+		KubernetesCluster: StringPtr("local5"),
+		KubernetesContext: StringPtr("kind-local5"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile:             StringPtr("kubernetes"),
+		BundleEndpointUrl:   StringPtr("127.0.0.5"),
+		Federations:         []*federation_proto.Federation{},
+		AttestationPolicies: []*ap_binding_proto.APBinding{},
+		ExternalServer:      BoolPtr(true),
 	},
 }
 
@@ -274,4 +291,8 @@ func Plugins(name string) *pluginspb.Plugins {
 
 func StringPtr(s string) *string {
 	return &s
+}
+
+func BoolPtr(b bool) *bool {
+	return &b
 }
