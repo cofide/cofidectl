@@ -14,6 +14,7 @@
 	jwt_issuer?: string
 	extra_helm_values?: #HelmValues
 	bundle_endpoint_profile?: #BundleEndpointProfile
+	external_server?: bool
 }
 
 #TrustProvider: {

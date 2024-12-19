@@ -99,6 +99,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 						},
 					},
+					"enabled":          true,
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
@@ -209,6 +210,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 						},
 					},
+					"enabled": true,
 					"federation": Values{
 						"enabled": true,
 					},
@@ -298,6 +300,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 						},
 					},
+					"enabled":          true,
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
@@ -444,6 +447,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 							},
 						},
 					},
+					"enabled":          true,
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
@@ -840,6 +844,7 @@ func TestMergeMaps(t *testing.T) {
 							},
 						},
 					},
+					"enabled": true,
 				},
 			},
 			want: map[string]any{
@@ -864,6 +869,7 @@ func TestMergeMaps(t *testing.T) {
 							},
 						},
 					},
+					"enabled": true,
 				},
 			},
 		},
@@ -1286,6 +1292,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				caKeyType:                "rsa-2048",
 				caTTL:                    "12h",
 				controllerManagerEnabled: true,
+				enabled:                  true,
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{
@@ -1308,6 +1315,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 					"controllerManager": map[string]any{
 						"enabled": true,
 					},
+					"enabled":          true,
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
@@ -1331,11 +1339,24 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid SPIRE server values, enabled set to false",
+			input: spireServerValues{
+				enabled: false,
+			},
+			want: map[string]any{
+				"spire-server": map[string]any{
+					"enabled": false,
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "invalid SPIRE server values, empty serviceType value",
 			input: spireServerValues{
 				caKeyType:                "rsa-2048",
 				caTTL:                    "12h",
 				controllerManagerEnabled: true,
+				enabled:                  true,
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{
@@ -1361,6 +1382,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				caKeyType:                "rsa-2048",
 				caTTL:                    "12h",
 				controllerManagerEnabled: true,
+				enabled:                  true,
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{

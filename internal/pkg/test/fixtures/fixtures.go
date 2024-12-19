@@ -118,6 +118,21 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
 	},
+	// tz5 has no federations or bound attestation policies and has an external SPIRE server.
+	"tz5": {
+		Name:              "tz5",
+		TrustDomain:       "td5",
+		KubernetesCluster: StringPtr("local5"),
+		KubernetesContext: StringPtr("kind-local5"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile:             StringPtr("kubernetes"),
+		BundleEndpointUrl:   StringPtr("127.0.0.5"),
+		Federations:         []*federation_proto.Federation{},
+		AttestationPolicies: []*ap_binding_proto.APBinding{},
+		ExternalServer:      BoolPtr(true),
+	},
 }
 
 var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPolicy = map[string]*attestation_policy_proto.AttestationPolicy{
@@ -274,4 +289,8 @@ func Plugins(name string) *pluginspb.Plugins {
 
 func StringPtr(s string) *string {
 	return &s
+}
+
+func BoolPtr(b bool) *bool {
+	return &b
 }

@@ -114,6 +114,7 @@ type addOpts struct {
 	context           string
 	profile           string
 	jwtIssuer         string
+	externalServer    bool
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
@@ -156,6 +157,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				Profile:               &opts.profile,
 				JwtIssuer:             &opts.jwtIssuer,
 				BundleEndpointProfile: &bundleEndpointProfile,
+				ExternalServer:        &opts.externalServer,
 			}
 
 			_, err = ds.AddTrustZone(newTrustZone)
@@ -173,6 +175,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 	f.StringVar(&opts.jwtIssuer, "jwt-issuer", "", "JWT issuer to use for this trust zone")
+	f.BoolVar(&opts.externalServer, "external-server", false, "If the SPIRE server runs externally")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
 	cobra.CheckErr(cmd.MarkFlagRequired("kubernetes-cluster"))
