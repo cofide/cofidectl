@@ -156,7 +156,7 @@ func (h *SpireHelm) WatchAndConfigure(ctx context.Context, ds datasource.DataSou
 			}
 		} else {
 			sb := provision.NewStatusBuilder(trustZone.Name, trustZone.GetKubernetesCluster())
-			statusCh <- sb.Done("Done", "Skipped waiting for SPIRE server pod and service")
+			statusCh <- sb.Done("Ready", "Skipped waiting for external SPIRE server pod and service")
 		}
 	}
 	return nil

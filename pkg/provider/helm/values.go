@@ -102,11 +102,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, err
 	}
 
-	spireServerEnabled := true
-
-	if g.trustZone.GetExternalServer() {
-		spireServerEnabled = false
-	}
+	spireServerEnabled := !g.trustZone.GetExternalServer()
 
 	ssv := spireServerValues{
 		caKeyType:                "rsa-2048",
