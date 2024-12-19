@@ -286,7 +286,7 @@ func installChart(ctx context.Context, cfg *action.Configuration, client *action
 	}
 
 	options, err := client.ChartPathOptions.LocateChart(
-		fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName),
+		getChartRef(chartName),
 		settings,
 	)
 	if err != nil {
@@ -325,7 +325,7 @@ func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action
 	}
 
 	options, err := client.ChartPathOptions.LocateChart(
-		fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName),
+		getChartRef(chartName),
 		settings,
 	)
 	if err != nil {
@@ -338,6 +338,16 @@ func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action
 	}
 
 	return client.RunWithContext(ctx, chartName, chart, values)
+}
+
+func getChartRef(chartName string) string {
+	// TODO: Make this conditional on an environment variable and use it for the repoPath.
+	if true {
+		repoPath := "/home/mark/src/spiffe/helm-charts-hardened/charts"
+		return fmt.Sprintf("%s/%s", repoPath, chartName)
+	} else {
+		return fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName)
+	}
 }
 
 func newUninstall(cfg *action.Configuration) *action.Uninstall {
