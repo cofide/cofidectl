@@ -62,6 +62,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			return value
 		}(),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
+		ExternalServer:        BoolPtr(false),
 	},
 	"tz2": {
 		Name:              "tz2",
@@ -88,6 +89,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
+		ExternalServer:        BoolPtr(false),
 	},
 	// tz3 has no federations or bound attestation policies.
 	"tz3": {
