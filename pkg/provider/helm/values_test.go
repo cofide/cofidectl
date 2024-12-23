@@ -78,7 +78,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
-							"disableContainerSelectors":   false,
+							"disableContainerSelectors":   true,
 							"enabled":                     true,
 							"skipKubeletVerification":     true,
 							"useNewContainerLocator":      false,
@@ -169,7 +169,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
-							"disableContainerSelectors":   false,
+							"disableContainerSelectors":   true,
 							"enabled":                     true,
 							"skipKubeletVerification":     true,
 							"useNewContainerLocator":      false,
@@ -279,7 +279,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
-							"disableContainerSelectors":   false,
+							"disableContainerSelectors":   true,
 							"enabled":                     true,
 							"skipKubeletVerification":     true,
 							"useNewContainerLocator":      false,
@@ -417,7 +417,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
-							"disableContainerSelectors":   false,
+							"disableContainerSelectors":   true,
 							"enabled":                     true,
 							"skipKubeletVerification":     true,
 							"useNewContainerLocator":      false,
@@ -1084,7 +1084,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					WorkloadAttestorConfig: map[string]any{
 						"enabled":                     true,
 						"skipKubeletVerification":     true,
-						"disableContainerSelectors":   false,
+						"disableContainerSelectors":   true,
 						"useNewContainerLocator":      false,
 						"verboseContainerLocatorLogs": false,
 					},
@@ -1121,7 +1121,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"k8s": map[string]any{
 							"enabled":                     true,
 							"skipKubeletVerification":     true,
-							"disableContainerSelectors":   false,
+							"disableContainerSelectors":   true,
 							"useNewContainerLocator":      false,
 							"verboseContainerLocatorLogs": false,
 						},
@@ -1140,7 +1140,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					WorkloadAttestorConfig: map[string]any{
 						"enabled":                     true,
 						"skipKubeletVerification":     true,
-						"disableContainerSelectors":   false,
+						"disableContainerSelectors":   true,
 						"useNewContainerLocator":      false,
 						"verboseContainerLocatorLogs": false,
 					},
@@ -1194,7 +1194,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					WorkloadAttestorConfig: map[string]any{
 						"enabled":                     true,
 						"skipKubeletVerification":     true,
-						"disableContainerSelectors":   false,
+						"disableContainerSelectors":   true,
 						"useNewContainerLocator":      false,
 						"verboseContainerLocatorLogs": false,
 					},
@@ -1224,7 +1224,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					WorkloadAttestorConfig: map[string]any{
 						"enabled":                     true,
 						"skipKubeletVerification":     true,
-						"disableContainerSelectors":   false,
+						"disableContainerSelectors":   true,
 						"useNewContainerLocator":      false,
 						"verboseContainerLocatorLogs": false,
 					},
@@ -1249,7 +1249,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					WorkloadAttestorConfig: map[string]any{
 						"enabled":                     true,
 						"skipKubeletVerification":     true,
-						"disableContainerSelectors":   false,
+						"disableContainerSelectors":   true,
 						"useNewContainerLocator":      false,
 						"verboseContainerLocatorLogs": false,
 					},
