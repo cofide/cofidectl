@@ -60,7 +60,7 @@ require (
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.0 // indirect
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
-	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
+	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
@@ -144,7 +144,6 @@ require (
 	go.opentelemetry.io/otel/exporters/prometheus v0.49.0 // indirect
 	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
-	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
 	golang.org/x/mod v0.20.0 // indirect
@@ -159,23 +158,22 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.5.0 // indirect
 	k8s.io/api v0.32.0
 	k8s.io/apiextensions-apiserver v0.31.3 // indirect
 	k8s.io/apimachinery v0.32.0
 	k8s.io/apiserver v0.31.3 // indirect
-	k8s.io/cli-runtime v0.31.3 // indirect
+	k8s.io/cli-runtime v0.32.0 // indirect
 	k8s.io/client-go v0.32.0
-	k8s.io/component-base v0.31.3 // indirect
+	k8s.io/component-base v0.32.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
-	k8s.io/kubectl v0.31.3
+	k8s.io/kubectl v0.32.0
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/kustomize/api v0.17.2 // indirect
-	sigs.k8s.io/kustomize/kyaml v0.17.1 // indirect
+	sigs.k8s.io/kustomize/api v0.18.0 // indirect
+	sigs.k8s.io/kustomize/kyaml v0.18.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
