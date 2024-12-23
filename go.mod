@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	buf.build/go/protoyaml v0.3.0
+	buf.build/go/protoyaml v0.3.1
 	cuelang.org/go v0.10.1
 	github.com/cofide/cofide-api-sdk v0.4.1-0.20241218164200-fd9d4ce5088c
 	github.com/fatih/color v1.18.0
@@ -18,13 +18,13 @@ require (
 	github.com/spiffe/spire-api-sdk v1.11.1
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/grpc v1.69.2
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.4
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.35.2-20241127180247-a33202765966.1 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.0-20241127180247-a33202765966.1 // indirect
 	cel.dev/expr v0.18.0 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
