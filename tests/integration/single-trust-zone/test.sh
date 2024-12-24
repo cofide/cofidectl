@@ -55,14 +55,6 @@ function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
   ./cofidectl trust-zone status $TRUST_ZONE
-
-  POD_NAME=$(kubectl get pods -l app=ping-pong-client \
-    -n $NAMESPACE_POLICY_NAMESPACE \
-    -o jsonpath='{.items[0].metadata.name}' \
-    --context $K8S_CLUSTER_CONTEXT)
-  ./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
-    --pod-name $POD_NAME \
-    --trust-zone $TRUST_ZONE
 }
 
 function run_tests() {
@@ -88,6 +80,16 @@ function wait_for_pong() {
   return 1
 }
 
+function show_workload_status() {
+  POD_NAME=$(kubectl get pods -l app=ping-pong-client \
+    -n $NAMESPACE_POLICY_NAMESPACE \
+    -o jsonpath='{.items[0].metadata.name}' \
+    --context $K8S_CLUSTER_CONTEXT)
+  ./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
+    --pod-name $POD_NAME \
+    --trust-zone $TRUST_ZONE
+}
+
 function down() {
   ./cofidectl down
 }
@@ -100,6 +102,7 @@ function main() {
   show_config
   show_status
   run_tests
+  show_workload_status
   down
   echo "Success!"
 }
