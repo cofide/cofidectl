@@ -80,6 +80,14 @@ function show_status() {
   ./cofidectl workload list
   ./cofidectl trust-zone status $TRUST_ZONE_1
   ./cofidectl trust-zone status $TRUST_ZONE_2
+
+  POD_NAME=$(kubectl get pods -l app=ping-pong-client \
+    -n $NAMESPACE_POLICY_NAMESPACE \
+    -o jsonpath='{.items[0].metadata.name}' \
+    --context $K8S_CLUSTER_1_CONTEXT)
+  ./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
+    --pod-name $POD_NAME \
+    --trust-zone $TRUST_ZONE_1
 }
 
 function run_tests() {
