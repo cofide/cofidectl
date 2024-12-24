@@ -112,6 +112,16 @@ function post_deploy() {
   fi
 }
 
+function show_workload_status() {
+  POD_NAME=$(kubectl get pods -l app=ping-pong-client \
+    -n $NAMESPACE_POLICY_NAMESPACE \
+    -o jsonpath='{.items[0].metadata.name}' \
+    --context $K8S_CLUSTER_1_CONTEXT)
+  ./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
+    --pod-name $POD_NAME \
+    --trust-zone $TRUST_ZONE_1
+}
+
 function down() {
   ./cofidectl down
 }
@@ -126,6 +136,7 @@ function main() {
   show_status
   run_tests
   post_deploy
+  show_workload_status
   down
   echo "Success!"
 }
