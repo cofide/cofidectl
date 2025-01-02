@@ -85,9 +85,32 @@ function show_workload_status() {
     -n $NAMESPACE_POLICY_NAMESPACE \
     -o jsonpath='{.items[0].metadata.name}' \
     --context $K8S_CLUSTER_CONTEXT)
-  ./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
+  WORKLOAD_STATUS_RESPONSE=$(./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
     --pod-name $POD_NAME \
-    --trust-zone $TRUST_ZONE
+    --trust-zone $TRUST_ZONE)
+
+  ERROR_PATTERNS=(
+    "Unable to create workload API client"
+    "unable to fetch X.509 trust bundles"
+    "unable to fetch X.509 SVIDs"
+    "SVID verification failed"
+    "No trust bundle found for trust domain"
+  )
+
+  for pattern in "${ERROR_PATTERNS[@]}"; do
+    if [[ $WORKLOAD_STATUS_RESPONSE == *"$pattern"* ]]; then
+      echo "cofidectl workload status unsuccessful"
+      exit 1
+    fi
+  done
+
+  if [[ ! $WORKLOAD_STATUS_RESPONSE == *"Trust bundles received"* ]] && [[ ! $WORKLOAD_STATUS_RESPONSE == *"SVIDs received"* ]]; then
+    echo "cofidectl workload status unsuccessful"
+    exit 1
+  fi
+
+  echo "cofidectl workload status successful"
+  exit 0
 }
 
 function down() {
