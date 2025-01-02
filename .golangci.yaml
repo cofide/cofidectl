@@ -9,5 +9,5 @@ linters-settings:
         COMPANY: Cofide Limited
     # Require Cofide copyright and SPDX license in all source files.
     template: |
-      Copyright {{ MOD-YEAR }} {{ COMPANY }}.
+      Copyright {{ MOD-YEAR-RANGE }} {{ COMPANY }}.
       SPDX-License-Identifier: Apache-2.0
