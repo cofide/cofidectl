@@ -89,7 +89,7 @@ function show_workload_status() {
     --pod-name $POD_NAME \
     --trust-zone $TRUST_ZONE)
 
-  if [[ ! $WORKLOAD_STATUS_RESPONSE == *"SVID verified against trust bundle"* ]]; then
+  if [[ $WORKLOAD_STATUS_RESPONSE != *"SVID verified against trust bundle"* ]]; then
     echo "cofidectl workload status unsuccessful"
     exit 1
   fi
