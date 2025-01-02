@@ -35,7 +35,7 @@ func execInServerContainer(ctx context.Context, client *kubeutil.Client, command
 		client.Clientset,
 		client.RestConfig,
 		serverPodName,
-		namespace,
+		serverNamespace,
 		serverContainerName,
 		command,
 		stdin,

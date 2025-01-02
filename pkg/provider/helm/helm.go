@@ -34,7 +34,8 @@ const (
 	SPIRECRDsChartName    = "spire-crds"
 	SPIRECRDsChartVersion = "0.4.0"
 
-	SPIRENamespace = "spire"
+	// Kubernetes namespace in which Helm charts and CRDs will be installed.
+	SPIREManagementNamespace = "spire-mgmt"
 )
 
 // Type assertion that HelmSPIREProvider implements the Provider interface.
@@ -261,7 +262,7 @@ func newInstall(cfg *action.Configuration, chart string, version string) *action
 	install := action.NewInstall(cfg)
 	install.Version = version
 	install.ReleaseName = chart
-	install.Namespace = SPIRENamespace
+	install.Namespace = SPIREManagementNamespace
 	install.CreateNamespace = true
 	return install
 }
@@ -308,7 +309,7 @@ func installChart(ctx context.Context, cfg *action.Configuration, client *action
 
 func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
 	upgrade := action.NewUpgrade(cfg)
-	upgrade.Namespace = SPIRENamespace
+	upgrade.Namespace = SPIREManagementNamespace
 	upgrade.Version = version
 	upgrade.ReuseValues = true
 	return upgrade

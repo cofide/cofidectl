@@ -24,8 +24,9 @@ type globalValues struct {
 	deleteHooks                   bool
 	installAndUpgradeHooksEnabled bool
 	spireClusterName              string
-	spireCreateRecommendations    bool
 	spireJwtIssuer                string
+	spireNamespacesCreate         bool
+	spireRecommendationsEnabled   bool
 	spireTrustDomain              string
 }
 
@@ -73,8 +74,9 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 
 	gv := globalValues{
 		spireClusterName:              g.trustZone.GetKubernetesCluster(),
-		spireCreateRecommendations:    true,
 		spireJwtIssuer:                g.trustZone.GetJwtIssuer(),
+		spireNamespacesCreate:         true,
+		spireRecommendationsEnabled:   true,
 		spireTrustDomain:              g.trustZone.TrustDomain,
 		installAndUpgradeHooksEnabled: false,
 		deleteHooks:                   false,
@@ -243,8 +245,11 @@ func (g *globalValues) generateValues() (map[string]any, error) {
 		"global": map[string]any{
 			"spire": map[string]any{
 				"clusterName": g.spireClusterName,
+				"namespaces": map[string]any{
+					"create": g.spireNamespacesCreate,
+				},
 				"recommendations": map[string]any{
-					"create": g.spireCreateRecommendations,
+					"enabled": g.spireRecommendationsEnabled,
 				},
 				"trustDomain": g.spireTrustDomain,
 			},

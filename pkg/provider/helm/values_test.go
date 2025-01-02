@@ -47,8 +47,11 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"spire": Values{
 						"clusterName": "local1",
-						"recommendations": Values{
+						"namespaces": Values{
 							"create": true,
+						},
+						"recommendations": Values{
+							"enabled": true,
 						},
 						"trustDomain": "td1",
 					},
@@ -133,13 +136,18 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"enabled": false,
 					},
 					"spire": Values{
+						"caSubject": Values{
+							"country":      "UK",
+							"organization": "acme-org",
+							"commonName":   "cn.example.com",
+						},
 						"clusterName": "local1",
 						"jwtIssuer":   "https://tz1.example.com",
 						"namespaces": Values{
 							"create": true,
 						},
 						"recommendations": Values{
-							"create": true,
+							"enabled": true,
 						},
 						"trustDomain": "td1",
 					},
@@ -248,8 +256,11 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"spire": Values{
 						"clusterName": "local4",
-						"recommendations": Values{
+						"namespaces": Values{
 							"create": true,
+						},
+						"recommendations": Values{
+							"enabled": true,
 						},
 						"trustDomain": "td4",
 					},
@@ -386,8 +397,11 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 					},
 					"spire": Values{
 						"clusterName": "local1",
-						"recommendations": Values{
+						"namespaces": Values{
 							"create": true,
+						},
+						"recommendations": Values{
+							"enabled": true,
 						},
 						"trustDomain": "td1",
 					},
@@ -973,8 +987,11 @@ func TestGlobalValues_GenerateValues(t *testing.T) {
 				"global": map[string]any{
 					"spire": map[string]any{
 						"clusterName": "local1",
-						"recommendations": map[string]any{
+						"namespaces": Values{
 							"create": false,
+						},
+						"recommendations": map[string]any{
+							"enabled": false,
 						},
 						"trustDomain": "td1",
 					},
@@ -999,8 +1016,11 @@ func TestGlobalValues_GenerateValues(t *testing.T) {
 				"global": map[string]any{
 					"spire": map[string]any{
 						"clusterName": "local1",
-						"recommendations": map[string]any{
+						"namespaces": Values{
 							"create": false,
+						},
+						"recommendations": map[string]any{
+							"enabled": false,
 						},
 						"trustDomain": "td1",
 					},
@@ -1026,8 +1046,11 @@ func TestGlobalValues_GenerateValues(t *testing.T) {
 					"spire": map[string]any{
 						"clusterName": "local1",
 						"jwtIssuer":   "https://tz1.example.com",
-						"recommendations": map[string]any{
+						"namespaces": Values{
 							"create": false,
+						},
+						"recommendations": map[string]any{
+							"enabled": false,
 						},
 						"trustDomain": "td1",
 					},
