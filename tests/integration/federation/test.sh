@@ -117,9 +117,17 @@ function show_workload_status() {
     -n $NAMESPACE_POLICY_NAMESPACE \
     -o jsonpath='{.items[0].metadata.name}' \
     --context $K8S_CLUSTER_1_CONTEXT)
-  ./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
+  WORKLOAD_STATUS_RESPONSE=$(./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
     --pod-name $POD_NAME \
-    --trust-zone $TRUST_ZONE_1
+    --trust-zone $TRUST_ZONE_1)
+
+  if [[ ! $WORKLOAD_STATUS_RESPONSE == *"SVID verified against trust bundle"* ]]; then
+    echo "cofidectl workload status unsuccessful"
+    exit 1
+  fi
+
+  echo "cofidectl workload status successful"
+  exit 0
 }
 
 function down() {

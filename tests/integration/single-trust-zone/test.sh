@@ -89,22 +89,7 @@ function show_workload_status() {
     --pod-name $POD_NAME \
     --trust-zone $TRUST_ZONE)
 
-  ERROR_PATTERNS=(
-    "Unable to create workload API client"
-    "unable to fetch X.509 trust bundles"
-    "unable to fetch X.509 SVIDs"
-    "SVID verification failed"
-    "No trust bundle found for trust domain"
-  )
-
-  for pattern in "${ERROR_PATTERNS[@]}"; do
-    if [[ $WORKLOAD_STATUS_RESPONSE == *"$pattern"* ]]; then
-      echo "cofidectl workload status unsuccessful"
-      exit 1
-    fi
-  done
-
-  if [[ ! $WORKLOAD_STATUS_RESPONSE == *"Trust bundles received"* ]] && [[ ! $WORKLOAD_STATUS_RESPONSE == *"SVIDs received"* ]]; then
+  if [[ ! $WORKLOAD_STATUS_RESPONSE == *"SVID verified against trust bundle"* ]]; then
     echo "cofidectl workload status unsuccessful"
     exit 1
   fi
