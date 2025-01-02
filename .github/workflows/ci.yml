@@ -20,7 +20,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          args: --timeout=5m --config=.golangci.yaml
+          args: --timeout=5m
 
   build-test:
     name: build
