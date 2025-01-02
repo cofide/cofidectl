@@ -80,6 +80,24 @@ function wait_for_pong() {
   return 1
 }
 
+function show_workload_status() {
+  POD_NAME=$(kubectl get pods -l app=ping-pong-client \
+    -n $NAMESPACE_POLICY_NAMESPACE \
+    -o jsonpath='{.items[0].metadata.name}' \
+    --context $K8S_CLUSTER_CONTEXT)
+  WORKLOAD_STATUS_RESPONSE=$(./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
+    --pod-name $POD_NAME \
+    --trust-zone $TRUST_ZONE)
+
+  if [[ $WORKLOAD_STATUS_RESPONSE != *"SVID verified against trust bundle"* ]]; then
+    echo "cofidectl workload status unsuccessful"
+    exit 1
+  fi
+
+  echo "cofidectl workload status successful"
+  exit 0
+}
+
 function down() {
   ./cofidectl down
 }
@@ -92,6 +110,7 @@ function main() {
   show_config
   show_status
   run_tests
+  show_workload_status
   down
   echo "Success!"
 }
