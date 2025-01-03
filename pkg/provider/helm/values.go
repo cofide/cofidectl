@@ -97,7 +97,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		logLevel:           "DEBUG",
 		agentConfig:        tp.AgentConfig,
 		sdsConfig:          sdsConfig,
-		spireServerAddress: "spire-server.spire",
+		spireServerAddress: "spire-server.spire-server",
 	}
 	spireAgentValues, err := sav.generateValues()
 	if err != nil {

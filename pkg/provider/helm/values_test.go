@@ -77,7 +77,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"defaultAllBundlesName": "ALL",
 					},
 					"server": Values{
-						"address": "spire-server.spire",
+						"address": "spire-server.spire-server",
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
@@ -114,7 +114,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 							"enabled": true,
 							"serviceAccountAllowList": []string{
-								"spire:spire-agent",
+								"spire-system:spire-agent",
 							},
 						},
 					},
@@ -173,7 +173,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"defaultAllBundlesName": "ALL",
 					},
 					"server": Values{
-						"address": "spire-server.spire",
+						"address": "spire-server.spire-server",
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
@@ -224,6 +224,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					},
 					"fullnameOverride": "spire-server",
 					"logLevel":         "INFO",
+					"nameOverride":     "custom-server-name",
 					"nodeAttestor": Values{
 						"k8sPsat": Values{
 							"allowedNodeLabelKeys": []string{},
@@ -233,7 +234,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 							"enabled": true,
 							"serviceAccountAllowList": []string{
-								"spire:spire-agent",
+								"spire-system:spire-agent",
 							},
 						},
 					},
@@ -286,7 +287,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"defaultAllBundlesName": "ROOTCA",
 					},
 					"server": Values{
-						"address": "spire-server.spire",
+						"address": "spire-server.spire-server",
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
@@ -323,7 +324,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 							"enabled": true,
 							"serviceAccountAllowList": []string{
-								"spire:spire-agent",
+								"spire-system:spire-agent",
 							},
 						},
 					},
@@ -427,7 +428,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 						"defaultAllBundlesName": "ALL",
 					},
 					"server": Values{
-						"address": "spire-server.spire",
+						"address": "spire-server.spire-server",
 					},
 					"workloadAttestors": Values{
 						"k8s": Values{
@@ -473,7 +474,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 							},
 							"enabled": true,
 							"serviceAccountAllowList": []string{
-								"spire:spire-agent",
+								"spire-system:spire-agent",
 							},
 						},
 					},
@@ -1120,7 +1121,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
-				spireServerAddress: "spire-server.spire",
+				spireServerAddress: "spire-server.spire-server",
 			},
 			want: map[string]any{
 				"spire-agent": map[string]any{
@@ -1138,7 +1139,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"defaultAllBundlesName": "ALL",
 					},
 					"server": map[string]any{
-						"address": "spire-server.spire",
+						"address": "spire-server.spire-server",
 					},
 					"workloadAttestors": map[string]any{
 						"k8s": map[string]any{
@@ -1176,7 +1177,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
-				spireServerAddress: "spire-server.spire",
+				spireServerAddress: "spire-server.spire-server",
 			},
 			want:      nil,
 			wantErr:   true,
@@ -1200,7 +1201,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
-				spireServerAddress: "spire-server.spire",
+				spireServerAddress: "spire-server.spire-server",
 			},
 			want:      nil,
 			wantErr:   true,
@@ -1230,7 +1231,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
-				spireServerAddress: "spire-server.spire",
+				spireServerAddress: "spire-server.spire-server",
 			},
 			want:      nil,
 			wantErr:   true,
@@ -1255,7 +1256,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					NodeAttestorEnabled: true,
 				},
 				sdsConfig:          map[string]any{},
-				spireServerAddress: "spire-server.spire",
+				spireServerAddress: "spire-server.spire-server",
 			},
 			want:      nil,
 			wantErr:   true,
@@ -1280,7 +1281,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					NodeAttestorEnabled: true,
 				},
 				sdsConfig:          nil,
-				spireServerAddress: "spire-server.spire",
+				spireServerAddress: "spire-server.spire-server",
 			},
 			want:      nil,
 			wantErr:   true,
@@ -1323,7 +1324,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 					NodeAttestorEnabled: true,
 					NodeAttestorConfig: map[string]any{
 						"enabled":                 true,
-						"serviceAccountAllowList": []string{"spire:spire-agent"},
+						"serviceAccountAllowList": []string{"spire-system:spire-agent"},
 						"audience":                []string{"spire-server"},
 						"allowedNodeLabelKeys":    []string{},
 						"allowedPodLabelKeys":     []string{},
@@ -1350,7 +1351,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 							},
 							"enabled": true,
 							"serviceAccountAllowList": []string{
-								"spire:spire-agent",
+								"spire-system:spire-agent",
 							},
 						},
 					},
@@ -1387,7 +1388,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 					NodeAttestorEnabled: true,
 					NodeAttestorConfig: map[string]any{
 						"enabled":                 true,
-						"serviceAccountAllowList": []string{"spire:spire-agent"},
+						"serviceAccountAllowList": []string{"spire-system:spire-agent"},
 						"audience":                []string{"spire-server"},
 						"allowedNodeLabelKeys":    []string{},
 						"allowedPodLabelKeys":     []string{},
