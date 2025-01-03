@@ -4,15 +4,19 @@
 package cmd
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 	"path"
+	"slices"
+	"strings"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/apbinding"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/attestationpolicy"
-	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/federation"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/workload"
+	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 
 	"github.com/spf13/cobra"
 )
@@ -32,11 +36,24 @@ func NewRootCommand(cmdCtx *cmdcontext.CommandContext) *RootCommand {
 var rootCmdDesc = `cofidectl - Workload identity for hybrid and multi-cloud security`
 
 func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
+	var logLevel string
+
 	cmd := &cobra.Command{
 		Use:          "cofidectl",
 		Short:        "Cofide CLI",
 		Long:         rootCmdDesc,
 		SilenceUsage: true,
+		// This runs before any subcommand.
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			slogLevel, err := slogLevelFromString(logLevel)
+			if err != nil {
+				return err
+			}
+
+			r.cmdCtx.SetLogLevel(slogLevel)
+			slog.Debug("Set slog level", slog.String("level", slogLevel.String()))
+			return nil
+		},
 	}
 
 	home, err := os.UserHomeDir()
@@ -44,7 +61,9 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		return nil, err
 	}
 
-	cmd.PersistentFlags().StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
+	pf := cmd.PersistentFlags()
+	pf.StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
+	pf.StringVar(&logLevel, "log-level", "ERROR", "log level")
 
 	initCmd := NewInitCommand(r.cmdCtx)
 	upCmd := NewUpCommand(r.cmdCtx)
@@ -67,4 +86,20 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	)
 
 	return cmd, nil
+}
+
+// slogLevelFromString returns an slog.Level from a string log level.
+// The string level is case-insensitive.
+func slogLevelFromString(level string) (slog.Level, error) {
+	var slogLevel slog.Level
+	// slog accepts funky inputs like INFO-3, so restrict what we accept.
+	validLevels := []string{"debug", "warn", "info", "error"}
+	if !slices.Contains(validLevels, strings.ToLower(level)) {
+		return slogLevel, fmt.Errorf("unexpected log level %s, valid levels: %s", level, strings.Join(validLevels, ", "))
+	}
+
+	if err := slogLevel.UnmarshalText([]byte(level)); err != nil {
+		return slogLevel, fmt.Errorf("unexpected log level %s: %w", level, err)
+	}
+	return slogLevel, nil
 }

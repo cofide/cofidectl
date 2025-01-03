@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,14 +23,19 @@ type CommandContext struct {
 	Ctx           context.Context
 	cancel        context.CancelCauseFunc
 	PluginManager *manager.PluginManager
+	logLevel      *slog.LevelVar
 }
 
 // NewCommandContext returns a command context wired up with a config loader and plugin manager.
 func NewCommandContext(cofideConfigFile string) *CommandContext {
+	logLevel := &slog.LevelVar{}
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
 	ctx, cancel := context.WithCancelCause(context.Background())
 	configLoader := config.NewFileLoader(cofideConfigFile)
 	pluginManager := manager.NewManager(configLoader)
-	return &CommandContext{Ctx: ctx, cancel: cancel, PluginManager: pluginManager}
+	return &CommandContext{Ctx: ctx, cancel: cancel, PluginManager: pluginManager, logLevel: logLevel}
 }
 
 func (cc *CommandContext) Shutdown() {
@@ -53,4 +59,10 @@ func (cc *CommandContext) HandleSignals() {
 	<-time.After(shutdownTimeoutSec * time.Second)
 	fmt.Println("Timed out waiting for shutdown")
 	os.Exit(1)
+}
+
+// SetLogLevel sets the log level of the default handler and gRPC plugins.
+func (cc *CommandContext) SetLogLevel(level slog.Level) {
+	cc.logLevel.Set(level)
+	cc.PluginManager.SetLogLevel(level)
 }
