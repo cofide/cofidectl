@@ -46,6 +46,11 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"enabled": false,
 					},
 					"spire": Values{
+						"caSubject": Values{
+							"commonName":   "cofide.io",
+							"country":      "UK",
+							"organization": "Cofide",
+						},
 						"clusterName": "local1",
 						"namespaces": Values{
 							"create": true,
@@ -256,6 +261,11 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"enabled": false,
 					},
 					"spire": Values{
+						"caSubject": Values{
+							"commonName":   "cofide.io",
+							"country":      "UK",
+							"organization": "Cofide",
+						},
 						"clusterName": "local4",
 						"namespaces": Values{
 							"create": true,
@@ -397,6 +407,11 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 						"enabled": false,
 					},
 					"spire": Values{
+						"caSubject": Values{
+							"commonName":   "cofide.io",
+							"country":      "UK",
+							"organization": "Cofide",
+						},
 						"clusterName": "local1",
 						"namespaces": Values{
 							"create": true,
@@ -987,6 +1002,11 @@ func TestGlobalValues_GenerateValues(t *testing.T) {
 			want: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
+						"caSubject": Values{
+							"commonName":   "",
+							"country":      "",
+							"organization": "",
+						},
 						"clusterName": "local1",
 						"namespaces": Values{
 							"create": false,
@@ -1016,6 +1036,11 @@ func TestGlobalValues_GenerateValues(t *testing.T) {
 			want: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
+						"caSubject": Values{
+							"commonName":   "",
+							"country":      "",
+							"organization": "",
+						},
 						"clusterName": "local1",
 						"namespaces": Values{
 							"create": false,
@@ -1045,6 +1070,11 @@ func TestGlobalValues_GenerateValues(t *testing.T) {
 			want: map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
+						"caSubject": Values{
+							"commonName":   "",
+							"country":      "",
+							"organization": "",
+						},
 						"clusterName": "local1",
 						"jwtIssuer":   "https://tz1.example.com",
 						"namespaces": Values{

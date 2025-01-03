@@ -23,11 +23,18 @@ type HelmValuesGenerator struct {
 type globalValues struct {
 	deleteHooks                   bool
 	installAndUpgradeHooksEnabled bool
+	spireCASubject                caSubject
 	spireClusterName              string
 	spireJwtIssuer                string
 	spireNamespacesCreate         bool
 	spireRecommendationsEnabled   bool
 	spireTrustDomain              string
+}
+
+type caSubject struct {
+	commonName   string
+	country      string
+	organization string
 }
 
 type spireAgentValues struct {
@@ -73,6 +80,11 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	}
 
 	gv := globalValues{
+		spireCASubject: caSubject{
+			commonName:   "cofide.io",
+			country:      "UK",
+			organization: "Cofide",
+		},
 		spireClusterName:              g.trustZone.GetKubernetesCluster(),
 		spireJwtIssuer:                g.trustZone.GetJwtIssuer(),
 		spireNamespacesCreate:         true,
@@ -244,6 +256,7 @@ func (g *globalValues) generateValues() (map[string]any, error) {
 	values := map[string]any{
 		"global": map[string]any{
 			"spire": map[string]any{
+				"caSubject":   g.spireCASubject.generateValues(),
 				"clusterName": g.spireClusterName,
 				"namespaces": map[string]any{
 					"create": g.spireNamespacesCreate,
@@ -277,6 +290,15 @@ func (g *globalValues) generateValues() (map[string]any, error) {
 	}
 
 	return values, nil
+}
+
+// generateValues generates the global.spire.caSubject Helm values map.
+func (c *caSubject) generateValues() map[string]any {
+	return map[string]any{
+		"country":      c.country,
+		"organization": c.organization,
+		"commonName":   c.commonName,
+	}
 }
 
 // generateValues generates the spire-agent Helm values map.

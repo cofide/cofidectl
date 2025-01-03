@@ -20,10 +20,10 @@ trust_zones:
             spire:
                 caSubject:
                     commonName: cn.example.com
-                    country: UK
                     organization: acme-org
         spire-server:
             logLevel: INFO
+            nameOverride: custom-server-name
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
       profile: kubernetes
       external_server: false

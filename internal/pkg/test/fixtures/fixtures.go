@@ -46,15 +46,18 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			ev := map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
+						// Modify multiple values in the same map.
 						"caSubject": map[string]any{
-							"country":      "UK",
 							"organization": "acme-org",
 							"commonName":   "cn.example.com",
 						},
 					},
 				},
 				"spire-server": map[string]any{
+					// Modify an existing value.
 					"logLevel": "INFO",
+					// Customise a new value.
+					"nameOverride": "custom-server-name",
 				},
 			}
 			value, err := structpb.NewStruct(ev)
