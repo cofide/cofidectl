@@ -18,10 +18,12 @@ trust_zones:
       extra_helm_values:
         global:
             spire:
-                namespaces:
-                    create: true
+                caSubject:
+                    commonName: cn.example.com
+                    organization: acme-org
         spire-server:
             logLevel: INFO
+            nameOverride: custom-server-name
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
       profile: kubernetes
       external_server: false

@@ -36,7 +36,7 @@ func TestGetServerStatus(t *testing.T) {
 			),
 		)
 	_, err := clientSet.AppsV1().
-		StatefulSets("spire").
+		StatefulSets("spire-server").
 		Apply(ctx, ssConfig, metav1.ApplyOptions{})
 	if err != nil {
 		t.Fatalf("failed to create statefulset: %v", err)
@@ -59,7 +59,7 @@ func TestGetServerStatus(t *testing.T) {
 			),
 		)
 	_, err = clientSet.CoreV1().
-		Pods("spire").
+		Pods("spire-server").
 		Apply(ctx, podConfig, metav1.ApplyOptions{})
 	if err != nil {
 		t.Fatalf("failed to create pod: %v", err)
@@ -104,7 +104,7 @@ func Test_addAgentK8sStatus(t *testing.T) {
 			WithNumberReady(1),
 		)
 	_, err := clientSet.AppsV1().
-		DaemonSets("spire").
+		DaemonSets("spire-system").
 		Apply(ctx, dsConfig, metav1.ApplyOptions{})
 	if err != nil {
 		t.Fatalf("failed to create daemonset: %v", err)
@@ -125,7 +125,7 @@ func Test_addAgentK8sStatus(t *testing.T) {
 			),
 		)
 	_, err = clientSet.CoreV1().
-		Pods("spire").
+		Pods("spire-system").
 		Apply(ctx, podConfig, metav1.ApplyOptions{})
 	if err != nil {
 		t.Fatalf("failed to create pod: %v", err)
@@ -146,7 +146,7 @@ func Test_addAgentK8sStatus(t *testing.T) {
 			),
 		)
 	_, err = clientSet.CoreV1().
-		Pods("spire").
+		Pods("spire-system").
 		Apply(ctx, podConfig, metav1.ApplyOptions{})
 	if err != nil {
 		t.Fatalf("failed to create pod: %v", err)

@@ -35,7 +35,7 @@ var oneAgentList = `{
         },
         {
           "type": "k8s_psat",
-          "value": "agent_ns:spire"
+          "value": "agent_ns:spire-system"
         },
         {
           "type": "k8s_psat",

@@ -52,8 +52,9 @@ func (tp *TrustProvider) GetValues() error {
 			NodeAttestor:        kubernetesPsat,
 			NodeAttestorEnabled: true,
 			NodeAttestorConfig: map[string]any{
-				"enabled":                 true,
-				"serviceAccountAllowList": []string{"spire:spire-agent"},
+				"enabled": true,
+				// Rely on defaults?
+				"serviceAccountAllowList": []string{"spire-system:spire-agent"},
 				"audience":                []string{"spire-server"},
 				"allowedNodeLabelKeys":    []string{},
 				"allowedPodLabelKeys":     []string{},
