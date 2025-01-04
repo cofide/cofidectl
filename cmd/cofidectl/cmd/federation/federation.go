@@ -18,6 +18,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	FederationStatus_HEALTHY   string = "Healthy"
+	FederationStatus_UNHEALTHY string = "Unhealthy"
+
+	FederationStatusReason_NO_BUNDLE_FOUND      string = "No bundle found"
+	FederationStatusReason_BUNDLES_DO_NOT_MATCH string = "Bundles do not match"
+)
+
 type FederationCommand struct {
 	cmdCtx *cmdcontext.CommandContext
 }
@@ -84,7 +92,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 					return err
 				}
 
-				status, err := checkFederationStatus(cmd.Context(), kubeConfig, from, to)
+				status, reason, err := checkFederationStatus(cmd.Context(), kubeConfig, from, to)
 				if err != nil {
 					return err
 				}
@@ -93,11 +101,12 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 					federation.From,
 					federation.To,
 					status,
+					reason,
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"From Trust Zone", "To Trust Zone", "Status"})
+			table.SetHeader([]string{"From Trust Zone", "To Trust Zone", "Status", "Reason"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -115,24 +124,24 @@ type bundles struct {
 
 // checkFederationStatus builds a comparison map between two trust domains, retrieves there server CA bundle and any federated bundles available
 // locally from the SPIRE server, and then compares the bundles on each to verify SPIRE has the correct bundles on each side of the federation
-func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) (string, error) {
+func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) (string, string, error) {
 	compare := make(map[*trust_zone_proto.TrustZone]bundles)
 
 	for _, tz := range []*trust_zone_proto.TrustZone{from, to} {
 		if deployed, err := isTrustZoneDeployed(ctx, tz); err != nil {
-			return "", err
+			return "", "", err
 		} else if !deployed {
-			return "Inactive", nil
+			return "Inactive", "", nil
 		}
 
 		client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, tz.GetKubernetesContext())
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 
 		serverCABundle, federatedBundles, err := spire.GetServerCABundleAndFederatedBundles(ctx, client)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 
 		compare[tz] = bundles{
@@ -144,15 +153,15 @@ func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_z
 	// Bundle does not exist at all on opposite trust domain
 	_, ok := compare[from].federatedBundles[to.TrustDomain]
 	if !ok {
-		return "Unhealthy", nil
+		return FederationStatus_UNHEALTHY, FederationStatusReason_NO_BUNDLE_FOUND, nil
 	}
 
 	// Bundle does not match entry on opposite trust domain
 	if compare[from].federatedBundles[to.TrustDomain] != compare[to].serverCABundle {
-		return "Unhealthy", nil
+		return FederationStatus_UNHEALTHY, FederationStatusReason_BUNDLES_DO_NOT_MATCH, nil
 	}
 
-	return "Healthy", nil
+	return FederationStatus_HEALTHY, "", nil
 }
 
 // isTrustZoneDeployed returns whether a trust zone has been deployed, i.e. whether a SPIRE Helm release has been installed.
