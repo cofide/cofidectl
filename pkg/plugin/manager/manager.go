@@ -238,6 +238,7 @@ func loadGRPCPlugin(ctx context.Context, logger hclog.Logger, pluginName string,
 		Plugins:          pluginSet,
 		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
 		Logger:           logger,
+		AutoMTLS:         true,
 	})
 
 	grpcPlugin, err := startGRPCPlugin(ctx, client, pluginName, plugins)
