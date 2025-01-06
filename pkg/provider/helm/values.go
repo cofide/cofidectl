@@ -38,11 +38,10 @@ type caSubject struct {
 }
 
 type spireAgentValues struct {
-	agentConfig        trustprovider.TrustProviderAgentConfig
-	fullnameOverride   string
-	logLevel           string
-	sdsConfig          map[string]any
-	spireServerAddress string
+	agentConfig      trustprovider.TrustProviderAgentConfig
+	fullnameOverride string
+	logLevel         string
+	sdsConfig        map[string]any
 }
 
 type spireServerValues struct {
@@ -105,11 +104,10 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	}
 
 	sav := spireAgentValues{
-		fullnameOverride:   "spire-agent",
-		logLevel:           "DEBUG",
-		agentConfig:        tp.AgentConfig,
-		sdsConfig:          sdsConfig,
-		spireServerAddress: "spire-server.spire-server",
+		fullnameOverride: "spire-agent",
+		logLevel:         "DEBUG",
+		agentConfig:      tp.AgentConfig,
+		sdsConfig:        sdsConfig,
 	}
 	spireAgentValues, err := sav.generateValues()
 	if err != nil {
@@ -335,23 +333,16 @@ func (s *spireAgentValues) generateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("agentConfig.WorkloadAttestorConfig value is empty")
 	}
 
-	if s.spireServerAddress == "" {
-		return nil, fmt.Errorf("spireServerAddress value is empty")
-	}
-
 	return map[string]any{
 		"spire-agent": map[string]any{
 			"fullnameOverride": s.fullnameOverride,
 			"logLevel":         s.logLevel,
 			"nodeAttestor": map[string]any{
 				s.agentConfig.NodeAttestor: map[string]any{
-					"enabled": s.agentConfig.NodeAttestorEnabled,
+					"enabled": true,
 				},
 			},
 			"sds": s.sdsConfig,
-			"server": map[string]any{
-				"address": s.spireServerAddress,
-			},
 			"workloadAttestors": map[string]any{
 				s.agentConfig.WorkloadAttestor: s.agentConfig.WorkloadAttestorConfig,
 			},
