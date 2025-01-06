@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	FederationStatus_HEALTHY   string = "Healthy"
-	FederationStatus_UNHEALTHY string = "Unhealthy"
+	FederationStatusHealthy   string = "Healthy"
+	FederationStatusUnhealthy string = "Unhealthy"
 
-	FederationStatusReason_NO_BUNDLE_FOUND      string = "No bundle found"
-	FederationStatusReason_BUNDLES_DO_NOT_MATCH string = "Bundles do not match"
+	FederationStatusReasonNoBundleFound     string = "No bundle found"
+	FederationStatusReasonBundlesDoNotMatch string = "Bundles do not match"
 )
 
 type FederationCommand struct {
@@ -153,15 +153,15 @@ func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_z
 	// Bundle does not exist at all on opposite trust domain
 	_, ok := compare[from].federatedBundles[to.TrustDomain]
 	if !ok {
-		return FederationStatus_UNHEALTHY, FederationStatusReason_NO_BUNDLE_FOUND, nil
+		return FederationStatusUnhealthy, FederationStatusReasonNoBundleFound, nil
 	}
 
 	// Bundle does not match entry on opposite trust domain
 	if compare[from].federatedBundles[to.TrustDomain] != compare[to].serverCABundle {
-		return FederationStatus_UNHEALTHY, FederationStatusReason_BUNDLES_DO_NOT_MATCH, nil
+		return FederationStatusUnhealthy, FederationStatusReasonBundlesDoNotMatch, nil
 	}
 
-	return FederationStatus_HEALTHY, "", nil
+	return FederationStatusHealthy, "", nil
 }
 
 // isTrustZoneDeployed returns whether a trust zone has been deployed, i.e. whether a SPIRE Helm release has been installed.
