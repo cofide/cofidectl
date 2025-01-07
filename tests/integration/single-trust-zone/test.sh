@@ -95,7 +95,6 @@ function show_workload_status() {
   fi
 
   echo "cofidectl workload status successful"
-  exit 0
 }
 
 function down() {
