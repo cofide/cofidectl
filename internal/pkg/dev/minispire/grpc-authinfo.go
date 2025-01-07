@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"google.golang.org/grpc/credentials"
 )
@@ -54,14 +53,13 @@ func (c *grpcCredentials) ServerHandshake(conn net.Conn) (net.Conn, credentials.
 
 	auth := AuthInfo{}
 	sys.Control(func(fd uintptr) {
-		cred, err := syscall.GetsockoptUcred(int(fd), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
-		if err != nil {
-			log.Printf("unable to get peer credentials: %v", err)
+		pid, uid, gid := getProcessInfo(fd)
+		if pid == 0 && uid == 0 && gid == 0 {
 			return
 		}
-		auth.Caller.PID = int32(cred.Pid)
-		auth.Caller.UID = uint32(cred.Uid)
-		auth.Caller.GID = uint32(cred.Gid)
+		auth.Caller.PID = pid
+		auth.Caller.UID = uid
+		auth.Caller.GID = gid
 	})
 
 	// get binary path of the caller
