@@ -23,18 +23,25 @@ type HelmValuesGenerator struct {
 type globalValues struct {
 	deleteHooks                   bool
 	installAndUpgradeHooksEnabled bool
+	spireCASubject                caSubject
 	spireClusterName              string
-	spireCreateRecommendations    bool
 	spireJwtIssuer                string
+	spireNamespacesCreate         bool
+	spireRecommendationsEnabled   bool
 	spireTrustDomain              string
 }
 
+type caSubject struct {
+	commonName   string
+	country      string
+	organization string
+}
+
 type spireAgentValues struct {
-	agentConfig        trustprovider.TrustProviderAgentConfig
-	fullnameOverride   string
-	logLevel           string
-	sdsConfig          map[string]any
-	spireServerAddress string
+	agentConfig      trustprovider.TrustProviderAgentConfig
+	fullnameOverride string
+	logLevel         string
+	sdsConfig        map[string]any
 }
 
 type spireServerValues struct {
@@ -72,9 +79,15 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	}
 
 	gv := globalValues{
+		spireCASubject: caSubject{
+			commonName:   "cofide.io",
+			country:      "UK",
+			organization: "Cofide",
+		},
 		spireClusterName:              g.trustZone.GetKubernetesCluster(),
-		spireCreateRecommendations:    true,
 		spireJwtIssuer:                g.trustZone.GetJwtIssuer(),
+		spireNamespacesCreate:         true,
+		spireRecommendationsEnabled:   true,
 		spireTrustDomain:              g.trustZone.TrustDomain,
 		installAndUpgradeHooksEnabled: false,
 		deleteHooks:                   false,
@@ -91,11 +104,10 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	}
 
 	sav := spireAgentValues{
-		fullnameOverride:   "spire-agent",
-		logLevel:           "DEBUG",
-		agentConfig:        tp.AgentConfig,
-		sdsConfig:          sdsConfig,
-		spireServerAddress: "spire-server.spire",
+		fullnameOverride: "spire-agent",
+		logLevel:         "DEBUG",
+		agentConfig:      tp.AgentConfig,
+		sdsConfig:        sdsConfig,
 	}
 	spireAgentValues, err := sav.generateValues()
 	if err != nil {
@@ -242,9 +254,13 @@ func (g *globalValues) generateValues() (map[string]any, error) {
 	values := map[string]any{
 		"global": map[string]any{
 			"spire": map[string]any{
+				"caSubject":   g.spireCASubject.generateValues(),
 				"clusterName": g.spireClusterName,
+				"namespaces": map[string]any{
+					"create": g.spireNamespacesCreate,
+				},
 				"recommendations": map[string]any{
-					"create": g.spireCreateRecommendations,
+					"enabled": g.spireRecommendationsEnabled,
 				},
 				"trustDomain": g.spireTrustDomain,
 			},
@@ -272,6 +288,15 @@ func (g *globalValues) generateValues() (map[string]any, error) {
 	}
 
 	return values, nil
+}
+
+// generateValues generates the global.spire.caSubject Helm values map.
+func (c *caSubject) generateValues() map[string]any {
+	return map[string]any{
+		"country":      c.country,
+		"organization": c.organization,
+		"commonName":   c.commonName,
+	}
 }
 
 // generateValues generates the spire-agent Helm values map.
@@ -308,23 +333,16 @@ func (s *spireAgentValues) generateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("agentConfig.WorkloadAttestorConfig value is empty")
 	}
 
-	if s.spireServerAddress == "" {
-		return nil, fmt.Errorf("spireServerAddress value is empty")
-	}
-
 	return map[string]any{
 		"spire-agent": map[string]any{
 			"fullnameOverride": s.fullnameOverride,
 			"logLevel":         s.logLevel,
 			"nodeAttestor": map[string]any{
 				s.agentConfig.NodeAttestor: map[string]any{
-					"enabled": s.agentConfig.NodeAttestorEnabled,
+					"enabled": true,
 				},
 			},
 			"sds": s.sdsConfig,
-			"server": map[string]any{
-				"address": s.spireServerAddress,
-			},
 			"workloadAttestors": map[string]any{
 				s.agentConfig.WorkloadAttestor: s.agentConfig.WorkloadAttestorConfig,
 			},

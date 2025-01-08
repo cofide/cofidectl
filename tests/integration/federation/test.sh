@@ -5,6 +5,8 @@
 
 set -euxo pipefail
 
+source $(dirname $(dirname $BASH_SOURCE))/lib.sh
+
 DATA_SOURCE_PLUGIN=${DATA_SOURCE_PLUGIN:-}
 PROVISION_PLUGIN=${PROVISION_PLUGIN:-}
 
@@ -63,6 +65,14 @@ function configure() {
 
 function up() {
   ./cofidectl up
+}
+
+function check_spire() {
+  for context in $K8S_CLUSTER_1_CONTEXT $K8S_CLUSTER_2_CONTEXT; do
+    check_spire_server $context
+    check_spire_agents $context
+    check_spire_csi_driver $context
+  done
 }
 
 function list_resources() {
@@ -130,9 +140,9 @@ function show_workload_status() {
 }
 
 function teardown_federation_and_verify() {
-  kubectl --context $K8S_CLUSTER_2_CONTEXT delete clusterspiffeids.spire.spiffe.io spire-spire-namespace
-  kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire spire-server-0 -- /opt/spire/bin/spire-server federation delete -id td1
-  kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire spire-server-0 -- /opt/spire/bin/spire-server bundle delete -id td1
+  kubectl --context $K8S_CLUSTER_2_CONTEXT delete clusterspiffeids.spire.spiffe.io spire-mgmt-spire-namespace
+  kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server federation delete -id td1
+  kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server bundle delete -id td1
   federations=$(./cofidectl federation list)
   if ! echo "$federations" | grep "Unhealthy | No bundle found" >/dev/null; then
     return 1
@@ -148,6 +158,7 @@ function main() {
   check_init
   configure
   up
+  check_spire
   list_resources
   show_config
   show_status
