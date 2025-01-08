@@ -81,12 +81,12 @@ jobs:
       - name: Get cloud-provider-kind Dockerfile
         run: |
           git clone https://github.com/kubernetes-sigs/cloud-provider-kind
-          cp cloud-provider-kind/Dockerfile ./
+          cp cloud-provider-kind ./
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./cloud-provider-kind
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
