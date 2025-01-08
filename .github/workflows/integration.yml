@@ -23,20 +23,21 @@ jobs:
       - name: Build and run tests
         run: just build
 
-      - name: Cache Docker images
-        uses: ./.github/actions/
+      - name: Get cloud-provider-kind Dockerfile
+        run: |
+          git clone https://github.com/kubernetes-sigs/cloud-provider-kind
+          cp cloud-provider-kind/Dockerfile ./
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
         with:
-          images: cloud-provider-kind-cloud-provider:latest
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Install kind
         run: just install-kind
-
-      - name: Save Docker images to cache
-        run: |
-          mkdir -p /tmp/docker-cache
-          # Caches all images
-          # docker save $(docker images --filter=reference='*:*' --format='{{.Repository}}:{{.Tag}}') > /tmp/docker-cache/pulled-images.tar
-          docker save cloud-provider-kind-cloud-provider:latest > /tmp/docker-cache/pulled-images.tar
 
       - name: Install ko
         uses: ko-build/setup-ko@v0.6
@@ -67,20 +68,18 @@ jobs:
       - name: Build and run tests
         run: just build
 
-      - name: Cache Docker images
-        uses: ./.github/actions/
-        with:
-          images: cloud-provider-kind-cloud-provider:latest
-
-      - name: Install kind
-        run: just install-kind
-
-      - name: Save Docker images to cache
+      - name: Get cloud-provider-kind Dockerfile
         run: |
-          mkdir -p /tmp/docker-cache
-          # Caches all images
-          # docker save $(docker images --filter=reference='*:*' --format='{{.Repository}}:{{.Tag}}') > /tmp/docker-cache/pulled-images.tar
-          docker save cloud-provider-kind-cloud-provider:latest > /tmp/docker-cache/pulled-images.tar
+          git clone https://github.com/kubernetes-sigs/cloud-provider-kind
+          cp cloud-provider-kind/Dockerfile ./
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Install ko
         uses: ko-build/setup-ko@v0.6
