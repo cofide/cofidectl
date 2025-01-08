@@ -26,7 +26,7 @@ jobs:
       - name: Get cloud-provider-kind Dockerfile
         run: |
           git clone https://github.com/kubernetes-sigs/cloud-provider-kind
-          cp cloud-provider-kind/Dockerfile ./
+          cp cloud-provider-kind ./
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -34,7 +34,7 @@ jobs:
       - name: Build cloud-provider-kind image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./cloud-provider-kind
           platforms: linux/amd64
           push: false
           cache-from: type=gha
