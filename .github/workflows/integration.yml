@@ -23,7 +23,7 @@ jobs:
       - name: Build and run tests
         run: just build
 
-      - name: Get cloud-provider-kind Dockerfile
+      - name: Get cloud-provider-kind repo
         run: |
           git clone https://github.com/kubernetes-sigs/cloud-provider-kind
       
@@ -34,8 +34,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./cloud-provider-kind
-          platforms: linux/amd64
           push: false
+          tags: cloud-provider-kind-cloud-provider:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -77,7 +77,7 @@ jobs:
       - name: Build and run tests
         run: just build
 
-      - name: Get cloud-provider-kind Dockerfile
+      - name: Get cloud-provider-kind repo
         run: |
           git clone https://github.com/kubernetes-sigs/cloud-provider-kind
 
@@ -86,6 +86,7 @@ jobs:
         with:
           context: ./cloud-provider-kind
           push: false
+          tags: cloud-provider-kind-cloud-provider:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
