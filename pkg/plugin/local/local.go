@@ -4,6 +4,7 @@
 package local
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -36,7 +37,7 @@ func NewLocalDataSource(loader config.Loader) (*LocalDataSource, error) {
 	return lds, nil
 }
 
-func (lds *LocalDataSource) Validate() error {
+func (lds *LocalDataSource) Validate(_ context.Context) error {
 	return nil
 }
 

@@ -9,6 +9,7 @@ import (
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
@@ -45,13 +46,18 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			ev := map[string]any{
 				"global": map[string]any{
 					"spire": map[string]any{
-						"namespaces": map[string]any{
-							"create": true,
+						// Modify multiple values in the same map.
+						"caSubject": map[string]any{
+							"organization": "acme-org",
+							"commonName":   "cn.example.com",
 						},
 					},
 				},
 				"spire-server": map[string]any{
+					// Modify an existing value.
 					"logLevel": "INFO",
+					// Customise a new value.
+					"nameOverride": "custom-server-name",
 				},
 			}
 			value, err := structpb.NewStruct(ev)
@@ -61,6 +67,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			return value
 		}(),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
+		ExternalServer:        BoolPtr(false),
 	},
 	"tz2": {
 		Name:              "tz2",
@@ -87,6 +94,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
+		ExternalServer:        BoolPtr(false),
 	},
 	// tz3 has no federations or bound attestation policies.
 	"tz3": {
@@ -116,6 +124,21 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl:   StringPtr("127.0.0.4"),
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
+	},
+	// tz5 has no federations or bound attestation policies and has an external SPIRE server.
+	"tz5": {
+		Name:              "tz5",
+		TrustDomain:       "td5",
+		KubernetesCluster: StringPtr("local5"),
+		KubernetesContext: StringPtr("kind-local5"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile:             StringPtr("kubernetes"),
+		BundleEndpointUrl:   StringPtr("127.0.0.5"),
+		Federations:         []*federation_proto.Federation{},
+		AttestationPolicies: []*ap_binding_proto.APBinding{},
+		ExternalServer:      BoolPtr(true),
 	},
 }
 
@@ -210,6 +233,19 @@ var pluginConfigFixtures map[string]*structpb.Struct = map[string]*structpb.Stru
 	}(),
 }
 
+var pluginsFixtures map[string]*pluginspb.Plugins = map[string]*pluginspb.Plugins{
+	// Data source and provision use different plugins.
+	"plugins1": {
+		DataSource: StringPtr("fake-datasource"),
+		Provision:  StringPtr("fake-provision"),
+	},
+	// Data source and provision use the same plugin.
+	"plugins2": {
+		DataSource: StringPtr("fake-plugin"),
+		Provision:  StringPtr("fake-plugin"),
+	},
+}
+
 func TrustZone(name string) *trust_zone_proto.TrustZone {
 	tz, ok := trustZoneFixtures[name]
 	if !ok {
@@ -246,6 +282,22 @@ func PluginConfig(name string) *structpb.Struct {
 	return pc
 }
 
+func Plugins(name string) *pluginspb.Plugins {
+	p, ok := pluginsFixtures[name]
+	if !ok {
+		panic(fmt.Sprintf("invalid plugins fixture %s", name))
+	}
+	p, err := proto.ClonePlugins(p)
+	if err != nil {
+		panic(fmt.Sprintf("failed to clone plugins: %s", err))
+	}
+	return p
+}
+
 func StringPtr(s string) *string {
 	return &s
+}
+
+func BoolPtr(b bool) *bool {
+	return &b
 }

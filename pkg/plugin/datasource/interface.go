@@ -1,18 +1,20 @@
 // Copyright 2024 Cofide Limited.
 // SPDX-License-Identifier: Apache-2.0
 
-package plugin
+package datasource
 
 import (
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	"github.com/cofide/cofidectl/pkg/plugin/validator"
 )
 
 // DataSource is the interface data source plugins have to implement.
 type DataSource interface {
-	Validate() error
+	validator.Validator
+
 	GetTrustZone(string) (*trust_zone_proto.TrustZone, error)
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
 	AddTrustZone(*trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)

@@ -11,11 +11,19 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 
-	"github.com/cofide/cofidectl/pkg/spire"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
+	"github.com/cofide/cofidectl/pkg/spire"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+)
+
+const (
+	FederationStatusHealthy   string = "Healthy"
+	FederationStatusUnhealthy string = "Unhealthy"
+
+	FederationStatusReasonNoBundleFound     string = "No bundle found"
+	FederationStatusReasonBundlesDoNotMatch string = "Bundles do not match"
 )
 
 type FederationCommand struct {
@@ -57,7 +65,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 		Long:  federationListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -84,7 +92,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 					return err
 				}
 
-				status, err := checkFederationStatus(cmd.Context(), kubeConfig, from, to)
+				status, reason, err := checkFederationStatus(cmd.Context(), kubeConfig, from, to)
 				if err != nil {
 					return err
 				}
@@ -93,11 +101,12 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 					federation.From,
 					federation.To,
 					status,
+					reason,
 				}
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"From Trust Zone", "To Trust Zone", "Status"})
+			table.SetHeader([]string{"From Trust Zone", "To Trust Zone", "Status", "Reason"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -115,24 +124,24 @@ type bundles struct {
 
 // checkFederationStatus builds a comparison map between two trust domains, retrieves there server CA bundle and any federated bundles available
 // locally from the SPIRE server, and then compares the bundles on each to verify SPIRE has the correct bundles on each side of the federation
-func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) (string, error) {
+func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) (string, string, error) {
 	compare := make(map[*trust_zone_proto.TrustZone]bundles)
 
 	for _, tz := range []*trust_zone_proto.TrustZone{from, to} {
 		if deployed, err := isTrustZoneDeployed(ctx, tz); err != nil {
-			return "", err
+			return "", "", err
 		} else if !deployed {
-			return "Inactive", nil
+			return "Inactive", "", nil
 		}
 
 		client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, tz.GetKubernetesContext())
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 
 		serverCABundle, federatedBundles, err := spire.GetServerCABundleAndFederatedBundles(ctx, client)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 
 		compare[tz] = bundles{
@@ -144,15 +153,15 @@ func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_z
 	// Bundle does not exist at all on opposite trust domain
 	_, ok := compare[from].federatedBundles[to.TrustDomain]
 	if !ok {
-		return "Unhealthy", nil
+		return FederationStatusUnhealthy, FederationStatusReasonNoBundleFound, nil
 	}
 
 	// Bundle does not match entry on opposite trust domain
 	if compare[from].federatedBundles[to.TrustDomain] != compare[to].serverCABundle {
-		return "Unhealthy", nil
+		return FederationStatusUnhealthy, FederationStatusReasonBundlesDoNotMatch, nil
 	}
 
-	return "Healthy", nil
+	return FederationStatusHealthy, "", nil
 }
 
 // isTrustZoneDeployed returns whether a trust zone has been deployed, i.e. whether a SPIRE Helm release has been installed.
@@ -181,7 +190,7 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		Long:  federationAddCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}

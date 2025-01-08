@@ -10,7 +10,7 @@ import (
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -64,7 +64,7 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 		Long:  apBindingListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -85,7 +85,7 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *APBindingCommand) list(source cofidectl_plugin.DataSource, opts ListOpts) ([]*ap_binding_proto.APBinding, error) {
+func (c *APBindingCommand) list(source datasource.DataSource, opts ListOpts) ([]*ap_binding_proto.APBinding, error) {
 	var err error
 	var trustZones []*trust_zone_proto.TrustZone
 
@@ -149,7 +149,7 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 		Long:  apBindingAddCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -191,7 +191,7 @@ func (c *APBindingCommand) GetDelCommand() *cobra.Command {
 		Long:  apBindingDelCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}

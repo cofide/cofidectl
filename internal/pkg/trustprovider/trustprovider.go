@@ -36,27 +36,18 @@ func (tp *TrustProvider) GetValues() error {
 	switch tp.Kind {
 	case "kubernetes":
 		tp.AgentConfig = TrustProviderAgentConfig{
-			WorkloadAttestor:        KubernetesTrustProvider,
-			WorkloadAttestorEnabled: true,
+			WorkloadAttestor: KubernetesTrustProvider,
 			WorkloadAttestorConfig: map[string]any{
-				"enabled":                     true,
-				"skipKubeletVerification":     true,
-				"disableContainerSelectors":   false,
-				"useNewContainerLocator":      false,
-				"verboseContainerLocatorLogs": false,
+				"enabled":                   true,
+				"disableContainerSelectors": true,
 			},
-			NodeAttestor:        kubernetesPsat,
-			NodeAttestorEnabled: true,
+			NodeAttestor: kubernetesPsat,
 		}
 		tp.ServerConfig = TrustProviderServerConfig{
-			NodeAttestor:        kubernetesPsat,
-			NodeAttestorEnabled: true,
+			NodeAttestor: kubernetesPsat,
 			NodeAttestorConfig: map[string]any{
-				"enabled":                 true,
-				"serviceAccountAllowList": []string{"spire:spire-agent"},
-				"audience":                []string{"spire-server"},
-				"allowedNodeLabelKeys":    []string{},
-				"allowedPodLabelKeys":     []string{},
+				"enabled":  true,
+				"audience": []string{"spire-server"},
 			},
 		}
 	default:
@@ -66,17 +57,14 @@ func (tp *TrustProvider) GetValues() error {
 }
 
 type TrustProviderAgentConfig struct {
-	WorkloadAttestor        string         `yaml:"workloadAttestor"`
-	WorkloadAttestorEnabled bool           `yaml:"workloadAttestorEnabled"`
-	WorkloadAttestorConfig  map[string]any `yaml:"workloadAttestorConfig"`
-	NodeAttestor            string         `yaml:"nodeAttestor"`
-	NodeAttestorEnabled     bool           `yaml:"nodeAttestorEnabled"`
+	WorkloadAttestor       string
+	WorkloadAttestorConfig map[string]any
+	NodeAttestor           string
 }
 
 type TrustProviderServerConfig struct {
-	NodeAttestor        string         `yaml:"nodeAttestor"`
-	NodeAttestorEnabled bool           `yaml:"nodeAttestorEnabled"`
-	NodeAttestorConfig  map[string]any `yaml:"nodeAttestorConfig"`
+	NodeAttestor       string
+	NodeAttestorConfig map[string]any
 }
 
 // GetTrustProviderKindFromProfile returns the valid kind of trust provider for the

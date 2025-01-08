@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/testing/protocmp"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -25,14 +25,13 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 		{
 			name: "default",
 			config: &Config{
-				DataSource: "local",
+				Plugins: &pluginspb.Plugins{},
 			},
 			wantFile: "default.yaml",
 		},
 		{
 			name: "full",
 			config: &Config{
-				DataSource: "fake-plugin",
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
@@ -46,6 +45,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					"plugin1": fixtures.PluginConfig("plugin1"),
 					"plugin2": fixtures.PluginConfig("plugin2"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantFile: "full.yaml",
 		},
@@ -73,17 +73,16 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 			name: "default",
 			file: "default.yaml",
 			want: &Config{
-				DataSource:          "local",
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 				PluginConfig:        map[string]*structpb.Struct{},
+				Plugins:             &pluginspb.Plugins{},
 			},
 		},
 		{
 			name: "full",
 			file: "full.yaml",
 			want: &Config{
-				DataSource: "fake-plugin",
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
@@ -97,6 +96,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 					"plugin1": fixtures.PluginConfig("plugin1"),
 					"plugin2": fixtures.PluginConfig("plugin2"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			},
 		},
 	}
@@ -104,12 +104,8 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			yamlConfig := readTestConfig(t, tt.file)
 			got, err := unmarshalYAML(yamlConfig)
-			if err != nil {
-				t.Fatalf("error unmarshalling configuration from YAML: %v", err)
-			}
-			if diff := cmp.Diff(got, tt.want, protocmp.Transform()); diff != "" {
-				t.Errorf("yaml.Unmarshall() mismatch (-want,+got):\n%s", diff)
-			}
+			require.NoError(t, err, err)
+			assert.EqualExportedValues(t, tt.want, got)
 		})
 	}
 }
@@ -153,12 +149,8 @@ func TestConfig_GetTrustZoneByName(t *testing.T) {
 				TrustZones: tt.trustZones,
 			}
 			gotTz, gotOk := c.GetTrustZoneByName(tt.trustZone)
-			if diff := cmp.Diff(tt.wantTz, gotTz, protocmp.Transform()); diff != "" {
-				t.Errorf("Config.GetTrustZoneByName() mismatch (-want,+got):\n%s", diff)
-			}
-			if gotOk != tt.wantOk {
-				t.Errorf("Config.GetTrustZoneByName() got1 = %v, want %v", gotOk, tt.wantOk)
-			}
+			assert.EqualExportedValues(t, tt.wantTz, gotTz)
+			assert.Equal(t, tt.wantOk, gotOk)
 		})
 	}
 }
@@ -202,12 +194,8 @@ func TestConfig_GetAttestationPolicyByName(t *testing.T) {
 				AttestationPolicies: tt.policies,
 			}
 			gotAp, gotOk := c.GetAttestationPolicyByName(tt.policy)
-			if diff := cmp.Diff(tt.wantAp, gotAp, protocmp.Transform()); diff != "" {
-				t.Errorf("Config.GetAttestationPolicyByName() mismatch (-want,+got):\n%s", diff)
-			}
-			if gotOk != tt.wantOk {
-				t.Errorf("Config.GetAttestationPolicyByName() got1 = %v, want %v", gotOk, tt.wantOk)
-			}
+			assert.EqualExportedValues(t, tt.wantAp, gotAp)
+			assert.Equal(t, tt.wantOk, gotOk)
 		})
 	}
 }

@@ -4,10 +4,11 @@
 package local
 
 import (
+	"context"
 	"slices"
 	"testing"
 
-	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +25,7 @@ import (
 
 func TestLocalDataSource_ImplementsDataSource(t *testing.T) {
 	local := LocalDataSource{}
-	var _ plugin.DataSource = &local
+	var _ datasource.DataSource = &local
 }
 
 func TestNewLocalDataSource(t *testing.T) {
@@ -49,13 +50,13 @@ func TestNewLocalDataSource(t *testing.T) {
 		{
 			name: "non-default config",
 			config: &config.Config{
-				DataSource: "test-plugin",
+				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantConfig: &config.Config{
-				DataSource:          "test-plugin",
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 				PluginConfig:        map[string]*structpb.Struct{},
+				Plugins:             fixtures.Plugins("plugins1"),
 			},
 		},
 	}
@@ -69,11 +70,8 @@ func TestNewLocalDataSource(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.Nil(t, err)
-				want := &LocalDataSource{
-					loader: loader,
-					config: tt.wantConfig,
-				}
-				assert.Equal(t, want, got)
+				assert.Same(t, loader, got.loader)
+				assert.EqualExportedValues(t, tt.wantConfig, got.config)
 			}
 		})
 	}
@@ -82,7 +80,7 @@ func TestNewLocalDataSource(t *testing.T) {
 func TestLocalDataSource_Validate(t *testing.T) {
 	lds, _ := buildLocalDataSource(t, config.NewConfig())
 
-	err := lds.Validate()
+	err := lds.Validate(context.Background())
 	require.Nil(t, err)
 }
 
@@ -107,6 +105,7 @@ func TestLocalDataSource_AddTrustZone(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			},
 			trustZone:     fixtures.TrustZone("tz1"),
 			wantErr:       true,
@@ -160,6 +159,7 @@ func TestLocalDataSource_GetTrustZone(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 
@@ -268,6 +268,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
 
@@ -308,6 +309,7 @@ func TestLocalDataSource_ListTrustZones(t *testing.T) {
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantErr: false,
 		},
@@ -353,6 +355,7 @@ func TestLocalDataSource_AddAttestationPolicy(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			},
 			policy:        fixtures.AttestationPolicy("ap1"),
 			wantErr:       true,
@@ -406,6 +409,7 @@ func TestLocalDataSource_GetAttestationPolicy(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 
@@ -441,6 +445,7 @@ func TestLocalDataSource_ListAttestationPolicies(t *testing.T) {
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantErr: false,
 		},
@@ -551,6 +556,7 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
 			got, err := lds.AddAPBinding(tt.binding)
@@ -614,6 +620,7 @@ func TestLocalDataSource_DestroyAPBinding(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
 			err := lds.DestroyAPBinding(tt.binding)
@@ -663,6 +670,7 @@ func TestLocalDataSource_ListAPBindingsByTrustZone(t *testing.T) {
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz3"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 			got, err := lds.ListAPBindingsByTrustZone(tt.trustZone)
@@ -745,6 +753,7 @@ func TestLocalDataSource_AddFederation(t *testing.T) {
 					fixtures.TrustZone("tz2"),
 					fixtures.TrustZone("tz3"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
 			got, err := lds.AddFederation(tt.federation)
@@ -783,6 +792,7 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantErr: false,
 		},
@@ -844,6 +854,7 @@ func TestLocalDataSource_ListFederationsByTrustZone(t *testing.T) {
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz3"),
 				},
+				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 			got, err := lds.ListFederationsByTrustZone(tt.trustZone)

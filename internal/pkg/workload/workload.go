@@ -4,15 +4,23 @@
 package workload
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"time"
 
-	"github.com/cofide/cofidectl/pkg/spire"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
+	"github.com/cofide/cofidectl/pkg/plugin/provision"
+	"github.com/cofide/cofidectl/pkg/spire"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
+
+const debugContainerNamePrefix = "cofidectl-debug"
+const debugContainerImage = "ghcr.io/cofide/cofidectl-debug-container:v0.1.0"
 
 type Workload struct {
 	Name             string
@@ -69,12 +77,15 @@ func GetRegisteredWorkloads(ctx context.Context, kubeConfig string, kubeContext 
 // GetUnregisteredWorkloads will discover workloads in a Kubernetes cluster that are not (yet) registered
 func GetUnregisteredWorkloads(ctx context.Context, kubeCfgFile string, kubeContext string, secretDiscovery bool, checkSpire bool) ([]Workload, error) {
 	// Includes the initial Kubernetes namespaces.
-	ignoredNamespaces := map[string]int{
-		"kube-node-lease":    1,
-		"kube-public":        2,
-		"kube-system":        3,
-		"local-path-storage": 4,
-		"spire":              5,
+	ignoredNamespaces := map[string]bool{
+		"kube-node-lease":    true,
+		"kube-public":        true,
+		"kube-system":        true,
+		"local-path-storage": true,
+		"spire":              true,
+		"spire-server":       true,
+		"spire-system":       true,
+		"spire-mgmt":         true,
 	}
 
 	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, kubeContext)
@@ -132,6 +143,136 @@ func GetUnregisteredWorkloads(ctx context.Context, kubeCfgFile string, kubeConte
 	}
 
 	return unregisteredWorkloads, nil
+}
+
+func GetStatus(ctx context.Context, statusCh chan<- *provisionpb.Status, dataCh chan string, client *kubeutil.Client, podName string, namespace string) {
+	debugContainerName := fmt.Sprintf("%s-%s", debugContainerNamePrefix, rand.String(5))
+
+	statusCh <- provision.StatusOk(
+		"Creating",
+		fmt.Sprintf("Waiting for ephemeral debug container to be created in %s", podName),
+	)
+
+	if err := createDebugContainer(ctx, client, podName, namespace, debugContainerName); err != nil {
+		statusCh <- provision.StatusError(
+			"Creating",
+			fmt.Sprintf("Failed waiting for ephemeral debug container to be created in %s", podName),
+			err,
+		)
+		return
+	}
+
+	statusCh <- provision.StatusOk(
+		"Waiting",
+		"Waiting for ephemeral debug container to complete",
+	)
+
+	if err := waitForDebugContainer(ctx, client, podName, namespace, debugContainerName); err != nil {
+		statusCh <- provision.StatusError(
+			"Waiting",
+			"Error waiting for ephemeral debug container to complete",
+			err,
+		)
+		return
+	}
+
+	logs, err := getDebugContainerLogs(ctx, client, podName, namespace, debugContainerName)
+	if err != nil {
+		statusCh <- provision.StatusError(
+			"Waiting",
+			"Error waiting for ephemeral debug container logs",
+			err,
+		)
+		return
+	}
+
+	dataCh <- logs
+	statusCh <- provision.StatusDone(
+		"Complete",
+		fmt.Sprintf("Successfully executed emphemeral debug container in %s", podName),
+	)
+}
+
+func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName string, namespace string, debugContainerName string) error {
+	pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	debugContainer := v1.EphemeralContainer{
+		EphemeralContainerCommon: v1.EphemeralContainerCommon{
+			Name:            debugContainerName,
+			Image:           debugContainerImage,
+			ImagePullPolicy: v1.PullIfNotPresent,
+			TTY:             true,
+			Stdin:           true,
+			VolumeMounts: []v1.VolumeMount{
+				{
+					ReadOnly:  true,
+					Name:      "spiffe-workload-api",
+					MountPath: "/spiffe-workload-api",
+				}},
+		},
+		TargetContainerName: pod.Spec.Containers[0].Name,
+	}
+
+	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, debugContainer)
+
+	_, err = client.Clientset.CoreV1().Pods(namespace).UpdateEphemeralContainers(
+		ctx,
+		pod.Name,
+		pod,
+		metav1.UpdateOptions{},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func waitForDebugContainer(ctx context.Context, client *kubeutil.Client, podName string, namespace string, debugContainerName string) error {
+	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	for {
+		pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, status := range pod.Status.EphemeralContainerStatuses {
+			if status.Name == debugContainerName && status.State.Terminated != nil {
+				return nil
+			}
+		}
+
+		select {
+		case <-waitCtx.Done():
+			return err
+		default:
+			time.Sleep(time.Second)
+			continue
+		}
+	}
+}
+
+func getDebugContainerLogs(ctx context.Context, client *kubeutil.Client, podName string, namespace string, debugContainerName string) (string, error) {
+	logs, err := client.Clientset.CoreV1().Pods(namespace).GetLogs(podName, &v1.PodLogOptions{
+		Container: debugContainerName,
+	}).Stream(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer logs.Close()
+
+	// Read the logs
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, logs)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func isAtRisk(creationTS time.Time) (time.Duration, bool) {

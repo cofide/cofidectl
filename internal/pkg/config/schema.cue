@@ -14,6 +14,7 @@
 	jwt_issuer?: string
 	extra_helm_values?: #HelmValues
 	bundle_endpoint_profile?: #BundleEndpointProfile
+	external_server?: bool
 }
 
 #TrustProvider: {
@@ -66,11 +67,16 @@
 	[string]: _
 }
 
+#Plugins: {
+	data_source?: string
+	provision?: string
+}
+
 #Config: {
-	data_source!: #DataSource
 	trust_zones: [...#TrustZone]
 	attestation_policies: [...#AttestationPolicy]
 	plugin_config?: #PluginConfig
+	plugins!: #Plugins
 }
 
 #Config

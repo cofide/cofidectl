@@ -53,6 +53,12 @@ jobs:
   federation:
     name: federation
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Repeat the test with in-process plugins and the test gRPC plugin.
+        plugin:
+          - ""
+          - "cofidectl-test-plugin"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -80,6 +86,10 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
+      - name: Build and install test plugin
+        run: just install-test-plugin
+        if: ${{ matrix.plugin == 'cofidectl-test-plugin' }}
 
       - name: Install ko
         uses: ko-build/setup-ko@v0.6
@@ -91,3 +101,6 @@ jobs:
 
       - name: Test
         run: just integration-test federation
+        env:
+          DATA_SOURCE_PLUGIN: ${{ matrix.plugin }}
+          PROVISION_PLUGIN: ${{ matrix.plugin }}

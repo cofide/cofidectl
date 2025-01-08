@@ -24,14 +24,16 @@ import (
 )
 
 const (
-	namespace             = "spire"
+	serverNamespace       = "spire-server"
 	serverStatefulsetName = "spire-server"
 	serverPodName         = "spire-server-0"
 	serverContainerName   = "spire-server"
 	serverServiceName     = "spire-server"
 	serverExecutable      = "/opt/spire/bin/spire-server"
 	scmContainerName      = "spire-controller-manager"
-	agentDaemonSetName    = "spire-agent"
+
+	agentNamespace     = "spire-system"
+	agentDaemonSetName = "spire-agent"
 )
 
 // ServerStatus contains status information about a running SPIRE server cluster.
@@ -80,7 +82,7 @@ func GetServerStatus(ctx context.Context, client *kubeutil.Client) (*ServerStatu
 
 func getServerStatefulSet(ctx context.Context, client *kubeutil.Client) (*appsv1.StatefulSet, error) {
 	return client.Clientset.AppsV1().
-		StatefulSets(namespace).
+		StatefulSets(serverNamespace).
 		Get(ctx, serverStatefulsetName, metav1.GetOptions{})
 }
 
@@ -88,7 +90,7 @@ func getPodsForStatefulSet(ctx context.Context, client *kubeutil.Client, statefu
 	set := labels.Set(statefulset.Spec.Selector.MatchLabels)
 	listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
 	return client.Clientset.CoreV1().
-		Pods(namespace).
+		Pods(serverNamespace).
 		List(ctx, listOptions)
 }
 
@@ -210,7 +212,7 @@ func addAgentK8sStatus(ctx context.Context, client *kubeutil.Client, agents []Ag
 
 func getAgentDaemonSet(ctx context.Context, client *kubeutil.Client) (*appsv1.DaemonSet, error) {
 	return client.Clientset.AppsV1().
-		DaemonSets(namespace).
+		DaemonSets(agentNamespace).
 		Get(ctx, agentDaemonSetName, metav1.GetOptions{})
 }
 
@@ -218,7 +220,7 @@ func getPodsforDaemonSet(ctx context.Context, client *kubeutil.Client, daemonset
 	set := labels.Set(daemonset.Spec.Selector.MatchLabels)
 	listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
 	return client.Clientset.CoreV1().
-		Pods(namespace).
+		Pods(agentNamespace).
 		List(ctx, listOptions)
 }
 
@@ -343,7 +345,7 @@ func GetBundle(ctx context.Context, client *kubeutil.Client) (string, error) {
 func createPodWatcher(ctx context.Context, client *kubeutil.Client) (watch.Interface, error) {
 	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64(120)
-		return client.Clientset.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
+		return client.Clientset.CoreV1().Pods(serverNamespace).Watch(ctx, metav1.ListOptions{
 			FieldSelector:  fmt.Sprintf("metadata.name=%s", serverPodName),
 			TimeoutSeconds: &timeout,
 		})
@@ -360,7 +362,7 @@ func createPodWatcher(ctx context.Context, client *kubeutil.Client) (watch.Inter
 func createServiceWatcher(ctx context.Context, client *kubeutil.Client) (watch.Interface, error) {
 	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64(120)
-		return client.Clientset.CoreV1().Services(namespace).Watch(ctx, metav1.ListOptions{
+		return client.Clientset.CoreV1().Services(serverNamespace).Watch(ctx, metav1.ListOptions{
 			FieldSelector:  fmt.Sprintf("metadata.name=%s", serverServiceName),
 			TimeoutSeconds: &timeout,
 		})

@@ -5,6 +5,11 @@
 
 set -euxo pipefail
 
+source $(dirname $(dirname $BASH_SOURCE))/lib.sh
+
+DATA_SOURCE_PLUGIN=${DATA_SOURCE_PLUGIN:-}
+PROVISION_PLUGIN=${PROVISION_PLUGIN:-}
+
 K8S_CLUSTER_NAME=${K8S_CLUSTER_NAME:-local1}
 K8S_CLUSTER_CONTEXT=${K8S_CLUSTER_CONTEXT:-kind-$K8S_CLUSTER_NAME}
 
@@ -14,9 +19,19 @@ TRUST_DOMAIN=${TRUST_DOMAIN:-td1}
 NAMESPACE_POLICY_NAMESPACE=${NAMESPACE_POLICY_NAMESPACE:-demo}
 POD_POLICY_POD_LABEL=${POD_POLICY_POD_LABEL:-"foo=bar"}
 
-function configure() {
+function init() {
   rm -f cofide.yaml
-  ./cofidectl init
+  args=""
+  if [[ -n "$DATA_SOURCE_PLUGIN" ]]; then
+    args="$args --data-source-plugin $DATA_SOURCE_PLUGIN"
+  fi
+  if [[ -n "$PROVISION_PLUGIN" ]]; then
+    args="$args --provision-plugin $PROVISION_PLUGIN"
+  fi
+  ./cofidectl init $args
+}
+
+function configure() {
   ./cofidectl trust-zone add $TRUST_ZONE --trust-domain $TRUST_DOMAIN --kubernetes-context $K8S_CLUSTER_CONTEXT --kubernetes-cluster $K8S_CLUSTER_NAME --profile kubernetes
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
@@ -26,6 +41,12 @@ function configure() {
 
 function up() {
   ./cofidectl up --quiet
+}
+
+function check_spire() {
+  check_spire_server $K8S_CLUSTER_CONTEXT
+  check_spire_agents $K8S_CLUSTER_CONTEXT
+  check_spire_csi_driver $K8S_CLUSTER_CONTEXT
 }
 
 function list_resources() {
@@ -59,7 +80,7 @@ function run_tests() {
 
 function wait_for_pong() {
   for i in $(seq 30); do
-    if kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client | grep pong; then
+    if kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client | grep '\.\.\.pong'; then
       return 0
     fi
     sleep 2
@@ -67,17 +88,37 @@ function wait_for_pong() {
   return 1
 }
 
+function show_workload_status() {
+  POD_NAME=$(kubectl get pods -l app=ping-pong-client \
+    -n $NAMESPACE_POLICY_NAMESPACE \
+    -o jsonpath='{.items[0].metadata.name}' \
+    --context $K8S_CLUSTER_CONTEXT)
+  WORKLOAD_STATUS_RESPONSE=$(./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
+    --pod-name $POD_NAME \
+    --trust-zone $TRUST_ZONE)
+
+  if [[ $WORKLOAD_STATUS_RESPONSE != *"SVID verified against trust bundle"* ]]; then
+    echo "cofidectl workload status unsuccessful"
+    exit 1
+  fi
+
+  echo "cofidectl workload status successful"
+}
+
 function down() {
   ./cofidectl down
 }
 
 function main() {
+  init
   configure
   up
+  check_spire
   list_resources
   show_config
   show_status
   run_tests
+  show_workload_status
   down
   echo "Success!"
 }

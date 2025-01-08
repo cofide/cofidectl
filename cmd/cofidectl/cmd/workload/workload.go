@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"os"
 
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	"github.com/cofide/cofidectl/internal/pkg/workload"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -32,13 +35,14 @@ This command consists of multiple sub-commands to interact with workloads.
 
 func (c *WorkloadCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "workload list|discover [ARGS]",
-		Short: "List workloads in a trust zone or discover candidate workloads",
+		Use:   "workload list|discover|status [ARGS]",
+		Short: "List or introspect the status of workloads in a trust zone or discover candidate workloads",
 		Long:  workloadRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
 	cmd.AddCommand(
+		c.GetStatusCommand(),
 		c.GetListCommand(),
 		c.GetDiscoverCommand(),
 	)
@@ -63,7 +67,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
-			ds, err := w.cmdCtx.PluginManager.GetDataSource()
+			ds, err := w.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -108,6 +112,77 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
+var workloadStatusCmdDesc = `
+This command will display the status of workloads in the Cofide configuration state.
+`
+
+type StatusOpts struct {
+	podName   string
+	namespace string
+	trustZone string
+}
+
+func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
+	opts := StatusOpts{}
+	cmd := &cobra.Command{
+		Use:   "status [ARGS]",
+		Short: "Display workload status",
+		Long:  workloadStatusCmdDesc,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			kubeConfig, err := cmd.Flags().GetString("kube-config")
+			if err != nil {
+				return fmt.Errorf("failed to retrieve the kubeconfig file location")
+			}
+
+			return w.status(cmd.Context(), kubeConfig, opts)
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.podName, "pod-name", "", "Pod name for the workload")
+	f.StringVar(&opts.namespace, "namespace", "", "Namespace for the workload")
+	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone for the workload")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("pod-name"))
+	cobra.CheckErr(cmd.MarkFlagRequired("namespace"))
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+
+	return cmd
+}
+
+func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts StatusOpts) error {
+	ds, err := w.cmdCtx.PluginManager.GetDataSource(ctx)
+	if err != nil {
+		return err
+	}
+
+	trustZone, err := ds.GetTrustZone(opts.trustZone)
+	if err != nil {
+		return err
+	}
+
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, *trustZone.KubernetesContext)
+	if err != nil {
+		return err
+	}
+
+	statusCh, dataCh := getWorkloadStatus(ctx, client, opts.podName, opts.namespace)
+
+	// Create a spinner to display whilst the debug container is created and executed and logs retrieved
+	if err := statusspinner.WatchProvisionStatus(ctx, statusCh, false); err != nil {
+		return fmt.Errorf("retrieving workload status failed: %w", err)
+	}
+
+	result := <-dataCh
+	if result == "" {
+		return fmt.Errorf("retrieving workload status failed")
+	}
+
+	fmt.Println(result)
+	return nil
+}
+
 func renderRegisteredWorkloads(ctx context.Context, kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
 	data := make([][]string, 0, len(trustZones))
 
@@ -144,6 +219,19 @@ func renderRegisteredWorkloads(ctx context.Context, kubeConfig string, trustZone
 	return nil
 }
 
+func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, podName string, namespace string) (<-chan *provisionpb.Status, chan string) {
+	statusCh := make(chan *provisionpb.Status)
+	dataCh := make(chan string, 1)
+
+	go func() {
+		defer close(statusCh)
+		defer close(dataCh)
+		workload.GetStatus(ctx, statusCh, dataCh, client, podName, namespace)
+	}()
+
+	return statusCh, dataCh
+}
+
 var workloadDiscoverCmdDesc = `
 This command will discover all of the unregistered workloads.
 `
@@ -162,7 +250,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
-			ds, err := w.cmdCtx.PluginManager.GetDataSource()
+			ds, err := w.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}

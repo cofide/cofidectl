@@ -4,12 +4,17 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
+	"github.com/cofide/cofidectl/pkg/plugin/provision"
+	"github.com/cofide/cofidectl/pkg/plugin/provision/spirehelm"
 	hclog "github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
 	"github.com/stretchr/testify/assert"
@@ -17,83 +22,67 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type fakeGrpcDataSource struct {
+type fakeGRPCDataSource struct {
 	local.LocalDataSource
 }
 
-func newFakeGrpcDataSource(t *testing.T, configLoader config.Loader) *fakeGrpcDataSource {
+func newFakeGRPCDataSource(t *testing.T, configLoader config.Loader) *fakeGRPCDataSource {
 	lds, err := local.NewLocalDataSource(configLoader)
 	assert.Nil(t, err)
-	return &fakeGrpcDataSource{LocalDataSource: *lds}
+	return &fakeGRPCDataSource{LocalDataSource: *lds}
+}
+
+type fakeGRPCProvision struct {
+	spirehelm.SpireHelm
+}
+
+func newFakeGRPCProvision() *fakeGRPCProvision {
+	return &fakeGRPCProvision{}
 }
 
 func TestManager_Init_success(t *testing.T) {
 	tests := []struct {
 		name         string
 		config       *config.Config
-		pluginName   string
+		plugins      *pluginspb.Plugins
 		pluginConfig map[string]*structpb.Struct
-		want         func(config.Loader) cofidectl_plugin.DataSource
 	}{
 		{
-			name:       "local",
-			config:     nil,
-			pluginName: LocalPluginName,
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
-				lds, err := local.NewLocalDataSource(cl)
-				assert.Nil(t, err)
-				return lds
-			},
+			name:    "defaults",
+			config:  nil,
+			plugins: GetDefaultPlugins(),
 		},
 		{
-			name:       "gRPC",
-			config:     nil,
-			pluginName: "fake-plugin",
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
-				fcds := newFakeGrpcDataSource(t, cl)
-				return fcds
-			},
+			name:    "nil plugins",
+			config:  nil,
+			plugins: nil,
 		},
 		{
-			name:         "local with config",
+			name:    "gRPC",
+			config:  nil,
+			plugins: fixtures.Plugins("plugins1"),
+		},
+		{
+			name:         "defaults with config",
 			config:       nil,
-			pluginName:   LocalPluginName,
+			plugins:      GetDefaultPlugins(),
 			pluginConfig: fakePluginConfig(t),
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
-				lds, err := local.NewLocalDataSource(cl)
-				assert.Nil(t, err)
-				return lds
-			},
 		},
 		{
-			name:       "existing local",
-			config:     &config.Config{DataSource: LocalPluginName},
-			pluginName: LocalPluginName,
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
-				lds, err := local.NewLocalDataSource(cl)
-				assert.Nil(t, err)
-				return lds
-			},
+			name:    "existing defaults",
+			config:  &config.Config{Plugins: GetDefaultPlugins()},
+			plugins: GetDefaultPlugins(),
 		},
 		{
-			name:       "existing gRPC",
-			config:     &config.Config{DataSource: "fake-plugin"},
-			pluginName: "fake-plugin",
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
-				fcds := newFakeGrpcDataSource(t, cl)
-				return fcds
-			},
+			name:    "existing gRPC",
+			config:  &config.Config{Plugins: fixtures.Plugins("plugins1")},
+			plugins: fixtures.Plugins("plugins1"),
 		},
 		{
-			name:         "existing local with config",
-			config:       &config.Config{DataSource: LocalPluginName, PluginConfig: fakePluginConfig(t)},
-			pluginName:   LocalPluginName,
+			name:         "existing defaults with config",
+			config:       &config.Config{Plugins: GetDefaultPlugins(), PluginConfig: fakePluginConfig(t)},
+			plugins:      GetDefaultPlugins(),
 			pluginConfig: fakePluginConfig(t),
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
-				lds, err := local.NewLocalDataSource(cl)
-				assert.Nil(t, err)
-				return lds
-			},
 		},
 	}
 	for _, tt := range tests {
@@ -102,20 +91,22 @@ func TestManager_Init_success(t *testing.T) {
 			require.Nil(t, err)
 
 			m := NewManager(configLoader)
-			// Mock out the Connect plugin loader function.
-			m.loadGrpcPlugin = func(logger hclog.Logger, _ string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
-				return nil, newFakeGrpcDataSource(t, configLoader), nil
+			// Mock out the gRPC plugin loader function.
+			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
+				return &grpcPlugin{nil, newFakeGRPCDataSource(t, configLoader), newFakeGRPCProvision()}, nil
 			}
 
-			got, err := m.Init(tt.pluginName, tt.pluginConfig)
+			err = m.Init(context.Background(), tt.plugins, tt.pluginConfig)
 			require.Nil(t, err)
-
-			want := tt.want(configLoader)
-			assert.Equal(t, want, got)
 
 			config, err := configLoader.Read()
 			assert.Nil(t, err)
-			assert.Equal(t, tt.pluginName, config.DataSource)
+			wantPlugins := tt.plugins
+			if wantPlugins == nil {
+				wantPlugins = GetDefaultPlugins()
+			}
+			assert.Equal(t, wantPlugins.GetDataSource(), config.Plugins.GetDataSource())
+			assert.Equal(t, wantPlugins.GetProvision(), config.Plugins.GetProvision())
 
 			expectedConfig := tt.pluginConfig
 			if expectedConfig == nil {
@@ -126,9 +117,9 @@ func TestManager_Init_success(t *testing.T) {
 				assert.NotSame(t, value, config.PluginConfig[pluginName], "pointer to plugin config stored in config")
 			}
 
-			got2, err := m.GetDataSource()
-			require.Nil(t, err)
-			assert.Same(t, got, got2, "GetDataSource() should return a cached copy")
+			assert.Nil(t, m.source, "cached data source should be nil")
+			assert.Nil(t, m.provision, "cached provision plugin should be nil")
+			assert.Empty(t, m.clients, "cached clients should be empty")
 		})
 	}
 }
@@ -137,21 +128,31 @@ func TestManager_Init_failure(t *testing.T) {
 	tests := []struct {
 		name           string
 		config         *config.Config
-		pluginName     string
+		dsName         string
+		provisionName  string
 		pluginConfig   map[string]*structpb.Struct
-		want           func(config.Loader) cofidectl_plugin.DataSource
+		want           func(config.Loader) datasource.DataSource
 		wantErrMessage string
 	}{
 		{
-			name:           "existing different plugin",
-			config:         &config.Config{DataSource: "fake-plugin"},
-			pluginName:     LocalPluginName,
-			wantErrMessage: "existing config file uses a different plugin: fake-plugin vs local",
+			name:           "existing different data source",
+			config:         &config.Config{Plugins: fixtures.Plugins("plugins1")},
+			dsName:         LocalDSPluginName,
+			provisionName:  SpireHelmProvisionPluginName,
+			wantErrMessage: "existing config file uses a different data source plugin: fake-datasource vs local",
+		},
+		{
+			name:           "existing different provision plugin",
+			config:         &config.Config{Plugins: fixtures.Plugins("plugins1")},
+			dsName:         "fake-datasource",
+			provisionName:  SpireHelmProvisionPluginName,
+			wantErrMessage: "existing config file uses a different provision plugin: fake-provision vs spire-helm",
 		},
 		{
 			name:           "existing different plugin config",
-			config:         &config.Config{DataSource: "local", PluginConfig: fakePluginConfig(t)},
-			pluginName:     LocalPluginName,
+			config:         &config.Config{Plugins: GetDefaultPlugins(), PluginConfig: fakePluginConfig(t)},
+			dsName:         LocalDSPluginName,
+			provisionName:  SpireHelmProvisionPluginName,
 			wantErrMessage: "existing config file has different plugin config:",
 		},
 	}
@@ -162,16 +163,19 @@ func TestManager_Init_failure(t *testing.T) {
 
 			m := NewManager(configLoader)
 
-			_, err = m.Init(tt.pluginName, tt.pluginConfig)
+			plugins := &pluginspb.Plugins{DataSource: &tt.dsName, Provision: &tt.provisionName}
+			err = m.Init(context.Background(), plugins, tt.pluginConfig)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.wantErrMessage)
 
 			config, err := configLoader.Read()
 			assert.Nil(t, err)
-			assert.Equal(t, config.DataSource, tt.config.DataSource, "config should not be updated")
+			assert.Equal(t, config.Plugins.GetDataSource(), tt.config.Plugins.GetDataSource(), "config should not be updated")
+			assert.Equal(t, config.Plugins.GetProvision(), tt.config.Plugins.GetProvision(), "config should not be updated")
 
 			assert.Nil(t, m.source, "cached data source should be nil")
-			assert.Nil(t, m.client, "cached client should be nil")
+			assert.Nil(t, m.provision, "cached provision plugin should be nil")
+			assert.Empty(t, m.clients, "cached clients should be empty")
 		})
 	}
 }
@@ -180,12 +184,12 @@ func TestManager_GetDataSource_success(t *testing.T) {
 	tests := []struct {
 		name   string
 		config config.Config
-		want   func(config.Loader) cofidectl_plugin.DataSource
+		want   func(config.Loader) datasource.DataSource
 	}{
 		{
-			name:   "local",
-			config: config.Config{DataSource: LocalPluginName},
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
+			name:   "defaults",
+			config: config.Config{Plugins: GetDefaultPlugins()},
+			want: func(cl config.Loader) datasource.DataSource {
 				lds, err := local.NewLocalDataSource(cl)
 				assert.Nil(t, err)
 				return lds
@@ -193,9 +197,17 @@ func TestManager_GetDataSource_success(t *testing.T) {
 		},
 		{
 			name:   "gRPC",
-			config: config.Config{DataSource: "fake-plugin"},
-			want: func(cl config.Loader) cofidectl_plugin.DataSource {
-				fcds := newFakeGrpcDataSource(t, cl)
+			config: config.Config{Plugins: fixtures.Plugins("plugins1")},
+			want: func(cl config.Loader) datasource.DataSource {
+				fcds := newFakeGRPCDataSource(t, cl)
+				return fcds
+			},
+		},
+		{
+			name:   "gRPC with provision",
+			config: config.Config{Plugins: fixtures.Plugins("plugins2")},
+			want: func(cl config.Loader) datasource.DataSource {
+				fcds := newFakeGRPCDataSource(t, cl)
 				return fcds
 			},
 		},
@@ -207,26 +219,38 @@ func TestManager_GetDataSource_success(t *testing.T) {
 
 			m := NewManager(configLoader)
 
-			// Mock out the Connect plugin loader function.
+			// Mock out the gRPC plugin loader function.
 			var client *go_plugin.Client
-			if tt.config.DataSource != LocalPluginName {
+			var provision provision.Provision
+			if tt.config.Plugins.GetDataSource() != LocalDSPluginName {
 				client = &go_plugin.Client{}
-				m.loadGrpcPlugin = func(logger hclog.Logger, _ string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
-					ds := newFakeGrpcDataSource(t, configLoader)
-					return client, ds, nil
+				m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
+					ds := newFakeGRPCDataSource(t, configLoader)
+					if tt.config.Plugins.GetProvision() == tt.config.Plugins.GetDataSource() {
+						provision = newFakeGRPCProvision()
+					}
+					return &grpcPlugin{client, ds, provision}, nil
 				}
 			}
 
-			got, err := m.GetDataSource()
+			got, err := m.GetDataSource(context.Background())
 			require.Nil(t, err)
 
 			want := tt.want(configLoader)
 			assert.Equal(t, want, got)
-			assert.Same(t, client, m.client)
+			assert.Equal(t, want, m.source)
+			assert.Same(t, client, m.clients[tt.config.Plugins.GetDataSource()])
 
-			got2, err := m.GetDataSource()
+			got2, err := m.GetDataSource(context.Background())
 			require.Nil(t, err)
 			assert.Same(t, got, got2, "second GetDataSource() should return a cached copy")
+
+			if tt.config.Plugins.GetProvision() == tt.config.Plugins.GetDataSource() {
+				got, err := m.GetProvision(context.Background())
+				require.Nil(t, err, err)
+				assert.Equal(t, provision, got)
+				assert.Equal(t, provision, m.provision)
+			}
 		})
 	}
 }
@@ -239,13 +263,13 @@ func TestManager_GetDataSource_failure(t *testing.T) {
 	}{
 		{
 			name:    "empty",
-			config:  config.Config{DataSource: ""},
+			config:  config.Config{Plugins: &pluginspb.Plugins{DataSource: fixtures.StringPtr("")}},
 			wantErr: "plugin name cannot be empty",
 		},
 		{
-			name:    "connect plugin load failure",
-			config:  config.Config{DataSource: "fake-plugin"},
-			wantErr: "failed to create connect plugin",
+			name:    "plugin load failure",
+			config:  config.Config{Plugins: fixtures.Plugins("plugins1")},
+			wantErr: "failed to create plugin",
 		},
 	}
 	for _, tt := range tests {
@@ -254,16 +278,119 @@ func TestManager_GetDataSource_failure(t *testing.T) {
 			require.Nil(t, err)
 
 			m := NewManager(configLoader)
-			// Mock out the Connect plugin loader function, and inject a load failure.
-			m.loadGrpcPlugin = func(logger hclog.Logger, _ string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
-				return nil, nil, errors.New("failed to create connect plugin")
+			// Mock out the gRPC plugin loader function, and inject a load failure.
+			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
+				return nil, errors.New("failed to create plugin")
 			}
 
-			_, err = m.GetDataSource()
+			_, err = m.GetDataSource(context.Background())
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.wantErr)
-			assert.Nil(t, m.source, "failed GetDataSource should not cache")
-			assert.Nil(t, m.client, "failed GetDataSource should not cache")
+			assert.Nil(t, m.source, "failed GetDataSource should not cache data source")
+			assert.Nil(t, m.provision, "failed GetDataSource should not cache provision")
+			assert.Empty(t, m.clients, "failed GetDataSource should not cache clients")
+		})
+	}
+}
+
+func TestManager_GetProvision_success(t *testing.T) {
+	tests := []struct {
+		name   string
+		config config.Config
+		want   provision.Provision
+	}{
+		{
+			name:   "defaults",
+			config: config.Config{Plugins: GetDefaultPlugins()},
+			want:   spirehelm.NewSpireHelm(nil),
+		},
+		{
+			name:   "gRPC",
+			config: config.Config{Plugins: fixtures.Plugins("plugins1")},
+			want:   newFakeGRPCProvision(),
+		},
+		{
+			name:   "gRPC with provision",
+			config: config.Config{Plugins: fixtures.Plugins("plugins2")},
+			want:   newFakeGRPCProvision(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configLoader, err := config.NewMemoryLoader(&tt.config)
+			require.Nil(t, err)
+
+			m := NewManager(configLoader)
+
+			// Mock out the gRPC plugin loader function.
+			var client *go_plugin.Client
+			var source datasource.DataSource
+			if tt.config.Plugins.GetDataSource() != LocalDSPluginName {
+				client = &go_plugin.Client{}
+				m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
+					provision := newFakeGRPCProvision()
+					if tt.config.Plugins.GetDataSource() == tt.config.Plugins.GetProvision() {
+						source = newFakeGRPCDataSource(t, configLoader)
+					}
+					return &grpcPlugin{client, source, provision}, nil
+				}
+			}
+
+			got, err := m.GetProvision(context.Background())
+			require.Nil(t, err)
+
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, m.provision)
+			assert.Same(t, client, m.clients[tt.config.Plugins.GetProvision()])
+
+			got2, err := m.GetProvision(context.Background())
+			require.Nil(t, err)
+			assert.Same(t, got, got2, "second GetProvision() should return a cached copy")
+
+			if tt.config.Plugins.GetDataSource() == tt.config.Plugins.GetProvision() {
+				got, err := m.GetDataSource(context.Background())
+				require.Nil(t, err, err)
+				assert.Equal(t, source, got)
+				assert.Equal(t, source, m.source)
+			}
+		})
+	}
+}
+
+func TestManager_GetProvision_failure(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  config.Config
+		wantErr string
+	}{
+		{
+			name:    "empty",
+			config:  config.Config{Plugins: &pluginspb.Plugins{DataSource: fixtures.StringPtr("")}},
+			wantErr: "plugin name cannot be empty",
+		},
+		{
+			name:    "plugin load failure",
+			config:  config.Config{Plugins: fixtures.Plugins("plugins1")},
+			wantErr: "failed to create plugin",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configLoader, err := config.NewMemoryLoader(&tt.config)
+			require.Nil(t, err)
+
+			m := NewManager(configLoader)
+			// Mock out the gRPC plugin loader function, and inject a load failure.
+			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
+				return nil, errors.New("failed to create plugin")
+			}
+
+			_, err = m.GetProvision(context.Background())
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.wantErr)
+			assert.Nil(t, m.source, "failed GetProvision should not cache data source")
+			assert.Nil(t, m.provision, "failed GetProvision should not cache provision")
+			assert.Empty(t, m.clients, "failed GetProvision should not cache clients")
 		})
 	}
 }
@@ -272,15 +399,15 @@ func TestManager_Shutdown(t *testing.T) {
 	tests := []struct {
 		name   string
 		config config.Config
-		want   func(config.Loader) cofidectl_plugin.DataSource
+		want   func(config.Loader) datasource.DataSource
 	}{
 		{
-			name:   "local",
-			config: config.Config{DataSource: LocalPluginName},
+			name:   "defaults",
+			config: config.Config{Plugins: GetDefaultPlugins()},
 		},
 		{
 			name:   "gRPC",
-			config: config.Config{DataSource: "fake-plugin"},
+			config: config.Config{Plugins: fixtures.Plugins("plugins1")},
 		},
 	}
 	for _, tt := range tests {
@@ -289,19 +416,19 @@ func TestManager_Shutdown(t *testing.T) {
 			require.Nil(t, err)
 
 			m := NewManager(configLoader)
-			// Mock out the Connect plugin loader function.
+			// Mock out the gRPC plugin loader function.
 			client := &go_plugin.Client{}
-			m.loadGrpcPlugin = func(logger hclog.Logger, _ string) (*go_plugin.Client, cofidectl_plugin.DataSource, error) {
-				ds := newFakeGrpcDataSource(t, configLoader)
-				return client, ds, nil
+			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
+				return &grpcPlugin{client, newFakeGRPCDataSource(t, configLoader), nil}, nil
 			}
 
-			_, err = m.GetDataSource()
+			_, err = m.GetDataSource(context.Background())
 			require.Nil(t, err)
 
 			m.Shutdown()
 			assert.Nil(t, m.source)
-			assert.Nil(t, m.client)
+			assert.Nil(t, m.provision)
+			assert.Empty(t, m.clients)
 		})
 	}
 }
@@ -317,13 +444,13 @@ func TestManager_GetPluginConfig(t *testing.T) {
 	}{
 		{
 			name:       "success",
-			config:     &config.Config{PluginConfig: fakePluginConfig(t)},
+			config:     &config.Config{Plugins: GetDefaultPlugins(), PluginConfig: fakePluginConfig(t)},
 			pluginName: "local",
 			want:       fakeLocalPluginConfig(t),
 		},
 		{
 			name:           "non-existent plugin",
-			config:         &config.Config{PluginConfig: fakePluginConfig(t)},
+			config:         &config.Config{Plugins: GetDefaultPlugins(), PluginConfig: fakePluginConfig(t)},
 			pluginName:     "non-existent-plugin",
 			want:           fakeLocalPluginConfig(t),
 			wantErr:        true,
@@ -331,7 +458,7 @@ func TestManager_GetPluginConfig(t *testing.T) {
 		},
 		{
 			name:           "no plugin config",
-			config:         &config.Config{},
+			config:         &config.Config{Plugins: GetDefaultPlugins()},
 			pluginName:     "non-existent-plugin",
 			want:           fakeLocalPluginConfig(t),
 			wantErr:        true,
@@ -372,13 +499,13 @@ func TestManager_SetPluginConfig(t *testing.T) {
 	}{
 		{
 			name:         "success",
-			config:       &config.Config{},
+			config:       &config.Config{Plugins: GetDefaultPlugins()},
 			pluginName:   "local",
 			pluginConfig: fakeLocalPluginConfig(t),
 		},
 		{
 			name:         "overwrite",
-			config:       &config.Config{PluginConfig: fakePluginConfig(t)},
+			config:       &config.Config{Plugins: GetDefaultPlugins(), PluginConfig: fakePluginConfig(t)},
 			pluginName:   "local",
 			pluginConfig: fakeLocalPluginConfig(t),
 		},

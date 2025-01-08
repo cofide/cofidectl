@@ -19,7 +19,7 @@ import (
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
-	cofidectl_plugin "github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/spire"
 	"github.com/olekukonko/tablewriter"
@@ -72,7 +72,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 		Long:  trustZoneListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -114,6 +114,7 @@ type addOpts struct {
 	context           string
 	profile           string
 	jwtIssuer         string
+	externalServer    bool
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
@@ -131,7 +132,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -156,6 +157,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				Profile:               &opts.profile,
 				JwtIssuer:             &opts.jwtIssuer,
 				BundleEndpointProfile: &bundleEndpointProfile,
+				ExternalServer:        &opts.externalServer,
 			}
 
 			_, err = ds.AddTrustZone(newTrustZone)
@@ -173,6 +175,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 	f.StringVar(&opts.jwtIssuer, "jwt-issuer", "", "JWT issuer to use for this trust zone")
+	f.BoolVar(&opts.externalServer, "external-server", false, "If the SPIRE server runs externally")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
 	cobra.CheckErr(cmd.MarkFlagRequired("kubernetes-cluster"))
@@ -193,7 +196,7 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 		Long:  trustZoneStatusCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource()
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -209,7 +212,7 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *TrustZoneCommand) status(ctx context.Context, source cofidectl_plugin.DataSource, kubeConfig, tzName string) error {
+func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string) error {
 	trustZone, err := source.GetTrustZone(tzName)
 	if err != nil {
 		return err

@@ -29,13 +29,17 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 		Long:  downCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := d.cmdCtx.PluginManager.GetDataSource()
+			ds, err := d.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
 
-			provision := d.cmdCtx.PluginManager.GetProvision()
-			statusCh, err := provision.TearDown(cmd.Context(), ds)
+			provision, err := d.cmdCtx.PluginManager.GetProvision(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			statusCh, err := provision.TearDown(cmd.Context(), ds, kubeCfgFile)
 			if err != nil {
 				return err
 			}

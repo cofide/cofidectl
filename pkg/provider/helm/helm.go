@@ -34,7 +34,8 @@ const (
 	SPIRECRDsChartName    = "spire-crds"
 	SPIRECRDsChartVersion = "0.4.0"
 
-	SPIRENamespace = "spire"
+	// Kubernetes namespace in which Helm charts and CRDs will be installed.
+	SPIREManagementNamespace = "spire-mgmt"
 )
 
 // Type assertion that HelmSPIREProvider implements the Provider interface.
@@ -261,7 +262,7 @@ func newInstall(cfg *action.Configuration, chart string, version string) *action
 	install := action.NewInstall(cfg)
 	install.Version = version
 	install.ReleaseName = chart
-	install.Namespace = SPIRENamespace
+	install.Namespace = SPIREManagementNamespace
 	install.CreateNamespace = true
 	return install
 }
@@ -285,8 +286,13 @@ func installChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, nil
 	}
 
+	chartRef, err := getChartRef(chartName)
+	if err != nil {
+		return nil, err
+	}
+
 	options, err := client.ChartPathOptions.LocateChart(
-		fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName),
+		chartRef,
 		settings,
 	)
 	if err != nil {
@@ -303,7 +309,7 @@ func installChart(ctx context.Context, cfg *action.Configuration, client *action
 
 func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
 	upgrade := action.NewUpgrade(cfg)
-	upgrade.Namespace = SPIRENamespace
+	upgrade.Namespace = SPIREManagementNamespace
 	upgrade.Version = version
 	upgrade.ReuseValues = true
 	return upgrade
@@ -324,8 +330,13 @@ func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, fmt.Errorf("%v not installed", chartName)
 	}
 
+	chartRef, err := getChartRef(chartName)
+	if err != nil {
+		return nil, err
+	}
+
 	options, err := client.ChartPathOptions.LocateChart(
-		fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName),
+		chartRef,
 		settings,
 	)
 	if err != nil {
@@ -338,6 +349,26 @@ func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action
 	}
 
 	return client.RunWithContext(ctx, chartName, chart, values)
+}
+
+// getChartRef returns the full chart reference using either a custom repository path
+// from HELM_REPO_PATH environment variable or the default SPIRE repository.
+func getChartRef(chartName string) (string, error) {
+	if chartName == "" {
+		return "", fmt.Errorf("chart name cannot be empty")
+	}
+
+	repoPath, exists := os.LookupEnv("HELM_REPO_PATH")
+	if exists {
+		if repoPath == "" {
+			return "", fmt.Errorf("HELM_REPO_PATH environment variable is set but empty")
+		}
+
+		repoPath = strings.TrimRight(repoPath, "/")
+		return fmt.Sprintf("%s/%s", repoPath, chartName), nil
+	}
+
+	return fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName), nil
 }
 
 func newUninstall(cfg *action.Configuration) *action.Uninstall {

@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsDataSourceServeCmd(t *testing.T) {
-	assert.True(t, IsDataSourceServeCmd([]string{"data-source", "serve"}))
-	assert.False(t, IsDataSourceServeCmd([]string{"trust-zone", "list"}))
-	assert.False(t, IsDataSourceServeCmd([]string{}))
-	assert.False(t, IsDataSourceServeCmd([]string{"data-source"}))
-	assert.False(t, IsDataSourceServeCmd([]string{"DATA-SOURCE", "serve"}))
-	assert.False(t, IsDataSourceServeCmd([]string{"data-source", "serve", "extra"}))
-	assert.False(t, IsDataSourceServeCmd(nil))
+func TestIsPluginServeCmd(t *testing.T) {
+	assert.True(t, IsPluginServeCmd([]string{"plugin", "serve"}))
+	assert.False(t, IsPluginServeCmd([]string{"trust-zone", "list"}))
+	assert.False(t, IsPluginServeCmd([]string{}))
+	assert.False(t, IsPluginServeCmd([]string{"plugin"}))
+	assert.False(t, IsPluginServeCmd([]string{"PLUGIN", "serve"}))
+	assert.False(t, IsPluginServeCmd([]string{"plugin", "serve", "extra"}))
+	assert.False(t, IsPluginServeCmd(nil))
 }

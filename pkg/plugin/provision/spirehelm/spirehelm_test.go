@@ -13,7 +13,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
-	"github.com/cofide/cofidectl/pkg/plugin"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
@@ -50,12 +50,42 @@ func TestSpireHelm_Deploy(t *testing.T) {
 	assert.EqualExportedValues(t, want, statuses)
 }
 
+func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
+	providerFactory := newFakeHelmSPIREProviderFactory()
+	spireHelm := NewSpireHelm(providerFactory)
+
+	config := &config.Config{
+		TrustZones: []*trust_zone_proto.TrustZone{
+			fixtures.TrustZone("tz5"),
+		},
+		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+		Plugins:             fixtures.Plugins("plugins1"),
+	}
+
+	ds := newFakeDataSource(t, config)
+
+	statusCh, err := spireHelm.Deploy(context.Background(), ds, "fake-kube.cfg")
+	require.NoError(t, err, err)
+
+	statuses := collectStatuses(statusCh)
+	want := []*provisionpb.Status{
+		provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
+		provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
+		provision.StatusOk("Installing", "Installing SPIRE CRDs for local5 in tz5"),
+		provision.StatusOk("Installing", "Installing SPIRE chart for local5 in tz5"),
+		provision.StatusDone("Installed", "Installation completed for local5 in tz5"),
+		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
+		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
+	}
+	assert.EqualExportedValues(t, want, statuses)
+}
+
 func TestSpireHelm_TearDown(t *testing.T) {
 	providerFactory := newFakeHelmSPIREProviderFactory()
 	spireHelm := NewSpireHelm(providerFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	statusCh, err := spireHelm.TearDown(context.Background(), ds)
+	statusCh, err := spireHelm.TearDown(context.Background(), ds, "fake-kube.cfg")
 	require.NoError(t, err, err)
 
 	statuses := collectStatuses(statusCh)
@@ -82,7 +112,7 @@ func newFakeHelmSPIREProviderFactory() *fakeHelmSPIREProviderFactory {
 	return &fakeHelmSPIREProviderFactory{}
 }
 
-func (f *fakeHelmSPIREProviderFactory) Build(ctx context.Context, ds plugin.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error) {
+func (f *fakeHelmSPIREProviderFactory) Build(ctx context.Context, ds datasource.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error) {
 	return newFakeHelmSPIREProvider(trustZone), nil
 }
 
@@ -128,7 +158,7 @@ func (p *fakeHelmSPIREProvider) CheckIfAlreadyInstalled() (bool, error) {
 	return false, nil
 }
 
-func newFakeDataSource(t *testing.T, cfg *config.Config) plugin.DataSource {
+func newFakeDataSource(t *testing.T, cfg *config.Config) datasource.DataSource {
 	configLoader, err := config.NewMemoryLoader(cfg)
 	require.Nil(t, err)
 	lds, err := local.NewLocalDataSource(configLoader)
@@ -146,5 +176,6 @@ func defaultConfig() *config.Config {
 			fixtures.AttestationPolicy("ap1"),
 			fixtures.AttestationPolicy("ap2"),
 		},
+		Plugins: fixtures.Plugins("plugins1"),
 	}
 }
