@@ -5,6 +5,8 @@
 
 set -euxo pipefail
 
+source $(dirname $(dirname $BASH_SOURCE))/lib.sh
+
 DATA_SOURCE_PLUGIN=${DATA_SOURCE_PLUGIN:-}
 PROVISION_PLUGIN=${PROVISION_PLUGIN:-}
 
@@ -39,6 +41,12 @@ function configure() {
 
 function up() {
   ./cofidectl up --quiet
+}
+
+function check_spire() {
+  check_spire_server $K8S_CLUSTER_CONTEXT
+  check_spire_agents $K8S_CLUSTER_CONTEXT
+  check_spire_csi_driver $K8S_CLUSTER_CONTEXT
 }
 
 function list_resources() {
@@ -106,6 +114,7 @@ function main() {
   init
   configure
   up
+  check_spire
   list_resources
   show_config
   show_status
