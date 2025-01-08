@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
 	"os/exec"
@@ -38,6 +39,7 @@ type PluginManager struct {
 	source           datasource.DataSource
 	provision        provision.Provision
 	clients          map[string]*go_plugin.Client
+	logLevel         hclog.Level
 }
 
 // grpcPluginLoader is a function that loads a gRPC plugin. The function should load a single
@@ -196,7 +198,7 @@ func (pm *PluginManager) loadGRPCPlugin(ctx context.Context, pluginName string, 
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
-		Level:  hclog.Error,
+		Level:  pm.logLevel,
 	})
 
 	grpcPlugin, err := pm.grpcPluginLoader(ctx, logger, pluginName, pluginCfg)
@@ -236,6 +238,7 @@ func loadGRPCPlugin(ctx context.Context, logger hclog.Logger, pluginName string,
 		Plugins:          pluginSet,
 		AllowedProtocols: []go_plugin.Protocol{go_plugin.ProtocolGRPC},
 		Logger:           logger,
+		AutoMTLS:         true,
 	})
 
 	grpcPlugin, err := startGRPCPlugin(ctx, client, pluginName, plugins)
@@ -347,6 +350,11 @@ func (pm *PluginManager) SetPluginConfig(pluginName string, pluginConfig *struct
 	}
 	cfg.PluginConfig[pluginName] = pluginConfig
 	return pm.configLoader.Write(cfg)
+}
+
+// SetLogLevel sets the log level for gRPC plugins.
+func (pm *PluginManager) SetLogLevel(level slog.Level) {
+	pm.logLevel = hclog.LevelFromString(level.String())
 }
 
 // GetDefaultPlugins returns a `Plugins` message containing the default plugins.
