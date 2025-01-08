@@ -98,7 +98,7 @@ jobs:
       - name: Build and install test plugin
         run: just install-test-plugin
         if: ${{ matrix.plugin == 'cofidectl-test-plugin' }}
-      
+
       - name: Install kind
         run: just install-kind
 
