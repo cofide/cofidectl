@@ -42,9 +42,7 @@ jobs:
 
       - name: Load cached image
         if: steps.cloud-provider-kind-cache.outputs.cache-hit == 'true'
-        run: |
-          docker load < /tmp/cloud-provider-kind-image
-          docker image ls
+        run: docker load < /tmp/cloud-provider-kind-image
 
       - name: Set up Docker Buildx
         if: steps.cloud-provider-kind-cache.outputs.cache-hit != 'true'
