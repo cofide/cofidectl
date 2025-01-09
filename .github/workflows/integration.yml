@@ -26,11 +26,28 @@ jobs:
       - name: Get cloud-provider-kind repo
         run: |
           git clone https://github.com/kubernetes-sigs/cloud-provider-kind
-      
+
+      - name: Generate cloud-provider-kind cache key
+        id: cloud-provider-cache
+        run: |
+          echo "hash=$(cd cloud-provider-kind && find . -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Cache cloud-provider-kind image
+        uses: actions/cache@v3
+        with:
+          path: /tmp/cloud-provider-kind-image
+          key: cloud-provider-kind-${{ steps.cloud-provider-cache.outputs.hash }}
+
+      - name: Load cached image
+        if: steps.cloud-provider-cache.outputs.cache-hit == 'true'
+        run: docker load < /tmp/cloud-provider-kind-image
+
       - name: Set up Docker Buildx
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build cloud-provider-kind image
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./cloud-provider-kind
@@ -39,6 +56,7 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/cloud-provider-kind-image
 
       - name: Install kind
         run: just install-kind
@@ -82,10 +100,27 @@ jobs:
         run: |
           git clone https://github.com/kubernetes-sigs/cloud-provider-kind
 
+      - name: Generate cloud-provider-kind cache key
+        id: cloud-provider-cache
+        run: |
+          echo "hash=$(cd cloud-provider-kind && find . -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Cache cloud-provider-kind image
+        uses: actions/cache@v3
+        with:
+          path: /tmp/cloud-provider-kind-image
+          key: cloud-provider-kind-${{ steps.cloud-provider-cache.outputs.hash }}
+
+      - name: Load cached image
+        if: steps.cloud-provider-cache.outputs.cache-hit == 'true'
+        run: docker load < /tmp/cloud-provider-kind-image
+
       - name: Set up Docker Buildx
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build cloud-provider-kind image
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./cloud-provider-kind
@@ -94,6 +129,7 @@ jobs:
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/cloud-provider-kind-image
       
       - name: Build and install test plugin
         run: just install-test-plugin
