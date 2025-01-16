@@ -7,7 +7,7 @@ toolchain go1.23.4
 require (
 	buf.build/go/protoyaml v0.3.1
 	cuelang.org/go v0.10.1
-	github.com/cofide/cofide-api-sdk v0.5.0
+	github.com/cofide/cofide-api-sdk v0.5.1
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.6.0
@@ -17,7 +17,7 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.4.0
 	github.com/spiffe/spire-api-sdk v1.11.1
 	github.com/stretchr/testify v1.10.0
-	google.golang.org/grpc v1.69.2
+	google.golang.org/grpc v1.69.4
 	google.golang.org/protobuf v1.36.2
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.4
