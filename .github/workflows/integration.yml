@@ -24,11 +24,15 @@ jobs:
       - name: Build and run tests
         run: just build
 
-      - name: Get cloud-provider-kind repo and generate cache key
+      - name: Checkout cloud-provider-kind repo
+        uses: actions/checkout@v4
+        with:
+          repository: kubernetes-sigs/cloud-provider-kind
+          path: cloud-provider-kind
+
+      - name: Generate cloud-provider-kind image cache key
         id: cloud-provider-kind-cache-key
-        run: |
-          git clone https://github.com/kubernetes-sigs/cloud-provider-kind
-          echo "hash=$(cd cloud-provider-kind && git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        run: echo "hash=$(cd cloud-provider-kind && git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Cache cloud-provider-kind image
         id: cloud-provider-kind-cache
@@ -95,11 +99,15 @@ jobs:
       - name: Build and run tests
         run: just build
 
-      - name: Get cloud-provider-kind repo and generate cache key
+      - name: Checkout cloud-provider-kind repo
+        uses: actions/checkout@v4
+        with:
+          repository: kubernetes-sigs/cloud-provider-kind
+          path: cloud-provider-kind
+
+      - name: Generate cloud-provider-kind image cache key
         id: cloud-provider-kind-cache-key
-        run: |
-          git clone https://github.com/kubernetes-sigs/cloud-provider-kind
-          echo "hash=$(cd cloud-provider-kind && git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        run: echo "hash=$(cd cloud-provider-kind && git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Cache cloud-provider-kind image
         id: cloud-provider-kind-cache
