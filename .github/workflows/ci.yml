@@ -37,5 +37,5 @@ jobs:
       - name: Install dependencies
         run: |
           go mod download
-      - name: Build and run tests
-        run: just test
+      - name: Build and run tests with race detector enabled
+        run: just test-race
