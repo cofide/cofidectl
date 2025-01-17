@@ -1,5 +1,6 @@
 trust_zones:
-    - trust_domain: td1
+    - name: tz1
+      trust_domain: td1
       bundle_endpoint_url: 127.0.0.1
       bundle: ""
       federations:
@@ -10,6 +11,13 @@ trust_zones:
       - name: local1
         trust_zone: tz1
         kubernetes_context: kind-local1
+        trust_provider:
+          name: ""
+          kind: kubernetes
+        profile: kubernetes
+      - name: local2
+        trust_zone: tz1
+        kubernetes_context: kind-local2
         trust_provider:
           name: ""
           kind: kubernetes

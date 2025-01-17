@@ -8,20 +8,21 @@ import (
 	"os"
 	"testing"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHelmSPIREProvider(t *testing.T) {
-	trustZoneProto := &trust_zone_proto.TrustZone{TrustDomain: "foo.bar"}
+	cluster := &clusterpb.Cluster{Name: fixtures.StringPtr("fake-cluster")}
 	spireValues := map[string]any{}
 	spireCRDsValues := map[string]any{}
 
-	p, err := NewHelmSPIREProvider(context.Background(), trustZoneProto, spireValues, spireCRDsValues)
+	p, err := NewHelmSPIREProvider(context.Background(), cluster, spireValues, spireCRDsValues)
 	assert.Nil(t, err)
 	assert.Equal(t, p.SPIREVersion, "0.21.0")
 	assert.Equal(t, p.SPIRECRDsVersion, "0.4.0")
-	assert.Equal(t, trustZoneProto.TrustDomain, p.trustZone.TrustDomain)
+	assert.Equal(t, cluster.GetName(), p.cluster.GetName())
 }
 
 func TestGetChartRef(t *testing.T) {

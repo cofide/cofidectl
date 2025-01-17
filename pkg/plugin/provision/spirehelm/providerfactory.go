@@ -6,6 +6,7 @@ package spirehelm
 import (
 	"context"
 
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
@@ -18,23 +19,35 @@ var _ ProviderFactory = &HelmSPIREProviderFactory{}
 // ProviderFactory is an interface that abstracts the construction of helm.Provider objects.
 type ProviderFactory interface {
 	// Build returns a helm.Provider configured with values for an install/upgrade.
-	Build(ctx context.Context, ds datasource.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error)
+	Build(
+		ctx context.Context,
+		ds datasource.DataSource,
+		trustZone *trust_zone_proto.TrustZone,
+		cluster *clusterpb.Cluster,
+		genValues bool,
+	) (helm.Provider, error)
 }
 
 // HelmSPIREProviderFactory implements the ProviderFactory interface, building a HelmSPIREProvider
 // using the default values generator.
 type HelmSPIREProviderFactory struct{}
 
-func (f *HelmSPIREProviderFactory) Build(ctx context.Context, ds datasource.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error) {
+func (f *HelmSPIREProviderFactory) Build(
+	ctx context.Context,
+	ds datasource.DataSource,
+	trustZone *trust_zone_proto.TrustZone,
+	cluster *clusterpb.Cluster,
+	genValues bool,
+) (helm.Provider, error) {
 	spireValues := map[string]any{}
 	var err error
 	if genValues {
-		generator := helm.NewHelmValuesGenerator(trustZone, ds, nil)
+		generator := helm.NewHelmValuesGenerator(trustZone, cluster, ds, nil)
 		spireValues, err = generator.GenerateValues()
 		if err != nil {
 			return nil, err
 		}
 	}
 	spireCRDsValues := map[string]any{}
-	return helm.NewHelmSPIREProvider(ctx, trustZone, spireValues, spireCRDsValues)
+	return helm.NewHelmSPIREProvider(ctx, cluster, spireValues, spireCRDsValues)
 }

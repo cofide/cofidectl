@@ -1,0 +1,10 @@
+trust_zones:
+    - name: tz1
+      trust_domain: td1
+      bundle_endpoint_url: 127.0.0.1
+      bundle: ""
+      federations:
+        - from: tz1
+          to: tz2
+      attestation_policies: []
+      clusters: []

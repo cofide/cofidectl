@@ -6,6 +6,7 @@ package helm
 import (
 	"fmt"
 
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
@@ -17,6 +18,7 @@ import (
 type HelmValuesGenerator struct {
 	source    datasource.DataSource
 	trustZone *trust_zone_proto.TrustZone
+	cluster   *clusterpb.Cluster
 	values    map[string]any
 }
 
@@ -63,9 +65,10 @@ type spiffeCSIDriverValues struct {
 	fullnameOverride string
 }
 
-func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, source datasource.DataSource, values map[string]any) *HelmValuesGenerator {
+func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, cluster *clusterpb.Cluster, source datasource.DataSource, values map[string]any) *HelmValuesGenerator {
 	return &HelmValuesGenerator{
 		trustZone: trustZone,
+		cluster:   cluster,
 		source:    source,
 		values:    values,
 	}
@@ -84,7 +87,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 			country:      "UK",
 			organization: "Cofide",
 		},
-		spireClusterName:              g.trustZone.GetKubernetesCluster(),
+		spireClusterName:              g.cluster.GetName(),
 		spireJwtIssuer:                g.trustZone.GetJwtIssuer(),
 		spireNamespacesCreate:         true,
 		spireRecommendationsEnabled:   true,
@@ -98,7 +101,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, err
 	}
 
-	sdsConfig, err := getSDSConfig(g.trustZone.GetProfile())
+	sdsConfig, err := getSDSConfig(g.cluster.GetProfile())
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +117,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, err
 	}
 
-	spireServerEnabled := !g.trustZone.GetExternalServer()
+	spireServerEnabled := !g.cluster.GetExternalServer()
 
 	ssv := spireServerValues{
 		caKeyType:                "rsa-2048",
@@ -229,9 +232,9 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		}
 	}
 
-	if g.trustZone.ExtraHelmValues != nil {
+	if g.cluster.ExtraHelmValues != nil {
 		// TODO: Potentially retrieve Helm values as map[string]any directly.
-		extraHelmValues := g.trustZone.ExtraHelmValues.AsMap()
+		extraHelmValues := g.cluster.ExtraHelmValues.AsMap()
 		combinedValues, err = MergeMaps(combinedValues, extraHelmValues)
 		if err != nil {
 			return nil, err

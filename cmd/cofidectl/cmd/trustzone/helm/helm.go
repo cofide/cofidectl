@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
 
+	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
@@ -101,13 +102,18 @@ func (c *HelmCommand) overrideValues(ds datasource.DataSource, tzName string, va
 		return err
 	}
 
-	trustZone.ExtraHelmValues, err = structpb.NewStruct(values)
+	cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+	if err != nil {
+		return err
+	}
+
+	cluster.ExtraHelmValues, err = structpb.NewStruct(values)
 	if err != nil {
 		return err
 	}
 
 	// Check that the values are acceptable.
-	generator := helm.NewHelmValuesGenerator(trustZone, ds, nil)
+	generator := helm.NewHelmValuesGenerator(trustZone, cluster, ds, nil)
 	if _, err = generator.GenerateValues(); err != nil {
 		return err
 	}
@@ -183,7 +189,12 @@ func (c *HelmCommand) getValues(ds datasource.DataSource, tzName string) (map[st
 		return nil, err
 	}
 
-	generator := helm.NewHelmValuesGenerator(trustZone, ds, nil)
+	cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+	if err != nil {
+		return nil, err
+	}
+
+	generator := helm.NewHelmValuesGenerator(trustZone, cluster, ds, nil)
 	values, err := generator.GenerateValues()
 	if err != nil {
 		return nil, err

@@ -11,8 +11,10 @@ import (
 	"slices"
 	"strconv"
 
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
 	trustprovider "github.com/cofide/cofidectl/internal/pkg/trustprovider"
+	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/manifoldco/promptui"
 
@@ -84,10 +86,15 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 
 			data := make([][]string, len(trustZones))
 			for i, trustZone := range trustZones {
+				cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+				if err != nil {
+					return err
+				}
+
 				data[i] = []string{
 					trustZone.Name,
 					trustZone.TrustDomain,
-					trustZone.GetKubernetesCluster(),
+					cluster.GetName(),
 				}
 			}
 
@@ -148,16 +155,21 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			}
 
 			bundleEndpointProfile := trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
+
+			newCluster := &clusterpb.Cluster{
+				Name:              &opts.kubernetesCluster,
+				TrustZone:         &opts.name,
+				KubernetesContext: &opts.context,
+				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
+				Profile:           &opts.profile,
+				ExternalServer:    &opts.externalServer,
+			}
 			newTrustZone := &trust_zone_proto.TrustZone{
 				Name:                  opts.name,
 				TrustDomain:           opts.trustDomain,
-				KubernetesCluster:     &opts.kubernetesCluster,
-				KubernetesContext:     &opts.context,
-				TrustProvider:         &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
-				Profile:               &opts.profile,
 				JwtIssuer:             &opts.jwtIssuer,
 				BundleEndpointProfile: &bundleEndpointProfile,
-				ExternalServer:        &opts.externalServer,
+				Clusters:              []*clusterpb.Cluster{newCluster},
 			}
 
 			_, err = ds.AddTrustZone(newTrustZone)
@@ -218,15 +230,21 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 		return err
 	}
 
-	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, trustZone.GetKubernetesContext())
+	cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
 	if err != nil {
 		return err
 	}
 
-	prov, err := helmprovider.NewHelmSPIREProvider(ctx, trustZone, nil, nil)
+	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, cluster.GetKubernetesContext())
 	if err != nil {
 		return err
 	}
+
+	prov, err := helmprovider.NewHelmSPIREProvider(ctx, cluster, nil, nil)
+	if err != nil {
+		return err
+	}
+
 	if installed, err := prov.CheckIfAlreadyInstalled(); err != nil {
 		return err
 	} else if !installed {

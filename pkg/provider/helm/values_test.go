@@ -34,7 +34,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				tz.BundleEndpointUrl = nil
 				tz.Federations = nil
 				tz.JwtIssuer = nil
-				tz.ExtraHelmValues = nil
+				tz.Clusters[0].ExtraHelmValues = nil
 				return tz
 			}(),
 			want: Values{
@@ -310,11 +310,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
 			source := newFakeDataSource(t, cfg)
-			g := &HelmValuesGenerator{
-				source:    source,
-				trustZone: tt.trustZone,
-				values:    nil,
-			}
+			g := NewHelmValuesGenerator(tt.trustZone, tt.trustZone.Clusters[0], source, nil)
 
 			got, err := g.GenerateValues()
 			require.Nil(t, err, err)
@@ -339,7 +335,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				tz.BundleEndpointUrl = nil
 				tz.Federations = nil
 				tz.JwtIssuer = nil
-				tz.ExtraHelmValues = nil
+				tz.Clusters[0].ExtraHelmValues = nil
 				return tz
 			}(),
 			values: Values{
@@ -452,11 +448,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
 			source := newFakeDataSource(t, cfg)
-			g := &HelmValuesGenerator{
-				source:    source,
-				trustZone: tt.trustZone,
-				values:    tt.values,
-			}
+			g := NewHelmValuesGenerator(tt.trustZone, tt.trustZone.Clusters[0], source, tt.values)
 
 			got, err := g.GenerateValues()
 			require.Nil(t, err, err)
@@ -475,7 +467,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			name: "no trust provider",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.TrustProvider = nil
+				tz.Clusters[0].TrustProvider = nil
 				return tz
 			}(),
 			wantErrString: "no trust provider for trust zone tz1",
@@ -484,7 +476,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			name: "invalid trust provider kind",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.TrustProvider.Kind = fixtures.StringPtr("invalid-tp")
+				tz.Clusters[0].TrustProvider.Kind = fixtures.StringPtr("invalid-tp")
 				return tz
 			}(),
 			wantErrString: "an unknown trust provider kind was specified: invalid-tp",
@@ -512,11 +504,8 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
 			source := newFakeDataSource(t, cfg)
-			g := &HelmValuesGenerator{
-				source:    source,
-				trustZone: tt.trustZone,
-				values:    nil,
-			}
+			g := NewHelmValuesGenerator(tt.trustZone, tt.trustZone.Clusters[0], source, nil)
+
 			_, err := g.GenerateValues()
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.wantErrString)
@@ -554,11 +543,8 @@ func TestHelmValuesGenerator_GenerateValues_federationFailure(t *testing.T) {
 			cfg := defaultConfig()
 			cfg.TrustZones[1] = tt.destTrustZone
 			source := newFakeDataSource(t, cfg)
-			g := &HelmValuesGenerator{
-				source:    source,
-				trustZone: cfg.TrustZones[0],
-				values:    nil,
-			}
+			g := NewHelmValuesGenerator(cfg.TrustZones[0], cfg.TrustZones[0].Clusters[0], source, nil)
+
 			_, err := g.GenerateValues()
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.wantErrString)

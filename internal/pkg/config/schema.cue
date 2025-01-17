@@ -3,17 +3,22 @@
 #TrustZone: {
 	name!: string
 	trust_domain!: string
-	kubernetes_cluster!: string
-	kubernetes_context!: string
-	trust_provider!: #TrustProvider
-	profile!: string
 	bundle_endpoint_url?: string
 	bundle?: string
 	federations: [...#Federation]
 	attestation_policies: [...#APBinding]
 	jwt_issuer?: string
-	extra_helm_values?: #HelmValues
 	bundle_endpoint_profile?: #BundleEndpointProfile
+	clusters: [#Cluster]
+}
+
+#Cluster: {
+	name!: string
+	trust_zone!: string
+	kubernetes_context!: string
+	trust_provider!: #TrustProvider
+	profile!: string
+	extra_helm_values?: #HelmValues
 	external_server?: bool
 }
 
