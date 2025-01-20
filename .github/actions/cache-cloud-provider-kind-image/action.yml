@@ -42,3 +42,5 @@ runs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         outputs: type=docker,dest=/tmp/cloud-provider-kind-image
+      env:
+        DOCKER_BUILD_RECORD_UPLOAD: "false"
