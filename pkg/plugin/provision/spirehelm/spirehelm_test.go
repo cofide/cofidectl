@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
@@ -112,17 +113,24 @@ func newFakeHelmSPIREProviderFactory() *fakeHelmSPIREProviderFactory {
 	return &fakeHelmSPIREProviderFactory{}
 }
 
-func (f *fakeHelmSPIREProviderFactory) Build(ctx context.Context, ds datasource.DataSource, trustZone *trust_zone_proto.TrustZone, genValues bool) (helm.Provider, error) {
-	return newFakeHelmSPIREProvider(trustZone), nil
+func (f *fakeHelmSPIREProviderFactory) Build(
+	ctx context.Context,
+	ds datasource.DataSource,
+	trustZone *trust_zone_proto.TrustZone,
+	cluster *clusterpb.Cluster,
+	genValues bool,
+) (helm.Provider, error) {
+	return newFakeHelmSPIREProvider(trustZone, cluster), nil
 }
 
 // fakeHelmSPIREProvider implements a fake helm.Provider that can be used in testing.
 type fakeHelmSPIREProvider struct {
 	trustZone *trust_zone_proto.TrustZone
+	cluster   *clusterpb.Cluster
 }
 
-func newFakeHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone) helm.Provider {
-	return &fakeHelmSPIREProvider{trustZone: trustZone}
+func newFakeHelmSPIREProvider(trustZone *trust_zone_proto.TrustZone, cluster *clusterpb.Cluster) helm.Provider {
+	return &fakeHelmSPIREProvider{trustZone: trustZone, cluster: cluster}
 }
 
 func (p *fakeHelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Status) error {
@@ -132,7 +140,7 @@ func (p *fakeHelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Statu
 }
 
 func (p *fakeHelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(p.trustZone.Name, p.trustZone.GetKubernetesCluster())
+	sb := provision.NewStatusBuilder(p.trustZone.Name, p.cluster.GetName())
 	statusCh <- sb.Ok("Installing", "Installing SPIRE CRDs")
 	statusCh <- sb.Ok("Installing", "Installing SPIRE chart")
 	statusCh <- sb.Done("Installed", "Installation completed")
@@ -148,7 +156,7 @@ func (p *fakeHelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Stat
 }
 
 func (p *fakeHelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(p.trustZone.Name, p.trustZone.GetKubernetesCluster())
+	sb := provision.NewStatusBuilder(p.trustZone.Name, p.cluster.GetName())
 	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE chart")
 	statusCh <- sb.Done("Uninstalled", "Uninstallation completed")
 	return nil

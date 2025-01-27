@@ -8,6 +8,7 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
@@ -21,12 +22,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 	"tz1": {
 		Name:              "tz1",
 		TrustDomain:       "td1",
-		KubernetesCluster: StringPtr("local1"),
-		KubernetesContext: StringPtr("kind-local1"),
-		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: StringPtr("kubernetes"),
-		},
-		Profile:           StringPtr("kubernetes"),
 		BundleEndpointUrl: StringPtr("127.0.0.1"),
 		Federations: []*federation_proto.Federation{
 			{
@@ -41,43 +36,48 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				FederatesWith: []string{"tz2"},
 			},
 		},
-		JwtIssuer: StringPtr("https://tz1.example.com"),
-		ExtraHelmValues: func() *structpb.Struct {
-			ev := map[string]any{
-				"global": map[string]any{
-					"spire": map[string]any{
-						// Modify multiple values in the same map.
-						"caSubject": map[string]any{
-							"organization": "acme-org",
-							"commonName":   "cn.example.com",
-						},
-					},
-				},
-				"spire-server": map[string]any{
-					// Modify an existing value.
-					"logLevel": "INFO",
-					// Customise a new value.
-					"nameOverride": "custom-server-name",
-				},
-			}
-			value, err := structpb.NewStruct(ev)
-			if err != nil {
-				panic(err)
-			}
-			return value
-		}(),
+		JwtIssuer:             StringPtr("https://tz1.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
-		ExternalServer:        BoolPtr(false),
+		Clusters: []*clusterpb.Cluster{
+			{
+				Name:              StringPtr("local1"),
+				TrustZone:         StringPtr("tz1"),
+				KubernetesContext: StringPtr("kind-local1"),
+				TrustProvider: &trust_provider_proto.TrustProvider{
+					Kind: StringPtr("kubernetes"),
+				},
+				Profile: StringPtr("kubernetes"),
+				ExtraHelmValues: func() *structpb.Struct {
+					ev := map[string]any{
+						"global": map[string]any{
+							"spire": map[string]any{
+								// Modify multiple values in the same map.
+								"caSubject": map[string]any{
+									"organization": "acme-org",
+									"commonName":   "cn.example.com",
+								},
+							},
+						},
+						"spire-server": map[string]any{
+							// Modify an existing value.
+							"logLevel": "INFO",
+							// Customise a new value.
+							"nameOverride": "custom-server-name",
+						},
+					}
+					value, err := structpb.NewStruct(ev)
+					if err != nil {
+						panic(err)
+					}
+					return value
+				}(),
+				ExternalServer: BoolPtr(false),
+			},
+		},
 	},
 	"tz2": {
 		Name:              "tz2",
 		TrustDomain:       "td2",
-		KubernetesCluster: StringPtr("local2"),
-		KubernetesContext: StringPtr("kind-local2"),
-		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: StringPtr("kubernetes"),
-		},
-		Profile:           StringPtr("kubernetes"),
 		BundleEndpointUrl: StringPtr("127.0.0.2"),
 		Federations: []*federation_proto.Federation{
 			{
@@ -94,51 +94,77 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
-		ExternalServer:        BoolPtr(false),
+		Clusters: []*clusterpb.Cluster{
+			{
+				Name:              StringPtr("local2"),
+				TrustZone:         StringPtr("tz2"),
+				KubernetesContext: StringPtr("kind-local2"),
+				TrustProvider: &trust_provider_proto.TrustProvider{
+					Kind: StringPtr("kubernetes"),
+				},
+				Profile:        StringPtr("kubernetes"),
+				ExternalServer: BoolPtr(false),
+			},
+		},
 	},
 	// tz3 has no federations or bound attestation policies.
 	"tz3": {
-		Name:              "tz3",
-		TrustDomain:       "td3",
-		KubernetesCluster: StringPtr("local3"),
-		KubernetesContext: StringPtr("kind-local3"),
-		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: StringPtr("kubernetes"),
-		},
-		Profile:               StringPtr("kubernetes"),
+		Name:                  "tz3",
+		TrustDomain:           "td3",
 		BundleEndpointUrl:     StringPtr("127.0.0.3"),
 		Federations:           []*federation_proto.Federation{},
 		AttestationPolicies:   []*ap_binding_proto.APBinding{},
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
+		Clusters: []*clusterpb.Cluster{
+			{
+				Name:              StringPtr("local3"),
+				TrustZone:         StringPtr("tz3"),
+				KubernetesContext: StringPtr("kind-local3"),
+				TrustProvider: &trust_provider_proto.TrustProvider{
+					Kind: StringPtr("kubernetes"),
+				},
+				Profile: StringPtr("kubernetes"),
+			},
+		},
 	},
 	// tz4 has no federations or bound attestation policies and uses the istio profile.
 	"tz4": {
-		Name:              "tz4",
-		TrustDomain:       "td4",
-		KubernetesCluster: StringPtr("local4"),
-		KubernetesContext: StringPtr("kind-local4"),
-		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: StringPtr("kubernetes"),
-		},
-		Profile:             StringPtr("istio"),
+		Name:                "tz4",
+		TrustDomain:         "td4",
 		BundleEndpointUrl:   StringPtr("127.0.0.4"),
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
+		Clusters: []*clusterpb.Cluster{
+			{
+				Name:              StringPtr("local4"),
+				TrustZone:         StringPtr("tz4"),
+				KubernetesContext: StringPtr("kind-local4"),
+				TrustProvider: &trust_provider_proto.TrustProvider{
+					Kind: StringPtr("kubernetes"),
+				},
+				Profile: StringPtr("istio"),
+			},
+		},
 	},
 	// tz5 has no federations or bound attestation policies and has an external SPIRE server.
 	"tz5": {
-		Name:              "tz5",
-		TrustDomain:       "td5",
-		KubernetesCluster: StringPtr("local5"),
-		KubernetesContext: StringPtr("kind-local5"),
-		TrustProvider: &trust_provider_proto.TrustProvider{
-			Kind: StringPtr("kubernetes"),
-		},
-		Profile:             StringPtr("kubernetes"),
+		Name:                "tz5",
+		TrustDomain:         "td5",
 		BundleEndpointUrl:   StringPtr("127.0.0.5"),
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
-		ExternalServer:      BoolPtr(true),
+		Clusters: []*clusterpb.Cluster{
+			{
+				Name:              StringPtr("local5"),
+				TrustZone:         StringPtr("tz5"),
+				KubernetesContext: StringPtr("kind-local5"),
+				TrustProvider: &trust_provider_proto.TrustProvider{
+					Kind: StringPtr("kubernetes"),
+				},
+				Profile:        StringPtr("kubernetes"),
+				ExternalServer: BoolPtr(true),
+			},
+		},
 	},
 }
 

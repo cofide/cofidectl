@@ -15,6 +15,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
+	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 )
 
 type LocalDataSource struct {
@@ -121,7 +122,15 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 	if new.TrustDomain != current.TrustDomain {
 		return fmt.Errorf("cannot update trust domain for existing trust zone %s", current.Name)
 	}
-	if err := validateTrustProviderUpdate(current.Name, current.TrustProvider, new.TrustProvider); err != nil {
+	currentCluster, err := trustzone.GetClusterFromTrustZone(current)
+	if err != nil {
+		return err
+	}
+	newCluster, err := trustzone.GetClusterFromTrustZone(new)
+	if err != nil {
+		return err
+	}
+	if err := validateTrustProviderUpdate(current.Name, currentCluster.TrustProvider, newCluster.TrustProvider); err != nil {
 		return err
 	}
 	// The following should be updated though other means.

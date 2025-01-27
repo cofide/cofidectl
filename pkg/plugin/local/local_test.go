@@ -17,6 +17,7 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
@@ -195,8 +196,8 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				tz := fixtures.TrustZone("tz1")
 				tz.Bundle = fixtures.StringPtr("new bundle")
 				tz.BundleEndpointUrl = fixtures.StringPtr("http://new.bundle")
-				tz.KubernetesCluster = fixtures.StringPtr("new-cluster")
-				tz.KubernetesContext = fixtures.StringPtr("new-context")
+				tz.Clusters[0].Name = fixtures.StringPtr("new-cluster")
+				tz.Clusters[0].KubernetesContext = fixtures.StringPtr("new-context")
 				return tz
 			}(),
 			wantErr: false,
@@ -221,7 +222,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 			name: "disallowed nil trust provider",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.TrustProvider = nil
+				tz.Clusters[0].TrustProvider = nil
 				return tz
 			}(),
 			wantErr:       true,
@@ -231,7 +232,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 			name: "disallowed trust provider kind",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.TrustProvider.Kind = fixtures.StringPtr("invalid")
+				tz.Clusters[0].TrustProvider.Kind = fixtures.StringPtr("invalid")
 				return tz
 			}(),
 			wantErr:       true,
@@ -260,6 +261,39 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 			}(),
 			wantErr:       true,
 			wantErrString: "cannot update federations for existing trust zone tz1",
+		},
+		{
+			name: "empty clusters list",
+			trustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz1")
+				tz.Clusters = []*clusterpb.Cluster{}
+				return tz
+			}(),
+			wantErr:       true,
+			wantErrString: "expected exactly one cluster per trust zone",
+		},
+		{
+			name: "nil clusters list",
+			trustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz1")
+				tz.Clusters = nil
+				return tz
+			}(),
+			wantErr:       true,
+			wantErrString: "expected exactly one cluster per trust zone",
+		},
+		{
+			name: "multiple clusters list",
+			trustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz1")
+				tz.Clusters = []*clusterpb.Cluster{
+					tz.Clusters[0],
+					tz.Clusters[0],
+				}
+				return tz
+			}(),
+			wantErr:       true,
+			wantErrString: "expected exactly one cluster per trust zone",
 		},
 	}
 	for _, tt := range tests {

@@ -82,6 +82,16 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			wantErr: "attestation_policies.0.kubernetes: field is required but not present",
 		},
 		{
+			name:    "empty trust zone clusters list",
+			data:    string(readTestConfig(t, "empty_trust_zone_clusters.yaml")),
+			wantErr: "trust_zones.0.clusters: incompatible list lengths (0 and 1)",
+		},
+		{
+			name:    "multiple trust zone clusters list",
+			data:    string(readTestConfig(t, "multiple_trust_zone_clusters.yaml")),
+			wantErr: "trust_zones.0.clusters: incompatible list lengths (1 and 2)",
+		},
+		{
 			name:    "plugins not a map",
 			data:    "plugins: 123",
 			wantErr: "plugins: conflicting values 123 and ",

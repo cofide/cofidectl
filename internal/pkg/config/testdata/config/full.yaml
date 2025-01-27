@@ -1,10 +1,6 @@
 trust_zones:
     - name: tz1
       trust_domain: td1
-      kubernetes_cluster: local1
-      kubernetes_context: kind-local1
-      trust_provider:
-        kind: kubernetes
       bundle_endpoint_url: 127.0.0.1
       federations:
         - from: tz1
@@ -15,24 +11,26 @@ trust_zones:
           federates_with:
             - tz2
       jwt_issuer: https://tz1.example.com
-      extra_helm_values:
-        global:
-            spire:
-                caSubject:
-                    commonName: cn.example.com
-                    organization: acme-org
-        spire-server:
-            logLevel: INFO
-            nameOverride: custom-server-name
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
-      profile: kubernetes
-      external_server: false
+      clusters:
+        - name: local1
+          trust_zone: tz1
+          kubernetes_context: kind-local1
+          trust_provider:
+            kind: kubernetes
+          extra_helm_values:
+            global:
+                spire:
+                    caSubject:
+                        commonName: cn.example.com
+                        organization: acme-org
+            spire-server:
+                logLevel: INFO
+                nameOverride: custom-server-name
+          profile: kubernetes
+          external_server: false
     - name: tz2
       trust_domain: td2
-      kubernetes_cluster: local2
-      kubernetes_context: kind-local2
-      trust_provider:
-        kind: kubernetes
       bundle_endpoint_url: 127.0.0.2
       federations:
         - from: tz2
@@ -44,8 +42,14 @@ trust_zones:
             - tz1
       jwt_issuer: https://tz2.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
-      profile: kubernetes
-      external_server: false
+      clusters:
+        - name: local2
+          trust_zone: tz2
+          kubernetes_context: kind-local2
+          trust_provider:
+            kind: kubernetes
+          profile: kubernetes
+          external_server: false
 attestation_policies:
     - name: ap1
       kubernetes:
