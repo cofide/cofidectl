@@ -273,6 +273,16 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 			wantErrString: "expected exactly one cluster per trust zone",
 		},
 		{
+			name: "nil clusters list",
+			trustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz1")
+				tz.Clusters = nil
+				return tz
+			}(),
+			wantErr:       true,
+			wantErrString: "expected exactly one cluster per trust zone",
+		},
+		{
 			name: "multiple clusters list",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
