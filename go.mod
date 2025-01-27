@@ -6,7 +6,7 @@ toolchain go1.23.4
 
 require (
 	buf.build/go/protoyaml v0.3.1
-	cuelang.org/go v0.10.1
+	cuelang.org/go v0.11.2
 	github.com/cofide/cofide-api-sdk v0.5.1
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
@@ -22,6 +22,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.0
 )
+
+require github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.0-20241127180247-a33202765966.1 // indirect
