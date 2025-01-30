@@ -16,6 +16,7 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/workload"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -99,7 +100,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderRegisteredWorkloads(cmd.Context(), kubeConfig, trustZones)
+			err = renderRegisteredWorkloads(cmd.Context(), ds, kubeConfig, trustZones)
 			if err != nil {
 				return err
 			}
@@ -132,12 +133,17 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 		Long:  workloadStatusCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ds, err := w.cmdCtx.PluginManager.GetDataSource(cmd.Context())
+			if err != nil {
+				return err
+			}
+
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			return w.status(cmd.Context(), kubeConfig, opts)
+			return w.status(cmd.Context(), ds, kubeConfig, opts)
 		},
 	}
 
@@ -153,18 +159,13 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 	return cmd
 }
 
-func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts StatusOpts) error {
-	ds, err := w.cmdCtx.PluginManager.GetDataSource(ctx)
-	if err != nil {
-		return err
-	}
-
+func (w *WorkloadCommand) status(ctx context.Context, ds datasource.DataSource, kubeConfig string, opts StatusOpts) error {
 	trustZone, err := ds.GetTrustZone(opts.trustZone)
 	if err != nil {
 		return err
 	}
 
-	cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+	cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 	if err != nil {
 		return err
 	}
@@ -190,11 +191,11 @@ func (w *WorkloadCommand) status(ctx context.Context, kubeConfig string, opts St
 	return nil
 }
 
-func renderRegisteredWorkloads(ctx context.Context, kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
+func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 		if err != nil {
 			return err
 		}
@@ -292,7 +293,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderUnregisteredWorkloads(cmd.Context(), kubeConfig, trustZones, opts.includeSecrets)
+			err = renderUnregisteredWorkloads(cmd.Context(), ds, kubeConfig, trustZones, opts.includeSecrets)
 			if err != nil {
 				return err
 			}
@@ -308,11 +309,11 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 	return cmd
 }
 
-func renderUnregisteredWorkloads(ctx context.Context, kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
+func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 		if err != nil {
 			return err
 		}

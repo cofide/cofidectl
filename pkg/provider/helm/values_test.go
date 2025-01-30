@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
@@ -23,6 +24,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 	tests := []struct {
 		name      string
 		trustZone *trust_zone_proto.TrustZone
+		cluster   *clusterpb.Cluster
 		want      Values
 	}{
 		{
@@ -34,8 +36,12 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				tz.BundleEndpointUrl = nil
 				tz.Federations = nil
 				tz.JwtIssuer = nil
-				tz.Clusters[0].ExtraHelmValues = nil
 				return tz
+			}(),
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.ExtraHelmValues = nil
+				return cluster
 			}(),
 			want: Values{
 				"global": Values{
@@ -119,6 +125,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 		{
 			name:      "tz1",
 			trustZone: fixtures.TrustZone("tz1"),
+			cluster:   fixtures.Cluster("local1"),
 			want: Values{
 				"global": Values{
 					"deleteHooks": Values{
@@ -226,6 +233,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 		{
 			name:      "tz4 using the istio profile",
 			trustZone: fixtures.TrustZone("tz4"),
+			cluster:   fixtures.Cluster("local4"),
 			want: Values{
 				"global": Values{
 					"deleteHooks": Values{
@@ -310,7 +318,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
 			source := newFakeDataSource(t, cfg)
-			g := NewHelmValuesGenerator(tt.trustZone, tt.trustZone.Clusters[0], source, nil)
+			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, nil)
 
 			got, err := g.GenerateValues()
 			require.Nil(t, err, err)
@@ -323,6 +331,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 	tests := []struct {
 		name      string
 		trustZone *trust_zone_proto.TrustZone
+		cluster   *clusterpb.Cluster
 		values    Values
 		want      Values
 	}{
@@ -335,8 +344,12 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				tz.BundleEndpointUrl = nil
 				tz.Federations = nil
 				tz.JwtIssuer = nil
-				tz.Clusters[0].ExtraHelmValues = nil
 				return tz
+			}(),
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.ExtraHelmValues = nil
+				return cluster
 			}(),
 			values: Values{
 				"spire-server": Values{
@@ -448,7 +461,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
 			source := newFakeDataSource(t, cfg)
-			g := NewHelmValuesGenerator(tt.trustZone, tt.trustZone.Clusters[0], source, tt.values)
+			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, tt.values)
 
 			got, err := g.GenerateValues()
 			require.Nil(t, err, err)
@@ -461,23 +474,26 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 	tests := []struct {
 		name          string
 		trustZone     *trust_zone_proto.TrustZone
+		cluster       *clusterpb.Cluster
 		wantErrString string
 	}{
 		{
-			name: "no trust provider",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.Clusters[0].TrustProvider = nil
-				return tz
+			name:      "no trust provider",
+			trustZone: fixtures.TrustZone("tz1"),
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.TrustProvider = nil
+				return cluster
 			}(),
-			wantErrString: "no trust provider for trust zone tz1",
+			wantErrString: "trust provider cannot be nil",
 		},
 		{
-			name: "invalid trust provider kind",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.Clusters[0].TrustProvider.Kind = fixtures.StringPtr("invalid-tp")
-				return tz
+			name:      "invalid trust provider kind",
+			trustZone: fixtures.TrustZone("tz1"),
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.TrustProvider.Kind = fixtures.StringPtr("invalid-tp")
+				return cluster
 			}(),
 			wantErrString: "an unknown trust provider kind was specified: invalid-tp",
 		},
@@ -488,6 +504,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 				tz.AttestationPolicies[0].Policy = "invalid-ap"
 				return tz
 			}(),
+			cluster:       fixtures.Cluster("local1"),
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
 		{
@@ -497,6 +514,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 				tz.Federations[0].To = "invalid-tz"
 				return tz
 			}(),
+			cluster:       fixtures.Cluster("local1"),
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
 	}
@@ -504,7 +522,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
 			source := newFakeDataSource(t, cfg)
-			g := NewHelmValuesGenerator(tt.trustZone, tt.trustZone.Clusters[0], source, nil)
+			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, nil)
 
 			_, err := g.GenerateValues()
 			require.Error(t, err)
@@ -543,7 +561,7 @@ func TestHelmValuesGenerator_GenerateValues_federationFailure(t *testing.T) {
 			cfg := defaultConfig()
 			cfg.TrustZones[1] = tt.destTrustZone
 			source := newFakeDataSource(t, cfg)
-			g := NewHelmValuesGenerator(cfg.TrustZones[0], cfg.TrustZones[0].Clusters[0], source, nil)
+			g := NewHelmValuesGenerator(cfg.TrustZones[0], cfg.Clusters[0], source, nil)
 
 			_, err := g.GenerateValues()
 			require.Error(t, err)
@@ -1476,6 +1494,11 @@ func defaultConfig() *config.Config {
 		TrustZones: []*trust_zone_proto.TrustZone{
 			fixtures.TrustZone("tz1"),
 			fixtures.TrustZone("tz2"),
+		},
+		Clusters: []*clusterpb.Cluster{
+			fixtures.Cluster("local1"),
+			fixtures.Cluster("local2"),
+			fixtures.Cluster("local4"),
 		},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 			fixtures.AttestationPolicy("ap1"),

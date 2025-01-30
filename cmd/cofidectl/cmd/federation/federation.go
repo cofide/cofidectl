@@ -12,6 +12,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
@@ -94,7 +95,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 					return err
 				}
 
-				status, reason, err := checkFederationStatus(cmd.Context(), kubeConfig, from, to)
+				status, reason, err := checkFederationStatus(cmd.Context(), ds, kubeConfig, from, to)
 				if err != nil {
 					return err
 				}
@@ -126,11 +127,11 @@ type bundles struct {
 
 // checkFederationStatus builds a comparison map between two trust domains, retrieves there server CA bundle and any federated bundles available
 // locally from the SPIRE server, and then compares the bundles on each to verify SPIRE has the correct bundles on each side of the federation
-func checkFederationStatus(ctx context.Context, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) (string, string, error) {
+func checkFederationStatus(ctx context.Context, ds datasource.DataSource, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) (string, string, error) {
 	compare := make(map[*trust_zone_proto.TrustZone]bundles)
 
 	for _, tz := range []*trust_zone_proto.TrustZone{from, to} {
-		cluster, err := trustzone.GetClusterFromTrustZone(tz)
+		cluster, err := trustzone.GetClusterFromTrustZone(tz, ds)
 		if err != nil {
 			return "", "", err
 		}

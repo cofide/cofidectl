@@ -6,7 +6,6 @@ package spirehelm
 import (
 	"context"
 	"fmt"
-	"iter"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
@@ -29,6 +28,12 @@ var _ provision.Provision = &SpireHelm{}
 type SpireHelm struct {
 	providerFactory ProviderFactory
 	spireAPIFactory SPIREAPIFactory
+}
+
+// TrustZoneCluster provides a container for a trust zone and a cluster associated with it.
+type TrustZoneCluster struct {
+	TrustZone *trust_zone_proto.TrustZone
+	Cluster   *clusterpb.Cluster
 }
 
 func NewSpireHelm(providerFactory ProviderFactory, spireAPIFactory SPIREAPIFactory) *SpireHelm {
@@ -70,7 +75,7 @@ func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, kube
 }
 
 func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, kubeCfgFile string, statusCh chan<- *provisionpb.Status) error {
-	trustZones, err := h.ListTrustZones(ds)
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds)
 	if err != nil {
 		statusCh <- provision.StatusError("Deploying", "Failed listing trust zones", err)
 		return err
@@ -80,20 +85,20 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, kubeCf
 		return err
 	}
 
-	if err := h.InstallSPIREStack(ctx, ds, trustZones, statusCh); err != nil {
+	if err := h.InstallSPIREStack(ctx, ds, trustZoneClusters, statusCh); err != nil {
 		return err
 	}
 
-	if err := h.WatchAndConfigure(ctx, ds, trustZones, kubeCfgFile, statusCh); err != nil {
+	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, kubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
-	if err := h.ApplyPostInstallHelmConfig(ctx, ds, trustZones, statusCh); err != nil {
+	if err := h.ApplyPostInstallHelmConfig(ctx, ds, trustZoneClusters, statusCh); err != nil {
 		return err
 	}
 
 	// Wait for spire-server to be ready again.
-	if err := h.WatchAndConfigure(ctx, ds, trustZones, kubeCfgFile, statusCh); err != nil {
+	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, kubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
@@ -101,20 +106,20 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, kubeCf
 }
 
 func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, statusCh chan<- *provisionpb.Status) error {
-	trustZones, err := h.ListTrustZones(ds)
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds)
 	if err != nil {
 		statusCh <- provision.StatusError("Uninstalling", "Failed listing trust zones", err)
 		return err
 	}
 
-	if err := h.UninstallSPIREStack(ctx, trustZones, statusCh); err != nil {
+	if err := h.UninstallSPIREStack(ctx, ds, trustZoneClusters, statusCh); err != nil {
 		return err
 	}
 	return nil
 }
 
-// ListTrustZones returns a list of all trust zones. If no trust zones exist, it returns an error.
-func (h *SpireHelm) ListTrustZones(ds datasource.DataSource) ([]*trust_zone_proto.TrustZone, error) {
+// ListTrustZoneClusters returns a slice of TrustZoneClusters. If no trust zones exist, it returns an error.
+func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource) ([]TrustZoneCluster, error) {
 	trustZones, err := ds.ListTrustZones()
 	if err != nil {
 		return nil, err
@@ -124,13 +129,18 @@ func (h *SpireHelm) ListTrustZones(ds datasource.DataSource) ([]*trust_zone_prot
 		return nil, fmt.Errorf("no trust zones have been configured")
 	}
 
-	// Sanity check that all trust zones have exactly one cluster.
+	trustZoneClusters := make([]TrustZoneCluster, 0, len(trustZones))
+
 	for _, trustZone := range trustZones {
-		if _, err := trustzone.GetClusterFromTrustZone(trustZone); err != nil {
+		// Sanity check that the trust zone has exactly one cluster.
+		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
+		if err != nil {
 			return nil, err
 		}
+		trustZoneCluster := TrustZoneCluster{TrustZone: trustZone, Cluster: cluster}
+		trustZoneClusters = append(trustZoneClusters, trustZoneCluster)
 	}
-	return trustZones, nil
+	return trustZoneClusters, nil
 }
 
 func (h *SpireHelm) AddSPIRERepository(ctx context.Context, statusCh chan<- *provisionpb.Status) error {
@@ -143,8 +153,11 @@ func (h *SpireHelm) AddSPIRERepository(ctx context.Context, statusCh chan<- *pro
 	return prov.AddRepository(statusCh)
 }
 
-func (h *SpireHelm) InstallSPIREStack(ctx context.Context, ds datasource.DataSource, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
-	for trustZone, cluster := range iterTZClusters(trustZones) {
+func (h *SpireHelm) InstallSPIREStack(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, statusCh chan<- *provisionpb.Status) error {
+	for _, tzc := range trustZoneClusters {
+		trustZone := tzc.TrustZone
+		cluster := tzc.Cluster
+
 		prov, err := h.providerFactory.Build(ctx, ds, trustZone, cluster, true)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
@@ -159,9 +172,12 @@ func (h *SpireHelm) InstallSPIREStack(ctx context.Context, ds datasource.DataSou
 	return nil
 }
 
-func (h *SpireHelm) WatchAndConfigure(ctx context.Context, ds datasource.DataSource, trustZones []*trust_zone_proto.TrustZone, kubeCfgFile string, statusCh chan<- *provisionpb.Status) error {
+func (h *SpireHelm) WatchAndConfigure(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, kubeCfgFile string, statusCh chan<- *provisionpb.Status) error {
 	// Wait for SPIRE servers to be available and update status before applying federation(s)
-	for trustZone, cluster := range iterTZClusters(trustZones) {
+	for _, tzc := range trustZoneClusters {
+		trustZone := tzc.TrustZone
+		cluster := tzc.Cluster
+
 		if cluster.GetExternalServer() {
 			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
 			statusCh <- sb.Done("Ready", "Skipped waiting for external SPIRE server pod and service")
@@ -212,7 +228,7 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 
 		trustZone.Bundle = &bundle
 
-		if err := ds.UpdateTrustZone(trustZone); err != nil {
+		if _, err := ds.UpdateTrustZone(trustZone); err != nil {
 			msg := fmt.Sprintf("Failed updating trust zone %s", trustZone.Name)
 			statusCh <- provision.StatusError("Waiting", msg, err)
 			return err
@@ -223,8 +239,11 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 	return nil
 }
 
-func (h *SpireHelm) ApplyPostInstallHelmConfig(ctx context.Context, ds datasource.DataSource, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
-	for trustZone, cluster := range iterTZClusters(trustZones) {
+func (h *SpireHelm) ApplyPostInstallHelmConfig(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, statusCh chan<- *provisionpb.Status) error {
+	for _, tzc := range trustZoneClusters {
+		trustZone := tzc.TrustZone
+		cluster := tzc.Cluster
+
 		prov, err := h.providerFactory.Build(ctx, ds, trustZone, cluster, true)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
@@ -240,8 +259,11 @@ func (h *SpireHelm) ApplyPostInstallHelmConfig(ctx context.Context, ds datasourc
 	return nil
 }
 
-func (h *SpireHelm) UninstallSPIREStack(ctx context.Context, trustZones []*trust_zone_proto.TrustZone, statusCh chan<- *provisionpb.Status) error {
-	for trustZone, cluster := range iterTZClusters(trustZones) {
+func (h *SpireHelm) UninstallSPIREStack(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, statusCh chan<- *provisionpb.Status) error {
+	for _, tzc := range trustZoneClusters {
+		trustZone := tzc.TrustZone
+		cluster := tzc.Cluster
+
 		prov, err := h.providerFactory.Build(ctx, nil, trustZone, cluster, false)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
@@ -254,17 +276,4 @@ func (h *SpireHelm) UninstallSPIREStack(ctx context.Context, trustZones []*trust
 		}
 	}
 	return nil
-}
-
-// iterTZClusters returns an iterator that iterates over all of the clusters for a slice of trust zones.
-func iterTZClusters(trustZones []*trust_zone_proto.TrustZone) iter.Seq2[*trust_zone_proto.TrustZone, *clusterpb.Cluster] {
-	return func(yield func(*trust_zone_proto.TrustZone, *clusterpb.Cluster) bool) {
-		for _, trustZone := range trustZones {
-			for _, cluster := range trustZone.GetClusters() {
-				if !yield(trustZone, cluster) {
-					return
-				}
-			}
-		}
-	}
 }

@@ -4,6 +4,7 @@
 package trustprovider
 
 import (
+	"errors"
 	"fmt"
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
@@ -15,24 +16,26 @@ const (
 )
 
 type TrustProvider struct {
-	Name         string
 	Kind         string
 	AgentConfig  TrustProviderAgentConfig
 	ServerConfig TrustProviderServerConfig
-	Proto        *trust_provider_proto.TrustProvider
 }
 
-func NewTrustProvider(kind string) (*TrustProvider, error) {
-	tp := &TrustProvider{
-		Kind: kind,
+func NewTrustProvider(tpp *trust_provider_proto.TrustProvider) (*TrustProvider, error) {
+	if tpp == nil {
+		return nil, errors.New("trust provider cannot be nil")
 	}
-	if err := tp.GetValues(); err != nil {
+
+	tp := &TrustProvider{
+		Kind: tpp.GetKind(),
+	}
+	if err := tp.getValues(); err != nil {
 		return nil, err
 	}
 	return tp, nil
 }
 
-func (tp *TrustProvider) GetValues() error {
+func (tp *TrustProvider) getValues() error {
 	switch tp.Kind {
 	case "kubernetes":
 		tp.AgentConfig = TrustProviderAgentConfig{

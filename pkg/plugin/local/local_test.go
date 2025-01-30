@@ -55,6 +55,7 @@ func TestNewLocalDataSource(t *testing.T) {
 			},
 			wantConfig: &config.Config{
 				TrustZones:          []*trust_zone_proto.TrustZone{},
+				Clusters:            []*clusterpb.Cluster{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 				PluginConfig:        map[string]*structpb.Struct{},
 				Plugins:             fixtures.Plugins("plugins1"),
@@ -196,8 +197,6 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				tz := fixtures.TrustZone("tz1")
 				tz.Bundle = fixtures.StringPtr("new bundle")
 				tz.BundleEndpointUrl = fixtures.StringPtr("http://new.bundle")
-				tz.Clusters[0].Name = fixtures.StringPtr("new-cluster")
-				tz.Clusters[0].KubernetesContext = fixtures.StringPtr("new-context")
 				return tz
 			}(),
 			wantErr: false,
@@ -217,26 +216,6 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 			}(),
 			wantErr:       true,
 			wantErrString: "cannot update trust domain for existing trust zone tz1",
-		},
-		{
-			name: "disallowed nil trust provider",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.Clusters[0].TrustProvider = nil
-				return tz
-			}(),
-			wantErr:       true,
-			wantErrString: "cannot remove trust provider for trust zone tz1",
-		},
-		{
-			name: "disallowed trust provider kind",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.Clusters[0].TrustProvider.Kind = fixtures.StringPtr("invalid")
-				return tz
-			}(),
-			wantErr:       true,
-			wantErrString: "cannot update trust provider kind for existing trust zone tz1",
 		},
 		{
 			name: "disallowed federation",
@@ -262,39 +241,6 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 			wantErr:       true,
 			wantErrString: "cannot update federations for existing trust zone tz1",
 		},
-		{
-			name: "empty clusters list",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.Clusters = []*clusterpb.Cluster{}
-				return tz
-			}(),
-			wantErr:       true,
-			wantErrString: "expected exactly one cluster per trust zone",
-		},
-		{
-			name: "nil clusters list",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.Clusters = nil
-				return tz
-			}(),
-			wantErr:       true,
-			wantErrString: "expected exactly one cluster per trust zone",
-		},
-		{
-			name: "multiple clusters list",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.Clusters = []*clusterpb.Cluster{
-					tz.Clusters[0],
-					tz.Clusters[0],
-				}
-				return tz
-			}(),
-			wantErr:       true,
-			wantErrString: "expected exactly one cluster per trust zone",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -302,16 +248,20 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 				},
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+				},
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
 
-			err := lds.UpdateTrustZone(tt.trustZone)
+			trustZone, err := lds.UpdateTrustZone(tt.trustZone)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
+				assert.EqualExportedValues(t, tt.trustZone, trustZone)
 				assert.EqualExportedValues(t, tt.trustZone, lds.config.TrustZones[0])
 				assert.False(t, slices.Contains(lds.config.TrustZones, tt.trustZone), "Pointer to trust zone stored in config")
 				// Check that the trust zone was persisted.
@@ -363,6 +313,290 @@ func TestLocalDataSource_ListTrustZones(t *testing.T) {
 				for _, gotTrustZone := range got {
 					assert.False(t, slices.Contains(lds.config.TrustZones, gotTrustZone), "Pointer to trust zone in config returned")
 				}
+			}
+		})
+	}
+}
+
+func TestLocalDataSource_AddCluster(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		config        *config.Config
+		cluster       *clusterpb.Cluster
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:    "success",
+			config:  config.NewConfig(),
+			cluster: fixtures.Cluster("local1"),
+			wantErr: false,
+		},
+		{
+			name: "duplicate",
+			config: &config.Config{
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			},
+			cluster:       fixtures.Cluster("local1"),
+			wantErr:       true,
+			wantErrString: "cluster local1 already exists in trust zone tz1 in local config",
+		},
+		{
+			name: "one cluster per trust zone",
+			config: &config.Config{
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			},
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				name := "local2"
+				cluster.Name = &name
+				return cluster
+			}(),
+			wantErr:       true,
+			wantErrString: "trust zone tz1 already has a cluster",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lds, loader := buildLocalDataSource(t, tt.config)
+
+			got, err := lds.AddCluster(tt.cluster)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				assert.EqualExportedValues(t, tt.cluster, got)
+				assert.False(t, slices.Contains(lds.config.Clusters, tt.cluster), "Pointer to cluster stored in config")
+				// Check that the trust zone was persisted.
+				gotConfig := readConfig(t, loader)
+				gotCluster, ok := gotConfig.GetClusterByName(tt.cluster.GetName(), tt.cluster.GetTrustZone())
+				assert.True(t, ok)
+				assert.EqualExportedValues(t, tt.cluster, gotCluster)
+			}
+		})
+	}
+}
+
+func TestLocalDataSource_GetCluster(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		cluster       string
+		trustZone     string
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:      "success",
+			cluster:   "local1",
+			trustZone: "tz1",
+			wantErr:   false,
+		},
+		{
+			name:          "non-existent",
+			cluster:       "local2",
+			trustZone:     "tz2",
+			wantErr:       true,
+			wantErrString: "failed to find cluster local2 in trust zone tz2 in local config",
+		},
+		{
+			name:          "scoped to trust zone",
+			cluster:       "local1",
+			trustZone:     "tz2",
+			wantErr:       true,
+			wantErrString: "failed to find cluster local1 in trust zone tz2 in local config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			}
+			lds, _ := buildLocalDataSource(t, cfg)
+
+			got, err := lds.GetCluster(tt.cluster, tt.trustZone)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				require.Nil(t, err)
+				assert.EqualExportedValues(t, cfg.Clusters[0], got)
+				assert.False(t, slices.Contains(lds.config.Clusters, got), "Pointer to cluster in config returned")
+			}
+		})
+	}
+}
+
+func TestLocalDataSource_ListClusters(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		config       *config.Config
+		wantClusters []*clusterpb.Cluster
+		wantErr      bool
+	}{
+		{
+			name:         "none",
+			config:       config.NewConfig(),
+			wantClusters: []*clusterpb.Cluster{},
+			wantErr:      false,
+		},
+		{
+			name: "two",
+			config: &config.Config{
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+					fixtures.Cluster("local1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			},
+			wantClusters: []*clusterpb.Cluster{
+				fixtures.Cluster("local1"),
+				fixtures.Cluster("local1"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "scoped to trust zone",
+			config: &config.Config{
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+					fixtures.Cluster("local2"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			},
+			wantClusters: []*clusterpb.Cluster{
+				fixtures.Cluster("local1"),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lds, _ := buildLocalDataSource(t, tt.config)
+			got, err := lds.ListClusters("tz1")
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.Nil(t, err)
+				if diff := cmp.Diff(got, tt.wantClusters, protocmp.Transform()); diff != "" {
+					t.Errorf("LocalDataSource.ListClusters() mismatch (-want,+got):\n%s", diff)
+				}
+				for _, gotCluster := range got {
+					assert.False(t, slices.Contains(lds.config.Clusters, gotCluster), "Pointer to cluster in config returned")
+				}
+			}
+		})
+	}
+}
+
+func TestLocalDataSource_UpdateCluster(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		cluster       *clusterpb.Cluster
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:    "no changes",
+			cluster: fixtures.Cluster("local1"),
+			wantErr: false,
+		},
+		{
+			name: "allowed changes",
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.KubernetesContext = fixtures.StringPtr("new-context")
+				cluster.ExtraHelmValues = nil
+				return cluster
+			}(),
+			wantErr: false,
+		},
+		{
+			name:          "non-existent",
+			cluster:       fixtures.Cluster("local2"),
+			wantErr:       true,
+			wantErrString: "failed to find cluster local2 in trust zone tz2 in local config",
+		},
+		{
+			name: "disallowed trust zone",
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.TrustZone = fixtures.StringPtr("tz2")
+				return cluster
+			}(),
+			wantErr:       true,
+			wantErrString: "cannot update trust zone for existing cluster local1 in trust zone tz1",
+		},
+		{
+			name: "disallowed nil trust provider",
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.TrustProvider = nil
+				return cluster
+			}(),
+			wantErr:       true,
+			wantErrString: "cannot remove trust provider for cluster local1 in trust zone tz1",
+		},
+		{
+			name: "disallowed trust provider kind",
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.TrustProvider.Kind = fixtures.StringPtr("invalid")
+				return cluster
+			}(),
+			wantErr:       true,
+			wantErrString: "cannot update trust provider kind for existing cluster local1 in trust zone tz1",
+		},
+		{
+			name: "disallowed profile",
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.Profile = fixtures.StringPtr("istio")
+				return cluster
+			}(),
+			wantErr:       true,
+			wantErrString: "cannot update profile for existing cluster local1 in trust zone tz1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				TrustZones: []*trust_zone_proto.TrustZone{
+					fixtures.TrustZone("tz1"),
+				},
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			}
+			lds, loader := buildLocalDataSource(t, cfg)
+
+			cluster, err := lds.UpdateCluster(tt.cluster)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				require.Nil(t, err)
+				assert.EqualExportedValues(t, tt.cluster, cluster)
+				assert.EqualExportedValues(t, tt.cluster, lds.config.Clusters[0])
+				assert.False(t, slices.Contains(lds.config.Clusters, tt.cluster), "Pointer to cluster stored in config")
+				// Check that the cluster was persisted.
+				gotConfig := readConfig(t, loader)
+				gotCluster, ok := gotConfig.GetClusterByName(tt.cluster.GetName(), tt.cluster.GetTrustZone())
+				assert.True(t, ok)
+				assert.EqualExportedValues(t, tt.cluster, gotCluster)
 			}
 		})
 	}

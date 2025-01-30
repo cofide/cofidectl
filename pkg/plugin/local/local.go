@@ -10,12 +10,12 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
-	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 )
 
 type LocalDataSource struct {
@@ -90,29 +90,41 @@ func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone
 	return proto.CloneTrustZone(trustZone)
 }
 
-func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) error {
+func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
+	trustZones := []*trust_zone_proto.TrustZone{}
+	for _, trustZone := range lds.config.TrustZones {
+		trustZone, err := proto.CloneTrustZone(trustZone)
+		if err != nil {
+			return nil, err
+		}
+		trustZones = append(trustZones, trustZone)
+	}
+	return trustZones, nil
+}
+
+func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
 	for i, current := range lds.config.TrustZones {
 		if current.Name == trustZone.Name {
 			if err := validateTrustZoneUpdate(current, trustZone); err != nil {
-				return err
+				return nil, err
 			}
 
 			trustZone, err := proto.CloneTrustZone(trustZone)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			lds.config.TrustZones[i] = trustZone
 
 			if err := lds.updateDataFile(); err != nil {
-				return fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.Name, err)
+				return nil, fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.Name, err)
 			}
 
-			return nil
+			return proto.CloneTrustZone(trustZone)
 		}
 	}
 
-	return fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
+	return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
 }
 
 func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
@@ -121,17 +133,6 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 	}
 	if new.TrustDomain != current.TrustDomain {
 		return fmt.Errorf("cannot update trust domain for existing trust zone %s", current.Name)
-	}
-	currentCluster, err := trustzone.GetClusterFromTrustZone(current)
-	if err != nil {
-		return err
-	}
-	newCluster, err := trustzone.GetClusterFromTrustZone(new)
-	if err != nil {
-		return err
-	}
-	if err := validateTrustProviderUpdate(current.Name, currentCluster.TrustProvider, newCluster.TrustProvider); err != nil {
-		return err
 	}
 	// The following should be updated though other means.
 	if !slices.EqualFunc(new.Federations, current.Federations, proto.FederationsEqual) {
@@ -143,29 +144,113 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 	return nil
 }
 
-func validateTrustProviderUpdate(tzName string, current, new *trust_provider_proto.TrustProvider) error {
-	if current == nil {
-		return fmt.Errorf("no trust provider in existing trust zone %s", tzName)
+func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
+	name := cluster.GetName()
+	trustZone := cluster.GetTrustZone()
+
+	if _, ok := lds.config.GetClusterByName(name, trustZone); ok {
+		return nil, fmt.Errorf("cluster %s already exists in trust zone %s in local config", name, trustZone)
 	}
-	if new == nil {
-		return fmt.Errorf("cannot remove trust provider for trust zone %s", tzName)
+
+	if len(lds.config.GetClustersByTrustZone(trustZone)) != 0 {
+		return nil, fmt.Errorf("trust zone %s already has a cluster", trustZone)
 	}
-	if new.GetKind() != current.GetKind() {
-		return fmt.Errorf("cannot update trust provider kind for existing trust zone %s", tzName)
+
+	cluster, err := proto.CloneCluster(cluster)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	lds.config.Clusters = append(lds.config.Clusters, cluster)
+	if err := lds.updateDataFile(); err != nil {
+		return nil, fmt.Errorf("failed to add cluster %s in trust zone %s to local config: %s", name, trustZone, err)
+	}
+	return cluster, nil
 }
 
-func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-	trustZones := []*trust_zone_proto.TrustZone{}
-	for _, trustZone := range lds.config.TrustZones {
-		trustZone, err := proto.CloneTrustZone(trustZone)
+func (lds *LocalDataSource) GetCluster(name, trustZone string) (*clusterpb.Cluster, error) {
+	cluster, ok := lds.config.GetClusterByName(name, trustZone)
+	if !ok {
+		return nil, fmt.Errorf("failed to find cluster %s in trust zone %s in local config", name, trustZone)
+	}
+
+	return proto.CloneCluster(cluster)
+}
+
+func (lds *LocalDataSource) ListClusters(trustZone string) ([]*clusterpb.Cluster, error) {
+	clusters := []*clusterpb.Cluster{}
+	for _, cluster := range lds.config.GetClustersByTrustZone(trustZone) {
+		cluster, err := proto.CloneCluster(cluster)
 		if err != nil {
 			return nil, err
 		}
-		trustZones = append(trustZones, trustZone)
+		clusters = append(clusters, cluster)
 	}
-	return trustZones, nil
+	return clusters, nil
+}
+
+func (lds *LocalDataSource) UpdateCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
+	name := cluster.GetName()
+	trustZone := cluster.GetTrustZone()
+
+	for i, current := range lds.config.Clusters {
+		if current.GetName() == name {
+			if err := validateClusterUpdate(current, cluster); err != nil {
+				return nil, err
+			}
+
+			cluster, err := proto.CloneCluster(cluster)
+			if err != nil {
+				return nil, err
+			}
+
+			lds.config.Clusters[i] = cluster
+
+			if err := lds.updateDataFile(); err != nil {
+				return nil, fmt.Errorf("failed to update cluster %s in trust zone %s in local config: %s", name, trustZone, err)
+			}
+
+			return proto.CloneCluster(cluster)
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find cluster %s in trust zone %s in local config", name, trustZone)
+}
+
+func validateClusterUpdate(current, new *clusterpb.Cluster) error {
+	name := current.GetName()
+	trustZone := current.GetTrustZone()
+
+	if new.GetName() != current.GetName() {
+		return fmt.Errorf("cannot update name for existing cluster %s in trust zone %s", name, trustZone)
+	}
+
+	if new.GetTrustZone() != current.GetTrustZone() {
+		return fmt.Errorf("cannot update trust zone for existing cluster %s in trust zone %s", name, trustZone)
+	}
+
+	if new.GetProfile() != current.GetProfile() {
+		return fmt.Errorf("cannot update profile for existing cluster %s in trust zone %s", name, trustZone)
+	}
+
+	if err := validateTrustProviderUpdate(current.GetName(), current.GetTrustZone(), current.TrustProvider, new.TrustProvider); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateTrustProviderUpdate(cluster, tzName string, current, new *trust_provider_proto.TrustProvider) error {
+	if current == nil {
+		return fmt.Errorf("no trust provider in existing cluster %s in trust zone %s", cluster, tzName)
+	}
+	if new == nil {
+		return fmt.Errorf("cannot remove trust provider for cluster %s in trust zone %s", cluster, tzName)
+	}
+	if new.GetKind() != current.GetKind() {
+		return fmt.Errorf("cannot update trust provider kind for existing cluster %s in trust zone %s", cluster, tzName)
+	}
+	return nil
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error) {

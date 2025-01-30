@@ -65,6 +65,9 @@ func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
 		TrustZones: []*trust_zone_proto.TrustZone{
 			fixtures.TrustZone("tz5"),
 		},
+		Clusters: []*clusterpb.Cluster{
+			fixtures.Cluster("local5"),
+		},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 		Plugins:             fixtures.Plugins("plugins1"),
 	}
@@ -219,6 +222,10 @@ func defaultConfig() *config.Config {
 		TrustZones: []*trust_zone_proto.TrustZone{
 			fixtures.TrustZone("tz1"),
 			fixtures.TrustZone("tz2"),
+		},
+		Clusters: []*clusterpb.Cluster{
+			fixtures.Cluster("local1"),
+			fixtures.Cluster("local2"),
 		},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 			fixtures.AttestationPolicy("ap1"),

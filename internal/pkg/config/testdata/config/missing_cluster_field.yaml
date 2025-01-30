@@ -1,0 +1,7 @@
+clusters:
+    - trust_zone: tz1
+      kubernetes_context: kind-local1
+      trust_provider:
+        kind: kubernetes
+      profile: kubernetes
+plugins: {}
