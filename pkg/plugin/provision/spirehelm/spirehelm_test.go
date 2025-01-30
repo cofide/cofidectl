@@ -5,7 +5,6 @@ package spirehelm
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
@@ -24,7 +23,8 @@ import (
 
 func TestSpireHelm_Deploy(t *testing.T) {
 	providerFactory := newFakeHelmSPIREProviderFactory()
-	spireHelm := NewSpireHelm(providerFactory)
+	spireAPIFactory := newFakeSPIREAPIFactory()
+	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
 	statusCh, err := spireHelm.Deploy(context.Background(), ds, "fake-kube.cfg")
@@ -41,19 +41,25 @@ func TestSpireHelm_Deploy(t *testing.T) {
 		provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
 		provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
 		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local1 in tz1"),
-		// FIXME: This attempts to create a real Kubernetes client and fails.
-		provision.StatusError(
-			"Waiting",
-			"Failed waiting for SPIRE server pod and service for local1 in tz1",
-			errors.New("load from file: open fake-kube.cfg: no such file or directory"),
-		),
+		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local1 in tz1"),
+		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
+		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
+		provision.StatusOk("Configuring", "Applying post-installation configuration for local1 in tz1"),
+		provision.StatusDone("Configured", "Post-installation configuration completed for local1 in tz1"),
+		provision.StatusOk("Configuring", "Applying post-installation configuration for local2 in tz2"),
+		provision.StatusDone("Configured", "Post-installation configuration completed for local2 in tz2"),
+		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local1 in tz1"),
+		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local1 in tz1"),
+		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
+		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
 	}
 	assert.EqualExportedValues(t, want, statuses)
 }
 
 func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
 	providerFactory := newFakeHelmSPIREProviderFactory()
-	spireHelm := NewSpireHelm(providerFactory)
+	spireAPIFactory := newFakeSPIREAPIFactory()
+	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 
 	config := &config.Config{
 		TrustZones: []*trust_zone_proto.TrustZone{
@@ -76,6 +82,8 @@ func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
 		provision.StatusOk("Installing", "Installing SPIRE chart for local5 in tz5"),
 		provision.StatusDone("Installed", "Installation completed for local5 in tz5"),
 		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
+		provision.StatusOk("Configuring", "Applying post-installation configuration for local5 in tz5"),
+		provision.StatusDone("Configured", "Post-installation configuration completed for local5 in tz5"),
 		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
 	}
 	assert.EqualExportedValues(t, want, statuses)
@@ -83,7 +91,8 @@ func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
 
 func TestSpireHelm_TearDown(t *testing.T) {
 	providerFactory := newFakeHelmSPIREProviderFactory()
-	spireHelm := NewSpireHelm(providerFactory)
+	spireAPIFactory := newFakeSPIREAPIFactory()
+	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
 	statusCh, err := spireHelm.TearDown(context.Background(), ds, "fake-kube.cfg")
@@ -148,10 +157,16 @@ func (p *fakeHelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) err
 }
 
 func (p *fakeHelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provisionpb.Status) error {
+	sb := provision.NewStatusBuilder(p.trustZone.Name, p.cluster.GetName())
+	statusCh <- sb.Ok("Configuring", "Applying post-installation configuration")
+	statusCh <- sb.Done("Configured", "Post-installation configuration completed")
 	return nil
 }
 
 func (p *fakeHelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) error {
+	sb := provision.NewStatusBuilder(p.trustZone.Name, p.cluster.GetName())
+	statusCh <- sb.Ok("Upgrading", "Upgrading SPIRE chart")
+	statusCh <- sb.Done("Upgraded", "Upgrade completed")
 	return nil
 }
 
@@ -164,6 +179,31 @@ func (p *fakeHelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.St
 
 func (p *fakeHelmSPIREProvider) CheckIfAlreadyInstalled() (bool, error) {
 	return false, nil
+}
+
+type fakeSPIREAPIFactory struct{}
+
+func newFakeSPIREAPIFactory() SPIREAPIFactory {
+	return &fakeSPIREAPIFactory{}
+}
+
+func (f *fakeSPIREAPIFactory) Build(kubeCfgFile, kubeContext string) (SPIREAPI, error) {
+	return &fakeSPIREAPI{}, nil
+}
+
+type fakeSPIREAPI struct {
+	ip        string
+	ipErr     error
+	bundle    string
+	bundleErr error
+}
+
+func (s *fakeSPIREAPI) WaitForServerIP(ctx context.Context) (string, error) {
+	return s.ip, s.ipErr
+}
+
+func (s *fakeSPIREAPI) GetBundle(ctx context.Context) (string, error) {
+	return s.bundle, s.bundleErr
 }
 
 func newFakeDataSource(t *testing.T, cfg *config.Config) datasource.DataSource {

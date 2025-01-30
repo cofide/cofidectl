@@ -13,10 +13,8 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
-	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
-	"github.com/cofide/cofidectl/pkg/spire"
 )
 
 // Control flow and error handling require some care in this package due to the asynchronous nature
@@ -30,13 +28,17 @@ var _ provision.Provision = &SpireHelm{}
 // SpireHelm implements the `Provision` interface by deploying a SPIRE cluster using the SPIRE Helm charts.
 type SpireHelm struct {
 	providerFactory ProviderFactory
+	spireAPIFactory SPIREAPIFactory
 }
 
-func NewSpireHelm(providerFactory ProviderFactory) *SpireHelm {
+func NewSpireHelm(providerFactory ProviderFactory, spireAPIFactory SPIREAPIFactory) *SpireHelm {
 	if providerFactory == nil {
 		providerFactory = &HelmSPIREProviderFactory{}
 	}
-	return &SpireHelm{providerFactory: providerFactory}
+	if spireAPIFactory == nil {
+		spireAPIFactory = &SPIREAPIFactoryImpl{}
+	}
+	return &SpireHelm{providerFactory: providerFactory, spireAPIFactory: spireAPIFactory}
 }
 
 func (h *SpireHelm) Validate(_ context.Context) error {
@@ -185,13 +187,13 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 	sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
 	statusCh <- sb.Ok("Waiting", "Waiting for SPIRE server pod and service")
 
-	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeCfgFile, cluster.GetKubernetesContext())
+	spireAPI, err := h.spireAPIFactory.Build(kubeCfgFile, cluster.GetKubernetesContext())
 	if err != nil {
 		statusCh <- sb.Error("Waiting", "Failed waiting for SPIRE server pod and service", err)
 		return err
 	}
 
-	clusterIP, err := spire.WaitForServerIP(ctx, client)
+	clusterIP, err := spireAPI.WaitForServerIP(ctx)
 	if err != nil {
 		statusCh <- sb.Error("Waiting", "Failed waiting for SPIRE server pod and service", err)
 		return err
@@ -202,7 +204,7 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 		trustZone.BundleEndpointUrl = &bundleEndpointUrl
 
 		// Obtain the bundle
-		bundle, err := spire.GetBundle(ctx, client)
+		bundle, err := spireAPI.GetBundle(ctx)
 		if err != nil {
 			statusCh <- sb.Error("Waiting", "Failed obtaining bundle", err)
 			return err

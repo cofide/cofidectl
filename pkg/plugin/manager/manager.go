@@ -176,7 +176,7 @@ func (pm *PluginManager) loadProvision(ctx context.Context) (provision.Provision
 
 	// Check if an in-process provision implementation has been requested.
 	if provisionName == SpireHelmProvisionPluginName {
-		spireHelm := spirehelm.NewSpireHelm(nil)
+		spireHelm := spirehelm.NewSpireHelm(nil, nil)
 		if err := spireHelm.Validate(ctx); err != nil {
 			return nil, err
 		}

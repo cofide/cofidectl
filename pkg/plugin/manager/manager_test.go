@@ -302,7 +302,7 @@ func TestManager_GetProvision_success(t *testing.T) {
 		{
 			name:   "defaults",
 			config: config.Config{Plugins: GetDefaultPlugins()},
-			want:   spirehelm.NewSpireHelm(nil),
+			want:   spirehelm.NewSpireHelm(nil, nil),
 		},
 		{
 			name:   "gRPC",
