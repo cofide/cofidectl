@@ -59,7 +59,7 @@ func serveDataSource() error {
 	if err != nil {
 		return err
 	}
-	spireHelm := spirehelm.NewSpireHelm(nil)
+	spireHelm := spirehelm.NewSpireHelm(nil, nil)
 
 	go_plugin.Serve(&go_plugin.ServeConfig{
 		HandshakeConfig: plugin.HandshakeConfig,
