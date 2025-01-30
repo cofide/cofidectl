@@ -102,7 +102,7 @@ func (c *HelmCommand) overrideValues(ds datasource.DataSource, tzName string, va
 		return err
 	}
 
-	cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+	cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,8 @@ func (c *HelmCommand) overrideValues(ds datasource.DataSource, tzName string, va
 		return err
 	}
 
-	return ds.UpdateTrustZone(trustZone)
+	_, err = ds.UpdateCluster(cluster)
+	return err
 }
 
 // readValues reads values in YAML format from the specified reader.
@@ -189,7 +190,7 @@ func (c *HelmCommand) getValues(ds datasource.DataSource, tzName string) (map[st
 		return nil, err
 	}
 
-	cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+	cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 	if err != nil {
 		return nil, err
 	}

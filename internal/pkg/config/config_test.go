@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
@@ -35,6 +36,10 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
+				},
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+					fixtures.Cluster("local2"),
 				},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
@@ -74,6 +79,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 			file: "default.yaml",
 			want: &Config{
 				TrustZones:          []*trust_zone_proto.TrustZone{},
+				Clusters:            []*clusterpb.Cluster{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 				PluginConfig:        map[string]*structpb.Struct{},
 				Plugins:             &pluginspb.Plugins{},
@@ -86,6 +92,10 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
+				},
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+					fixtures.Cluster("local2"),
 				},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
@@ -151,6 +161,125 @@ func TestConfig_GetTrustZoneByName(t *testing.T) {
 			gotTz, gotOk := c.GetTrustZoneByName(tt.trustZone)
 			assert.EqualExportedValues(t, tt.wantTz, gotTz)
 			assert.Equal(t, tt.wantOk, gotOk)
+		})
+	}
+}
+
+func TestConfig_GetClusterByName(t *testing.T) {
+	tests := []struct {
+		name        string
+		clusters    []*clusterpb.Cluster
+		cluster     string
+		trustZone   string
+		wantCluster *clusterpb.Cluster
+		wantOk      bool
+	}{
+		{
+			name: "found",
+			clusters: []*clusterpb.Cluster{
+				fixtures.Cluster("local1"),
+				fixtures.Cluster("local2"),
+			},
+			cluster:     "local2",
+			trustZone:   "tz2",
+			wantCluster: fixtures.Cluster("local2"),
+			wantOk:      true,
+		},
+		{
+			name:        "not found",
+			clusters:    []*clusterpb.Cluster{},
+			cluster:     "local1",
+			trustZone:   "tz1",
+			wantCluster: nil,
+			wantOk:      false,
+		},
+		{
+			name: "trust zone scoped",
+			clusters: []*clusterpb.Cluster{
+				fixtures.Cluster("local1"),
+			},
+			cluster:     "local1",
+			trustZone:   "tz2",
+			wantCluster: nil,
+			wantOk:      false,
+		},
+		{
+			name:        "nil list",
+			clusters:    nil,
+			cluster:     "local1",
+			trustZone:   "tz1",
+			wantCluster: nil,
+			wantOk:      false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Config{
+				Clusters: tt.clusters,
+			}
+			gotCluster, gotOk := c.GetClusterByName(tt.cluster, tt.trustZone)
+			assert.EqualExportedValues(t, tt.wantCluster, gotCluster)
+			assert.Equal(t, tt.wantOk, gotOk)
+		})
+	}
+}
+
+func TestConfig_GetClustersByTrustZone(t *testing.T) {
+	tests := []struct {
+		name         string
+		clusters     []*clusterpb.Cluster
+		trustZone    string
+		wantClusters []*clusterpb.Cluster
+	}{
+		{
+			name: "found",
+			clusters: []*clusterpb.Cluster{
+				fixtures.Cluster("local1"),
+				fixtures.Cluster("local2"),
+			},
+			trustZone:    "tz2",
+			wantClusters: []*clusterpb.Cluster{fixtures.Cluster("local2")},
+		},
+		{
+			name: "found multiple",
+			clusters: []*clusterpb.Cluster{
+				fixtures.Cluster("local1"),
+				fixtures.Cluster("local1"),
+			},
+			trustZone: "tz1",
+			wantClusters: []*clusterpb.Cluster{
+				fixtures.Cluster("local1"),
+				fixtures.Cluster("local1"),
+			},
+		},
+		{
+			name:         "not found",
+			clusters:     []*clusterpb.Cluster{},
+			trustZone:    "tz1",
+			wantClusters: []*clusterpb.Cluster{},
+		},
+		{
+			name: "trust zone scoped",
+			clusters: []*clusterpb.Cluster{
+				fixtures.Cluster("local1"),
+			},
+			trustZone:    "tz2",
+			wantClusters: []*clusterpb.Cluster{},
+		},
+		{
+			name:         "nil list",
+			clusters:     nil,
+			trustZone:    "tz1",
+			wantClusters: []*clusterpb.Cluster{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Config{
+				Clusters: tt.clusters,
+			}
+			gotClusters := c.GetClustersByTrustZone(tt.trustZone)
+			assert.EqualExportedValues(t, tt.wantClusters, gotClusters)
 		})
 	}
 }

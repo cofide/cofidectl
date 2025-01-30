@@ -9,7 +9,6 @@
 	attestation_policies: [...#APBinding]
 	jwt_issuer?: string
 	bundle_endpoint_profile?: #BundleEndpointProfile
-	clusters: [#Cluster]
 }
 
 #Cluster: {
@@ -79,6 +78,7 @@
 
 #Config: {
 	trust_zones: [...#TrustZone]
+	clusters: [...#Cluster]
 	attestation_policies: [...#AttestationPolicy]
 	plugin_config?: #PluginConfig
 	plugins!: #Plugins

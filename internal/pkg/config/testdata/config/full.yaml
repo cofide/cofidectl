@@ -12,23 +12,6 @@ trust_zones:
             - tz2
       jwt_issuer: https://tz1.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
-      clusters:
-        - name: local1
-          trust_zone: tz1
-          kubernetes_context: kind-local1
-          trust_provider:
-            kind: kubernetes
-          extra_helm_values:
-            global:
-                spire:
-                    caSubject:
-                        commonName: cn.example.com
-                        organization: acme-org
-            spire-server:
-                logLevel: INFO
-                nameOverride: custom-server-name
-          profile: kubernetes
-          external_server: false
     - name: tz2
       trust_domain: td2
       bundle_endpoint_url: 127.0.0.2
@@ -42,14 +25,30 @@ trust_zones:
             - tz1
       jwt_issuer: https://tz2.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
-      clusters:
-        - name: local2
-          trust_zone: tz2
-          kubernetes_context: kind-local2
-          trust_provider:
-            kind: kubernetes
-          profile: kubernetes
-          external_server: false
+clusters:
+    - name: local1
+      trust_zone: tz1
+      kubernetes_context: kind-local1
+      trust_provider:
+        kind: kubernetes
+      extra_helm_values:
+        global:
+            spire:
+                caSubject:
+                    commonName: cn.example.com
+                    organization: acme-org
+        spire-server:
+            logLevel: INFO
+            nameOverride: custom-server-name
+      profile: kubernetes
+      external_server: false
+    - name: local2
+      trust_zone: tz2
+      kubernetes_context: kind-local2
+      trust_provider:
+        kind: kubernetes
+      profile: kubernetes
+      external_server: false
 attestation_policies:
     - name: ap1
       kubernetes:

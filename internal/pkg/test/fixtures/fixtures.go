@@ -38,42 +38,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		JwtIssuer:             StringPtr("https://tz1.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
-		Clusters: []*clusterpb.Cluster{
-			{
-				Name:              StringPtr("local1"),
-				TrustZone:         StringPtr("tz1"),
-				KubernetesContext: StringPtr("kind-local1"),
-				TrustProvider: &trust_provider_proto.TrustProvider{
-					Kind: StringPtr("kubernetes"),
-				},
-				Profile: StringPtr("kubernetes"),
-				ExtraHelmValues: func() *structpb.Struct {
-					ev := map[string]any{
-						"global": map[string]any{
-							"spire": map[string]any{
-								// Modify multiple values in the same map.
-								"caSubject": map[string]any{
-									"organization": "acme-org",
-									"commonName":   "cn.example.com",
-								},
-							},
-						},
-						"spire-server": map[string]any{
-							// Modify an existing value.
-							"logLevel": "INFO",
-							// Customise a new value.
-							"nameOverride": "custom-server-name",
-						},
-					}
-					value, err := structpb.NewStruct(ev)
-					if err != nil {
-						panic(err)
-					}
-					return value
-				}(),
-				ExternalServer: BoolPtr(false),
-			},
-		},
 	},
 	"tz2": {
 		Name:              "tz2",
@@ -94,18 +58,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
-		Clusters: []*clusterpb.Cluster{
-			{
-				Name:              StringPtr("local2"),
-				TrustZone:         StringPtr("tz2"),
-				KubernetesContext: StringPtr("kind-local2"),
-				TrustProvider: &trust_provider_proto.TrustProvider{
-					Kind: StringPtr("kubernetes"),
-				},
-				Profile:        StringPtr("kubernetes"),
-				ExternalServer: BoolPtr(false),
-			},
-		},
 	},
 	// tz3 has no federations or bound attestation policies.
 	"tz3": {
@@ -115,17 +67,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		Federations:           []*federation_proto.Federation{},
 		AttestationPolicies:   []*ap_binding_proto.APBinding{},
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
-		Clusters: []*clusterpb.Cluster{
-			{
-				Name:              StringPtr("local3"),
-				TrustZone:         StringPtr("tz3"),
-				KubernetesContext: StringPtr("kind-local3"),
-				TrustProvider: &trust_provider_proto.TrustProvider{
-					Kind: StringPtr("kubernetes"),
-				},
-				Profile: StringPtr("kubernetes"),
-			},
-		},
 	},
 	// tz4 has no federations or bound attestation policies and uses the istio profile.
 	"tz4": {
@@ -134,17 +75,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl:   StringPtr("127.0.0.4"),
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
-		Clusters: []*clusterpb.Cluster{
-			{
-				Name:              StringPtr("local4"),
-				TrustZone:         StringPtr("tz4"),
-				KubernetesContext: StringPtr("kind-local4"),
-				TrustProvider: &trust_provider_proto.TrustProvider{
-					Kind: StringPtr("kubernetes"),
-				},
-				Profile: StringPtr("istio"),
-			},
-		},
 	},
 	// tz5 has no federations or bound attestation policies and has an external SPIRE server.
 	"tz5": {
@@ -153,18 +83,81 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl:   StringPtr("127.0.0.5"),
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
-		Clusters: []*clusterpb.Cluster{
-			{
-				Name:              StringPtr("local5"),
-				TrustZone:         StringPtr("tz5"),
-				KubernetesContext: StringPtr("kind-local5"),
-				TrustProvider: &trust_provider_proto.TrustProvider{
-					Kind: StringPtr("kubernetes"),
-				},
-				Profile:        StringPtr("kubernetes"),
-				ExternalServer: BoolPtr(true),
-			},
+	},
+}
+
+var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluster{
+	"local1": {
+		Name:              StringPtr("local1"),
+		TrustZone:         StringPtr("tz1"),
+		KubernetesContext: StringPtr("kind-local1"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
 		},
+		Profile: StringPtr("kubernetes"),
+		ExtraHelmValues: func() *structpb.Struct {
+			ev := map[string]any{
+				"global": map[string]any{
+					"spire": map[string]any{
+						// Modify multiple values in the same map.
+						"caSubject": map[string]any{
+							"organization": "acme-org",
+							"commonName":   "cn.example.com",
+						},
+					},
+				},
+				"spire-server": map[string]any{
+					// Modify an existing value.
+					"logLevel": "INFO",
+					// Customise a new value.
+					"nameOverride": "custom-server-name",
+				},
+			}
+			value, err := structpb.NewStruct(ev)
+			if err != nil {
+				panic(err)
+			}
+			return value
+		}(),
+		ExternalServer: BoolPtr(false),
+	},
+	"local2": {
+		Name:              StringPtr("local2"),
+		TrustZone:         StringPtr("tz2"),
+		KubernetesContext: StringPtr("kind-local2"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile:        StringPtr("kubernetes"),
+		ExternalServer: BoolPtr(false),
+	},
+	"local3": {
+		Name:              StringPtr("local3"),
+		TrustZone:         StringPtr("tz3"),
+		KubernetesContext: StringPtr("kind-local3"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile: StringPtr("kubernetes"),
+	},
+	"local4": {
+		Name:              StringPtr("local4"),
+		TrustZone:         StringPtr("tz4"),
+		KubernetesContext: StringPtr("kind-local4"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile: StringPtr("istio"),
+	},
+	"local5": {
+		Name:              StringPtr("local5"),
+		TrustZone:         StringPtr("tz5"),
+		KubernetesContext: StringPtr("kind-local5"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile:        StringPtr("kubernetes"),
+		ExternalServer: BoolPtr(true),
 	},
 }
 
@@ -282,6 +275,18 @@ func TrustZone(name string) *trust_zone_proto.TrustZone {
 		panic(fmt.Sprintf("failed to clone trust zone: %s", err))
 	}
 	return tz
+}
+
+func Cluster(name string) *clusterpb.Cluster {
+	cluster, ok := clusterFixtures[name]
+	if !ok {
+		panic(fmt.Sprintf("invalid cluster fixture %s", name))
+	}
+	cluster, err := proto.CloneCluster(cluster)
+	if err != nil {
+		panic(fmt.Sprintf("failed to clone cluster: %s", err))
+	}
+	return cluster
 }
 
 func AttestationPolicy(name string) *attestation_policy_proto.AttestationPolicy {

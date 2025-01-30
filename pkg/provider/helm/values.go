@@ -11,7 +11,6 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
-	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 )
 
@@ -75,8 +74,7 @@ func NewHelmValuesGenerator(trustZone *trust_zone_proto.TrustZone, cluster *clus
 }
 
 func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
-	tz := trustzone.NewTrustZone(g.trustZone)
-	tp, err := tz.GetTrustProvider()
+	tp, err := trustprovider.NewTrustProvider(g.cluster.GetTrustProvider())
 	if err != nil {
 		return nil, err
 	}
