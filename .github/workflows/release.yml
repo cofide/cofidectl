@@ -1,0 +1,32 @@
+name: pre-release-binaries
+on:
+    push:
+      tags:
+        - "v*.*.*"
+
+jobs:
+  build:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: [amd64, arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: |
+          go run gotest.tools/gotestsum@latest --format github-actions ./...
+          mkdir -p dist
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/cofidectl/main.go
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+            prerelease: true
+            files: dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}
