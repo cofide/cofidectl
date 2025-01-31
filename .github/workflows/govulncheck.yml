@@ -15,9 +15,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Install dependencies
-        run: |
-          go mod download
       - id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
