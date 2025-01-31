@@ -24,9 +24,6 @@ jobs:
       - name: Build and run tests
         run: just build
 
-      - name: Build and cache cloud-provider-kind image
-        uses: ./.github/actions/cache-cloud-provider-kind-image
-
       - name: Install kind
         run: just install-kind
 
@@ -64,9 +61,6 @@ jobs:
 
       - name: Build and run tests
         run: just build
-
-      - name: Build and cache cloud-provider-kind image
-        uses: ./.github/actions/cache-cloud-provider-kind-image
       
       - name: Build and install test plugin
         run: just install-test-plugin
