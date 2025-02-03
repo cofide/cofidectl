@@ -6,7 +6,7 @@ toolchain go1.23.4
 
 require (
 	buf.build/go/protoyaml v0.3.1
-	cuelang.org/go v0.10.1
+	cuelang.org/go v0.12.0
 	github.com/cofide/cofide-api-sdk v0.5.2-0.20250117165051-3f40e0c57dc0
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
@@ -22,6 +22,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.0
 )
+
+require github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.0-20241127180247-a33202765966.1 // indirect
@@ -146,9 +148,9 @@ require (
 	go.opentelemetry.io/otel/trace v1.32.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/mod v0.21.0 // indirect
+	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/oauth2 v0.24.0 // indirect
+	golang.org/x/oauth2 v0.25.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/term v0.28.0 // indirect
