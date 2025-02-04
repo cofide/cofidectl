@@ -60,7 +60,7 @@ function ensure_kind_network() {
 }
 
 function run_cloud_provider_kind() {
-docker run -d \
+  docker run -d \
     --network kind \
     --restart unless-stopped \
     --privileged \
