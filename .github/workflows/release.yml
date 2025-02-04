@@ -5,7 +5,7 @@ on:
         - "v*.*.*"
 
 jobs:
-  build:
+  publish:
     name: Build and Publish
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
@@ -22,11 +22,12 @@ jobs:
           go-version-file: go.mod
       - name: Build
         run: |
-          go run gotest.tools/gotestsum@latest --format github-actions ./...
           mkdir -p dist
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/cofidectl/main.go
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-            prerelease: true
-            files: dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}
+      - name: Upload artifacts
+        run: |
+          gh release list --limit 1 | grep -q ${{ github.ref_name }} || gh release create ${{ github.ref_name }} -d
+          gh release upload ${{  github.ref_name }} dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }} --clobber
+          gh release upload ${{ github.ref_name }} LICENSE --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
