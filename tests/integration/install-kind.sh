@@ -59,14 +59,13 @@ function ensure_kind_network() {
   fi
 }
 
-function install_cloud_provider_kind() {
-  # https://github.com/kubernetes-sigs/cloud-provider-kind
-  if [[ ! -d cloud-provider-kind ]]; then
-    git clone --depth 1 https://github.com/kubernetes-sigs/cloud-provider-kind
-  fi
-  pushd cloud-provider-kind
-  sudo bash -c 'NET_MODE=kind docker compose up -d'
-  popd
+function run_cloud_provider_kind() {
+  docker run -d \
+    --network kind \
+    --restart unless-stopped \
+    --name cloud-provider-kind \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.5.0
 }
 
 function check_non_root_docker_access() {
@@ -82,7 +81,7 @@ function main() {
   install_kind
   set_inotify_limits_for_kind
   ensure_kind_network
-  install_cloud_provider_kind
+  run_cloud_provider_kind
   echo "Success!"
   check_non_root_docker_access
 }

@@ -2,7 +2,7 @@ module github.com/cofide/cofidectl
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.23.6
 
 require (
 	buf.build/go/protoyaml v0.3.1
