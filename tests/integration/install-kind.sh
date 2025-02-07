@@ -63,6 +63,7 @@ function run_cloud_provider_kind() {
   docker run -d \
     --network kind \
     --restart unless-stopped \
+    --name cloud-provider-kind \
     -v /var/run/docker.sock:/var/run/docker.sock \
     registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.5.0
 }
