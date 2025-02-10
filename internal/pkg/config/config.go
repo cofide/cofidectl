@@ -6,6 +6,7 @@ package config
 import (
 	"buf.build/go/protoyaml"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	config_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/config/v1alpha1"
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -15,6 +16,7 @@ import (
 // Config describes the cofide.yaml configuration file format.
 type Config struct {
 	TrustZones          []*trust_zone_proto.TrustZone
+	Clusters            []*clusterpb.Cluster
 	AttestationPolicies []*attestation_policy_proto.AttestationPolicy
 	PluginConfig        map[string]*structpb.Struct
 	Plugins             *pluginspb.Plugins
@@ -23,6 +25,7 @@ type Config struct {
 func NewConfig() *Config {
 	return &Config{
 		TrustZones:          []*trust_zone_proto.TrustZone{},
+		Clusters:            []*clusterpb.Cluster{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 		PluginConfig:        map[string]*structpb.Struct{},
 		Plugins:             &pluginspb.Plugins{},
@@ -36,6 +39,7 @@ func newConfigFromProto(proto *config_proto.Config) *Config {
 	}
 	return &Config{
 		TrustZones:          proto.TrustZones,
+		Clusters:            proto.Clusters,
 		AttestationPolicies: proto.AttestationPolicies,
 		PluginConfig:        proto.PluginConfig,
 		Plugins:             plugins,
@@ -45,6 +49,7 @@ func newConfigFromProto(proto *config_proto.Config) *Config {
 func (c *Config) toProto() *config_proto.Config {
 	return &config_proto.Config{
 		TrustZones:          c.TrustZones,
+		Clusters:            c.Clusters,
 		AttestationPolicies: c.AttestationPolicies,
 		PluginConfig:        c.PluginConfig,
 		Plugins:             c.Plugins,
@@ -62,6 +67,7 @@ func (c *Config) marshalYAML() ([]byte, error) {
 func unmarshalYAML(data []byte) (*Config, error) {
 	proto := config_proto.Config{
 		TrustZones:          []*trust_zone_proto.TrustZone{},
+		Clusters:            []*clusterpb.Cluster{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
 		PluginConfig:        map[string]*structpb.Struct{},
 	}
@@ -79,6 +85,25 @@ func (c *Config) GetTrustZoneByName(name string) (*trust_zone_proto.TrustZone, b
 		}
 	}
 	return nil, false
+}
+
+func (c *Config) GetClusterByName(name, trustZone string) (*clusterpb.Cluster, bool) {
+	for _, cluster := range c.Clusters {
+		if cluster.GetName() == name && cluster.GetTrustZone() == trustZone {
+			return cluster, true
+		}
+	}
+	return nil, false
+}
+
+func (c *Config) GetClustersByTrustZone(trustZone string) []*clusterpb.Cluster {
+	clusters := []*clusterpb.Cluster{}
+	for _, cluster := range c.Clusters {
+		if cluster.GetTrustZone() == trustZone {
+			clusters = append(clusters, cluster)
+		}
+	}
+	return clusters
 }
 
 func (c *Config) GetAttestationPolicyByName(name string) (*attestation_policy_proto.AttestationPolicy, bool) {

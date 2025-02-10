@@ -7,7 +7,7 @@ toolchain go1.23.6
 require (
 	buf.build/go/protoyaml v0.3.1
 	cuelang.org/go v0.10.1
-	github.com/cofide/cofide-api-sdk v0.5.2-0.20250117165051-3f40e0c57dc0
+	github.com/cofide/cofide-api-sdk v0.5.2-0.20250130134925-4714836e1d96
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.6.0

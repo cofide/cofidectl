@@ -6,11 +6,3 @@ trust_zones:
         - from: tz1
           to: tz2
       attestation_policies: []
-      clusters:
-      - name: local1
-        trust_zone: tz1
-        kubernetes_context: kind-local1
-        trust_provider:
-          name: ""
-          kind: kubernetes
-        profile: kubernetes

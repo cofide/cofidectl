@@ -52,6 +52,11 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			wantErr: "trust_zones: conflicting values \"not-a-list\" and [...#TrustZone]",
 		},
 		{
+			name:    "clusters not a list",
+			data:    "clusters: \"not-a-list\"",
+			wantErr: "clusters: conflicting values \"not-a-list\" and [...#Cluster]",
+		},
+		{
 			name:    "attestation policies not a list",
 			data:    "attestation_policies: \"not-a-list\"",
 			wantErr: "attestation_policies: conflicting values \"not-a-list\" and [...#AttestationPolicy]",
@@ -67,6 +72,11 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			wantErr: "trust_zones.0.foo: field not allowed",
 		},
 		{
+			name:    "unexpected cluster field",
+			data:    "clusters: [foo: bar]",
+			wantErr: "clusters.0.foo: field not allowed",
+		},
+		{
 			name:    "unexpected attestation policy field",
 			data:    "attestation_policies: [foo: bar]",
 			wantErr: "attestation_policies.0.foo: field not allowed",
@@ -77,19 +87,14 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			wantErr: "trust_zones.0.name: field is required but not present",
 		},
 		{
+			name:    "missing cluster field",
+			data:    string(readTestConfig(t, "missing_cluster_field.yaml")),
+			wantErr: "clusters.0.name: field is required but not present",
+		},
+		{
 			name:    "missing attestation policy field",
 			data:    string(readTestConfig(t, "missing_attestation_policy_field.yaml")),
 			wantErr: "attestation_policies.0.kubernetes: field is required but not present",
-		},
-		{
-			name:    "empty trust zone clusters list",
-			data:    string(readTestConfig(t, "empty_trust_zone_clusters.yaml")),
-			wantErr: "trust_zones.0.clusters: incompatible list lengths (0 and 1)",
-		},
-		{
-			name:    "multiple trust zone clusters list",
-			data:    string(readTestConfig(t, "multiple_trust_zone_clusters.yaml")),
-			wantErr: "trust_zones.0.clusters: incompatible list lengths (1 and 2)",
 		},
 		{
 			name:    "plugins not a map",

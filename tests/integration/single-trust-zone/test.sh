@@ -37,6 +37,18 @@ function configure() {
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy namespace
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy pod-label
+  override_helm_values
+}
+
+function override_helm_values() {
+  cat << EOF > values.yaml
+tornjak-frontend:
+  enabled: false
+upstream-spire-agent:
+  upstream: false
+EOF
+  ./cofidectl trust-zone helm override $TRUST_ZONE --input-file values.yaml
+  rm -f values.yaml
 }
 
 function up() {
@@ -105,6 +117,22 @@ function show_workload_status() {
   echo "cofidectl workload status successful"
 }
 
+function check_overridden_values() {
+  echo "Generated Helm values:"
+  ./cofidectl trust-zone helm values $TRUST_ZONE --output-file -
+
+  check_overridden_value '."tornjak-frontend".enabled' "false"
+  check_overridden_value '."upstream-spire-agent".upstream' "false"
+}
+
+function check_overridden_value() {
+  value=$(helm --kube-context $K8S_CLUSTER_CONTEXT get values spire | yq $1)
+  if [[ $value != $2 ]]; then
+    echo "Error: Did not find expected overridden Helm value $1: expected $2, actual $value"
+    return 1
+  fi
+}
+
 function down() {
   ./cofidectl down
 }
@@ -119,6 +147,7 @@ function main() {
   show_status
   run_tests
   show_workload_status
+  check_overridden_values
   down
   echo "Success!"
 }

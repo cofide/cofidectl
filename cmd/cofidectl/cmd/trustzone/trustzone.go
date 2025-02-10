@@ -86,7 +86,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 
 			data := make([][]string, len(trustZones))
 			for i, trustZone := range trustZones {
-				cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+				cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 				if err != nil {
 					return err
 				}
@@ -156,6 +156,18 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 
 			bundleEndpointProfile := trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
 
+			newTrustZone := &trust_zone_proto.TrustZone{
+				Name:                  opts.name,
+				TrustDomain:           opts.trustDomain,
+				JwtIssuer:             &opts.jwtIssuer,
+				BundleEndpointProfile: &bundleEndpointProfile,
+			}
+
+			_, err = ds.AddTrustZone(newTrustZone)
+			if err != nil {
+				return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, err)
+			}
+
 			newCluster := &clusterpb.Cluster{
 				Name:              &opts.kubernetesCluster,
 				TrustZone:         &opts.name,
@@ -164,17 +176,10 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				Profile:           &opts.profile,
 				ExternalServer:    &opts.externalServer,
 			}
-			newTrustZone := &trust_zone_proto.TrustZone{
-				Name:                  opts.name,
-				TrustDomain:           opts.trustDomain,
-				JwtIssuer:             &opts.jwtIssuer,
-				BundleEndpointProfile: &bundleEndpointProfile,
-				Clusters:              []*clusterpb.Cluster{newCluster},
-			}
 
-			_, err = ds.AddTrustZone(newTrustZone)
+			_, err = ds.AddCluster(newCluster)
 			if err != nil {
-				return fmt.Errorf("failed to create trust zone %s: %s", newTrustZone.Name, err)
+				return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
 			}
 
 			return nil
@@ -230,7 +235,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 		return err
 	}
 
-	cluster, err := trustzone.GetClusterFromTrustZone(trustZone)
+	cluster, err := trustzone.GetClusterFromTrustZone(trustZone, source)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -55,6 +56,15 @@ func (c *DataSourcePluginClientGRPC) Validate(ctx context.Context) error {
 	return err
 }
 
+func (c *DataSourcePluginClientGRPC) AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
+	resp, err := c.client.AddTrustZone(c.ctx, &cofidectl_proto.AddTrustZoneRequest{TrustZone: trustZone})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.TrustZone, nil
+}
+
 func (c *DataSourcePluginClientGRPC) GetTrustZone(name string) (*trust_zone_proto.TrustZone, error) {
 	resp, err := c.client.GetTrustZone(c.ctx, &cofidectl_proto.GetTrustZoneRequest{Name: &name})
 	if err != nil {
@@ -73,8 +83,8 @@ func (c *DataSourcePluginClientGRPC) ListTrustZones() ([]*trust_zone_proto.Trust
 	return resp.TrustZones, nil
 }
 
-func (c *DataSourcePluginClientGRPC) AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
-	resp, err := c.client.AddTrustZone(c.ctx, &cofidectl_proto.AddTrustZoneRequest{TrustZone: trustZone})
+func (c *DataSourcePluginClientGRPC) UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
+	resp, err := c.client.UpdateTrustZone(c.ctx, &cofidectl_proto.UpdateTrustZoneRequest{TrustZone: trustZone})
 	if err != nil {
 		return nil, err
 	}
@@ -82,9 +92,40 @@ func (c *DataSourcePluginClientGRPC) AddTrustZone(trustZone *trust_zone_proto.Tr
 	return resp.TrustZone, nil
 }
 
-func (c *DataSourcePluginClientGRPC) UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) error {
-	_, err := c.client.UpdateTrustZone(c.ctx, &cofidectl_proto.UpdateTrustZoneRequest{TrustZone: trustZone})
-	return err
+func (c *DataSourcePluginClientGRPC) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
+	resp, err := c.client.AddCluster(c.ctx, &cofidectl_proto.AddClusterRequest{Cluster: cluster})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Cluster, nil
+}
+
+func (c *DataSourcePluginClientGRPC) GetCluster(name, trustZone string) (*clusterpb.Cluster, error) {
+	resp, err := c.client.GetCluster(c.ctx, &cofidectl_proto.GetClusterRequest{Name: &name, TrustZone: &trustZone})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Cluster, nil
+}
+
+func (c *DataSourcePluginClientGRPC) ListClusters(trustZone string) ([]*clusterpb.Cluster, error) {
+	resp, err := c.client.ListClusters(c.ctx, &cofidectl_proto.ListClustersRequest{TrustZone: &trustZone})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Clusters, nil
+}
+
+func (c *DataSourcePluginClientGRPC) UpdateCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
+	resp, err := c.client.UpdateCluster(c.ctx, &cofidectl_proto.UpdateClusterRequest{Cluster: cluster})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Cluster, nil
 }
 
 func (c *DataSourcePluginClientGRPC) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error) {
@@ -167,6 +208,14 @@ func (s *GRPCServer) Validate(ctx context.Context, req *cofidectl_proto.Validate
 	return &cofidectl_proto.ValidateResponse{}, nil
 }
 
+func (s *GRPCServer) AddTrustZone(_ context.Context, req *cofidectl_proto.AddTrustZoneRequest) (*cofidectl_proto.AddTrustZoneResponse, error) {
+	trustZone, err := s.Impl.AddTrustZone(req.TrustZone)
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.AddTrustZoneResponse{TrustZone: trustZone}, nil
+}
+
 func (s *GRPCServer) GetTrustZone(_ context.Context, req *cofidectl_proto.GetTrustZoneRequest) (*cofidectl_proto.GetTrustZoneResponse, error) {
 	trustZone, err := s.Impl.GetTrustZone(req.GetName())
 	if err != nil {
@@ -183,20 +232,44 @@ func (s *GRPCServer) ListTrustZones(_ context.Context, req *cofidectl_proto.List
 	return &cofidectl_proto.ListTrustZonesResponse{TrustZones: trustZones}, nil
 }
 
-func (s *GRPCServer) AddTrustZone(_ context.Context, req *cofidectl_proto.AddTrustZoneRequest) (*cofidectl_proto.AddTrustZoneResponse, error) {
-	trustZone, err := s.Impl.AddTrustZone(req.TrustZone)
+func (s *GRPCServer) UpdateTrustZone(_ context.Context, req *cofidectl_proto.UpdateTrustZoneRequest) (*cofidectl_proto.UpdateTrustZoneResponse, error) {
+	trustZone, err := s.Impl.UpdateTrustZone(req.TrustZone)
 	if err != nil {
 		return nil, err
 	}
-	return &cofidectl_proto.AddTrustZoneResponse{TrustZone: trustZone}, nil
+	return &cofidectl_proto.UpdateTrustZoneResponse{TrustZone: trustZone}, nil
 }
 
-func (s *GRPCServer) UpdateTrustZone(_ context.Context, req *cofidectl_proto.UpdateTrustZoneRequest) (*cofidectl_proto.UpdateTrustZoneResponse, error) {
-	err := s.Impl.UpdateTrustZone(req.TrustZone)
+func (s *GRPCServer) AddCluster(_ context.Context, req *cofidectl_proto.AddClusterRequest) (*cofidectl_proto.AddClusterResponse, error) {
+	cluster, err := s.Impl.AddCluster(req.Cluster)
 	if err != nil {
 		return nil, err
 	}
-	return &cofidectl_proto.UpdateTrustZoneResponse{}, nil
+	return &cofidectl_proto.AddClusterResponse{Cluster: cluster}, nil
+}
+
+func (s *GRPCServer) GetCluster(_ context.Context, req *cofidectl_proto.GetClusterRequest) (*cofidectl_proto.GetClusterResponse, error) {
+	cluster, err := s.Impl.GetCluster(req.GetName(), req.GetTrustZone())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.GetClusterResponse{Cluster: cluster}, nil
+}
+
+func (s *GRPCServer) ListClusters(_ context.Context, req *cofidectl_proto.ListClustersRequest) (*cofidectl_proto.ListClustersResponse, error) {
+	clusters, err := s.Impl.ListClusters(req.GetTrustZone())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.ListClustersResponse{Clusters: clusters}, nil
+}
+
+func (s *GRPCServer) UpdateCluster(_ context.Context, req *cofidectl_proto.UpdateClusterRequest) (*cofidectl_proto.UpdateClusterResponse, error) {
+	cluster, err := s.Impl.UpdateCluster(req.Cluster)
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.UpdateClusterResponse{Cluster: cluster}, nil
 }
 
 func (s *GRPCServer) AddAttestationPolicy(_ context.Context, req *cofidectl_proto.AddAttestationPolicyRequest) (*cofidectl_proto.AddAttestationPolicyResponse, error) {
