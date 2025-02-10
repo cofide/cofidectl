@@ -2,7 +2,7 @@ module github.com/cofide/cofidectl
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.23.6
 
 require (
 	buf.build/go/protoyaml v0.3.1
@@ -14,11 +14,11 @@ require (
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/manifoldco/promptui v0.9.0
 	github.com/spf13/cobra v1.8.1
-	github.com/spiffe/go-spiffe/v2 v2.4.0
+	github.com/spiffe/go-spiffe/v2 v2.5.0
 	github.com/spiffe/spire-api-sdk v1.11.1
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.4
+	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.0
 )

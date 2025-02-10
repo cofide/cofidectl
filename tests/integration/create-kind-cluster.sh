@@ -8,7 +8,7 @@ DELETE_EXISTING_KIND_CLUSTER=${DELETE_EXISTING_KIND_CLUSTER:-true}
 
 K8S_CLUSTER_NAME=${K8S_CLUSTER_NAME:-local1}
 
-CLOUD_PROVIDER_KIND_CONTAINER_NAME=cloud-provider-kind-cloud-provider-1
+CLOUD_PROVIDER_KIND_CONTAINER_NAME=cloud-provider-kind
 
 function delete_kind_cluster() {
   cluster=$(kind get clusters | egrep "\b${K8S_CLUSTER_NAME}\b" || true)
