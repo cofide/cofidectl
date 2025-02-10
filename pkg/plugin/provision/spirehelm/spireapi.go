@@ -8,6 +8,7 @@ import (
 
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/spire"
+	spiretypes "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 )
 
 // Type check that SPIREAPIFactoryImpl implements the SPIREAPIFactory interface.
@@ -25,7 +26,7 @@ type SPIREAPI interface {
 	WaitForServerIP(ctx context.Context) (string, error)
 
 	// GetBundle retrieves a SPIFFE bundle for the local trust zone.
-	GetBundle(ctx context.Context) (string, error)
+	GetBundle(ctx context.Context) (*spiretypes.Bundle, error)
 }
 
 // SPIREAPIFactoryImpl implements the SPIREAPIFactory interface, building a SPIREAPIImpl.
@@ -50,6 +51,6 @@ func (s *SPIREAPIImpl) WaitForServerIP(ctx context.Context) (string, error) {
 	return spire.WaitForServerIP(ctx, s.client)
 }
 
-func (s *SPIREAPIImpl) GetBundle(ctx context.Context) (string, error) {
+func (s *SPIREAPIImpl) GetBundle(ctx context.Context) (*spiretypes.Bundle, error) {
 	return spire.GetBundle(ctx, s.client)
 }

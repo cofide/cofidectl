@@ -226,7 +226,7 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 			return err
 		}
 
-		trustZone.Bundle = &bundle
+		trustZone.Bundle = bundle
 
 		if _, err := ds.UpdateTrustZone(trustZone); err != nil {
 			msg := fmt.Sprintf("Failed updating trust zone %s", trustZone.Name)

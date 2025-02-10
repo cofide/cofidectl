@@ -333,13 +333,13 @@ func WaitForServerIP(ctx context.Context, client *kubeutil.Client) (string, erro
 }
 
 // GetBundle retrieves a SPIFFE bundle for the local trust zone by exec'ing into a SPIRE Server.
-func GetBundle(ctx context.Context, client *kubeutil.Client) (string, error) {
-	command := []string{"bundle", "show", "-format", "spiffe"}
+func GetBundle(ctx context.Context, client *kubeutil.Client) (*types.Bundle, error) {
+	command := []string{"bundle", "show", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(stdout), nil
+	return parseBundleShow(stdout)
 }
 
 func createPodWatcher(ctx context.Context, client *kubeutil.Client) (watch.Interface, error) {
@@ -433,7 +433,7 @@ func GetServerCABundleAndFederatedBundles(ctx context.Context, client *kubeutil.
 	return serverCABundle, federatedBundles, err
 }
 
-// getServerCABundle retrives the x509_authorities component of the server CA trust bundle
+// getServerCABundle retrieves the x509_authorities component of the server CA trust bundle
 func getServerCABundle(ctx context.Context, client *kubeutil.Client) (string, error) {
 	command := []string{"bundle", "show", "-output", "json"}
 	stdout, _, err := execInServerContainer(ctx, client, command)

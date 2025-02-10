@@ -17,6 +17,7 @@ import (
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
+	spiretypes "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -197,7 +198,7 @@ func (f *fakeSPIREAPIFactory) Build(kubeCfgFile, kubeContext string) (SPIREAPI, 
 type fakeSPIREAPI struct {
 	ip        string
 	ipErr     error
-	bundle    string
+	bundle    *spiretypes.Bundle
 	bundleErr error
 }
 
@@ -205,7 +206,7 @@ func (s *fakeSPIREAPI) WaitForServerIP(ctx context.Context) (string, error) {
 	return s.ip, s.ipErr
 }
 
-func (s *fakeSPIREAPI) GetBundle(ctx context.Context) (string, error) {
+func (s *fakeSPIREAPI) GetBundle(ctx context.Context) (*spiretypes.Bundle, error) {
 	return s.bundle, s.bundleErr
 }
 
