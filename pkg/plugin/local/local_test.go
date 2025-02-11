@@ -10,6 +10,7 @@ import (
 
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/google/go-cmp/cmp"
+	spiretypes "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/testing/protocmp"
@@ -195,7 +196,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 			name: "allowed changes",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.Bundle = fixtures.StringPtr("new bundle")
+				tz.Bundle = &spiretypes.Bundle{}
 				tz.BundleEndpointUrl = fixtures.StringPtr("http://new.bundle")
 				return tz
 			}(),

@@ -4,11 +4,31 @@
 	name!: string
 	trust_domain!: string
 	bundle_endpoint_url?: string
-	bundle?: string
+	bundle?: #Bundle
 	federations: [...#Federation]
 	attestation_policies: [...#APBinding]
 	jwt_issuer?: string
 	bundle_endpoint_profile?: #BundleEndpointProfile
+}
+
+#Bundle: {
+	trust_domain?: string
+	x509_authorities?: [...#X509Certificate]
+	jwt_authorities?: [...#JWTKey]
+	refresh_hint?: string
+	sequence_number?: string
+}
+
+#X509Certificate: {
+	asn1!: string
+	tainted?: bool
+}
+
+#JWTKey: {
+	public_key!: string
+	key_id?: string
+	expires_at?: string
+	tainted?: bool
 }
 
 #Cluster: {

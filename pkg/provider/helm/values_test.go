@@ -231,6 +231,119 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 			},
 		},
 		{
+			name:      "tz2",
+			trustZone: fixtures.TrustZone("tz2"),
+			cluster:   fixtures.Cluster("local2"),
+			want: Values{
+				"global": Values{
+					"deleteHooks": Values{
+						"enabled": false,
+					},
+					"installAndUpgradeHooks": Values{
+						"enabled": false,
+					},
+					"spire": Values{
+						"caSubject": Values{
+							"country":      "UK",
+							"organization": "Cofide",
+							"commonName":   "cofide.io",
+						},
+						"clusterName": "local2",
+						"jwtIssuer":   "https://tz2.example.com",
+						"namespaces": Values{
+							"create": true,
+						},
+						"recommendations": Values{
+							"enabled": true,
+						},
+						"trustDomain": "td2",
+					},
+				},
+				"spiffe-csi-driver": Values{
+					"fullnameOverride": "spiffe-csi-driver",
+				},
+				"spiffe-oidc-discovery-provider": Values{
+					"enabled": false,
+				},
+				"spire-agent": Values{
+					"fullnameOverride": "spire-agent",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPsat": Values{
+							"enabled": true,
+						},
+					},
+					"sds": map[string]any{
+						"enabled":               true,
+						"defaultSvidName":       "default",
+						"defaultBundleName":     "ROOTCA",
+						"defaultAllBundlesName": "ALL",
+					},
+					"workloadAttestors": Values{
+						"k8s": Values{
+							"disableContainerSelectors": true,
+							"enabled":                   true,
+						},
+					},
+				},
+				"spire-server": Values{
+					"caKeyType": "rsa-2048",
+					"caTTL":     "12h",
+					"controllerManager": Values{
+						"enabled": true,
+						"identities": Values{
+							"clusterFederatedTrustDomains": Values{
+								"tz1": Values{
+									"bundleEndpointProfile": Values{
+										"endpointSPIFFEID": "spiffe://td1/spire/server",
+										"type":             "https_spiffe",
+									},
+									"bundleEndpointURL": "127.0.0.1",
+									"trustDomain":       "td1",
+									"trustDomainBundle": "{\"keys\":[{\"use\":\"x509-svid\",\"kty\":\"RSA\",\"n\":\"zQiMbwAURHf67uePImpXIdacY2oRaQ5YZeZSYQDHzt-kmvhTlfymJdnA8c9Uh9ysfWMg2kEA64IGKGsBuHABfQea2Q-3csVYxSnjvMdLv6xLLZNF64QdMu2rGAQbuLAEbaxvLRhOi1mdverVeOe7J07NgG4tcKCE2IiRL41F7aSg6_lB5Rkk3sigO4bpsaDpHgLCYcWEt4DZkxj1A79fs-Ej09wvrIO6s7GC3jeqOMY-uRRVVvi_iO7mLPwI5oWnWgZyECr7dOR3Q-X1VyW_y-WUMEMzEyOReMo7U_S56iaV1oElDmc_86mZWOERnlL0Q4pNx8nuqpLfdMAmcGenTQ\",\"e\":\"AQAB\",\"x5c\":[\"MIIDrjCCApagAwIBAgIRAL6Ru792Wi5AhHhh387STRIwDQYJKoZIhvcNAQELBQAwZDELMAkGA1UEBhMCVUsxDzANBgNVBAoTBkNvZmlkZTESMBAGA1UEAxMJY29maWRlLmlvMTAwLgYDVQQFEycyNTMzMTAwMTAyMjM0MjQ3NDE4NDYzOTczNzY0MDQzMTM0OTI3NTQwHhcNMjUwMjA3MTU1ODU1WhcNMjUwMjA4MDM1OTA1WjBkMQswCQYDVQQGEwJVSzEPMA0GA1UEChMGQ29maWRlMRIwEAYDVQQDEwljb2ZpZGUuaW8xMDAuBgNVBAUTJzI1MzMxMDAxMDIyMzQyNDc0MTg0NjM5NzM3NjQwNDMxMzQ5Mjc1NDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAM0IjG8AFER3+u7njyJqVyHWnGNqEWkOWGXmUmEAx87fpJr4U5X8piXZwPHPVIfcrH1jINpBAOuCBihrAbhwAX0HmtkPt3LFWMUp47zHS7+sSy2TReuEHTLtqxgEG7iwBG2sby0YTotZnb3q1XjnuydOzYBuLXCghNiIkS+NRe2koOv5QeUZJN7IoDuG6bGg6R4CwmHFhLeA2ZMY9QO/X7PhI9PcL6yDurOxgt43qjjGPrkUVVb4v4ju5iz8COaFp1oGchAq+3Tkd0Pl9Vclv8vllDBDMxMjkXjKO1P0ueomldaBJQ5nP/OpmVjhEZ5S9EOKTcfJ7qqS33TAJnBnp00CAwEAAaNbMFkwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFGCz3aiUExK4+2cTKGFcJpxBcAexMBcGA1UdEQQQMA6GDHNwaWZmZTovL3RkMjANBgkqhkiG9w0BAQsFAAOCAQEAfhzGZqw3UC+uJGsOLFQ0v7EWS35UB8PvgWABDd+2cRABnSSsNciaszN0Fz9t1qJcP20eldna5b0eZNJLOH89BEqWGTiXD37B3qAqKsT/pAU0eglMtDCNW+KipDpAoo9dFlbF+cSk9dJlH0gNYsMwO1vMFdrRK/4O79sRkxKn2JMf082EXsFpDzPORDsZ1FidOkWT3kTKbH469zFz8a0El7Tq58/2aELkF9qUnP3ZfN6H9CGiES7OV7kNuzuTadVIiFQpeYxd+U/ro6jKeyUdY83FZ6Qfx/bRTRqXStrbutDcdetWWQvRGRCHRoa0uMNmz8fkqLDRkc+emcJGyGSLAQ==\"]},{\"use\":\"jwt-svid\",\"kty\":\"RSA\",\"kid\":\"sHYIGH99d7NhlAVufX9a9e0D9HMPGCQw\",\"n\":\"0mg3S_3z_NlFHhqvd49RibgQpgsWvVBs66pC27AsJIh9UFs5jW17QQJkaBRt_LtA4jhQIQErj3g1ZPyv2JCfLOA-rFHcGFdsnuf8xTgKQfmp4v_xpvUQVmA9rzoFLx5DTDxLe0tU0lgGhJxPJcoSGzAae_Tn_1jenWkIvyPX1W5TMFiIJkpPpqASOUCOnkdwwZ-XeLo-7XWGUAjNtHVsEIOjiIRFkeZCwKSXJvXy9T5OMjCtGsQFaF6-fg5wE0VJBXCDXMr_uPIbVmozGC75opOOPJXcV8daVbEpCKm2BFDcm0MNchNijGGCR0JhYEhb04YSAhN8tmyjxeHHJiblmw\",\"e\":\"AQAB\"}],\"spiffe_sequence\":3,\"spiffe_refresh_hint\":2}",
+								},
+							},
+							"clusterSPIFFEIDs": Values{
+								"ap2": Values{
+									"federatesWith": []string{
+										"td1",
+									},
+									"podSelector": Values{
+										"matchExpressions": []map[string]any{
+											{
+												"key":      "foo",
+												"operator": "In",
+												"values":   []string{"bar"},
+											},
+										},
+										"matchLabels": map[string]any{},
+									},
+								},
+								"default": Values{
+									"enabled": false,
+								},
+							},
+						},
+					},
+					"enabled": true,
+					"federation": Values{
+						"enabled": true,
+					},
+					"fullnameOverride": "spire-server",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPsat": Values{
+							"audience": []string{"spire-server"},
+							"enabled":  true,
+						},
+					},
+					"service": Values{
+						"type": "LoadBalancer",
+					},
+				},
+			},
+		},
+		{
 			name:      "tz4 using the istio profile",
 			trustZone: fixtures.TrustZone("tz4"),
 			cluster:   fixtures.Cluster("local4"),

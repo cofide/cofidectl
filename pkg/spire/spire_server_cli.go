@@ -118,3 +118,92 @@ func parseEntryList(output []byte) (*entryListJson, error) {
 	}
 	return entries, nil
 }
+
+type bundleJson struct {
+	JwtAuthorities  []jwtAuthorityJson  `json:"jwt_authorities"`
+	RefreshHint     string              `json:"refresh_hint"`
+	SequenceNumber  string              `json:"sequence_number"`
+	TrustDomain     string              `json:"trust_domain"`
+	X509Authorities []x509AuthorityJson `json:"x509_authorities"`
+}
+
+func (b *bundleJson) toBundle() (*types.Bundle, error) {
+	bundle := types.Bundle{
+		JwtAuthorities:  []*types.JWTKey{},
+		TrustDomain:     b.TrustDomain,
+		X509Authorities: []*types.X509Certificate{},
+	}
+	var err error
+
+	if b.RefreshHint != "" {
+		bundle.RefreshHint, err = strconv.ParseInt(b.RefreshHint, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if b.SequenceNumber != "" {
+		bundle.SequenceNumber, err = strconv.ParseUint(b.SequenceNumber, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, ja := range b.JwtAuthorities {
+		jk, err := ja.toJWTKey()
+		if err != nil {
+			return nil, err
+		}
+
+		bundle.JwtAuthorities = append(bundle.JwtAuthorities, jk)
+	}
+
+	for _, xc := range b.X509Authorities {
+		bundle.X509Authorities = append(bundle.X509Authorities, xc.toX509Certificate())
+	}
+
+	return &bundle, nil
+}
+
+type jwtAuthorityJson struct {
+	ExpiresAt string `json:"expires_at"`
+	KeyId     string `json:"key_id"`
+	PublicKey []byte `json:"public_key"`
+	Tainted   bool   `json:"tainted"`
+}
+
+func (ja *jwtAuthorityJson) toJWTKey() (*types.JWTKey, error) {
+	expiresAt, err := strconv.ParseInt(ja.ExpiresAt, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.JWTKey{
+		ExpiresAt: expiresAt,
+		KeyId:     ja.KeyId,
+		PublicKey: ja.PublicKey,
+		Tainted:   ja.Tainted,
+	}, nil
+}
+
+type x509AuthorityJson struct {
+	Asn1    []byte `json:"asn1"`
+	Tainted bool   `json:"tainted"`
+}
+
+func (xa *x509AuthorityJson) toX509Certificate() *types.X509Certificate {
+	return &types.X509Certificate{
+		Asn1:    xa.Asn1,
+		Tainted: xa.Tainted,
+	}
+}
+
+// parseBundleShow parses the output of the 'bundle show -output json' command.
+func parseBundleShow(output []byte) (*types.Bundle, error) {
+	bundle := &bundleJson{}
+	err := json.Unmarshal(output, bundle)
+	if err != nil {
+		return nil, err
+	}
+	return bundle.toBundle()
+}
