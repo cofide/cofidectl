@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package dev
 
 import (
@@ -62,7 +65,10 @@ func devMiniSpireCmd() *cobra.Command {
 
 			go func() {
 				fmt.Println("SPIRE server listening on", opts.socket)
-				grpcServer.Serve(lis)
+				err := grpcServer.Serve(lis)
+				if err != nil {
+					fmt.Println("SPIRE server failed", err)
+				}
 			}()
 
 			// listen for signals to stop the server

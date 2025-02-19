@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package minispire
 
 import (
@@ -52,7 +55,7 @@ func (c *grpcCredentials) ServerHandshake(conn net.Conn) (net.Conn, credentials.
 	}
 
 	auth := AuthInfo{}
-	sys.Control(func(fd uintptr) {
+	err = sys.Control(func(fd uintptr) {
 		pid, uid, gid := getProcessInfo(fd)
 		if pid == 0 && uid == 0 && gid == 0 {
 			return
@@ -61,6 +64,11 @@ func (c *grpcCredentials) ServerHandshake(conn net.Conn) (net.Conn, credentials.
 		auth.Caller.UID = uid
 		auth.Caller.GID = gid
 	})
+	if err != nil {
+		log.Printf("unable to get peer credentials: %v", err)
+		conn.Close()
+		return conn, AuthInfo{}, ErrInvalidConnection
+	}
 
 	// get binary path of the caller
 	path, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", auth.Caller.PID))
