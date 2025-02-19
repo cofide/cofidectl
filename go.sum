@@ -90,6 +90,8 @@ github.com/cockroachdb/apd/v3 v3.2.1 h1:U+8j7t0axsIgvQUqthuNm82HIrYXodOV2iWLWtEa
 github.com/cockroachdb/apd/v3 v3.2.1/go.mod h1:klXJcjp+FffLTHlhIG69tezTDvdP065naDsHzKhYSqc=
 github.com/cofide/cofide-api-sdk v0.10.0 h1:MVWKzeJQRx031n4ggMq26xz5wHcjcJPJIXPVt48xgo0=
 github.com/cofide/cofide-api-sdk v0.10.0/go.mod h1:w6f6RfZxwPA2zr0BAAhd+Wl2sIzuQOu6ONfVuISX45c=
+github.com/cofide/cofide-sdk-go v0.1.0 h1:cBUMlrRMQoCmYXnejh5mRnzcRzKXJ50fQfocCUSjMj0=
+github.com/cofide/cofide-sdk-go v0.1.0/go.mod h1:yaB5vLtujeZ4tXjh7m2UCziraRVXrHiyf81N44EKv9s=
 github.com/containerd/cgroups v1.1.0 h1:v8rEWFl6EoqHB+swVNjVoCJE8o3jX7e8nqBGPLaDFBM=
 github.com/containerd/cgroups v1.1.0/go.mod h1:6ppBcbh/NOOUU+dMKrykgaBnK9lCIBxHqJDGwsa1mIw=
 github.com/containerd/containerd v1.7.24 h1:zxszGrGjrra1yYJW/6rhm9cJ1ZQ8rkKBR48brqsa7nA=

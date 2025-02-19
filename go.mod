@@ -6,7 +6,7 @@ require (
 	buf.build/go/protoyaml v0.3.1
 	cuelang.org/go v0.10.1
 	github.com/cofide/cofide-api-sdk v0.10.0
-	github.com/cofide/cofide-sdk-go v0.0.0-unpublished
+	github.com/cofide/cofide-sdk-go v0.1.0
 	github.com/fatih/color v1.18.0
 	github.com/go-jose/go-jose/v4 v4.0.5
 	github.com/gofrs/flock v0.12.1
@@ -28,8 +28,6 @@ require go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 
 // Uncomment the following for development with local Cofide API SDK changes:
 //replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
-
-replace github.com/cofide/cofide-sdk-go v0.0.0-unpublished => ../cofide-sdk-go
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.0-20241127180247-a33202765966.1 // indirect
