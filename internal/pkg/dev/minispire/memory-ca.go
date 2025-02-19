@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package minispire
 
 import (
@@ -265,8 +268,15 @@ func generateJTI(claims map[string]any, spiffeID string) string {
 
 	// add 5 bytes of random data to avoid collisions
 	nonce := make([]byte, 5)
-	rand.Read(nonce)
-	hash.Write(nonce)
+	_, err = rand.Read(nonce)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = hash.Write(nonce)
+	if err != nil {
+		panic(err)
+	}
 
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }

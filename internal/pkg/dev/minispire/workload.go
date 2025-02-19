@@ -1,3 +1,6 @@
+// Copyright 2024 Cofide Limited.
+// SPDX-License-Identifier: Apache-2.0
+
 package minispire
 
 import (
@@ -148,13 +151,11 @@ func (w *WorkloadHandler) waitForCertUpdateAndSendSVIDs(req *pb.X509SVIDRequest,
 }
 
 func (w *WorkloadHandler) FetchX509Bundles(req *pb.X509BundlesRequest, resp pb.SpiffeWorkloadAPI_FetchX509BundlesServer) error {
-	resp.Send(&pb.X509BundlesResponse{
+	return resp.Send(&pb.X509BundlesResponse{
 		Bundles: map[string][]byte{
 			w.c.Domain: w.c.CA.GetCACert(),
 		},
 	})
-
-	return nil
 }
 
 func (w *WorkloadHandler) FetchJWTSVID(ctx context.Context, req *pb.JWTSVIDRequest) (*pb.JWTSVIDResponse, error) {
