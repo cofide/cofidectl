@@ -10,7 +10,7 @@ require (
 	github.com/cofide/cofide-api-sdk v0.10.0
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/manifoldco/promptui v0.9.0
 	github.com/spf13/cobra v1.9.1
