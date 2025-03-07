@@ -5,6 +5,7 @@ package spirehelm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
@@ -135,6 +136,9 @@ func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource) ([]TrustZone
 		// Sanity check that the trust zone has exactly one cluster.
 		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 		if err != nil {
+			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
+				continue
+			}
 			return nil, err
 		}
 		trustZoneCluster := TrustZoneCluster{TrustZone: trustZone, Cluster: cluster}

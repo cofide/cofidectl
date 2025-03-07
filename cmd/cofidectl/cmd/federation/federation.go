@@ -5,6 +5,7 @@ package federation
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
@@ -133,6 +134,9 @@ func checkFederationStatus(ctx context.Context, ds datasource.DataSource, kubeCo
 	for _, tz := range []*trust_zone_proto.TrustZone{from, to} {
 		cluster, err := trustzone.GetClusterFromTrustZone(tz, ds)
 		if err != nil {
+			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
+				return "No cluster", "N/A", nil
+			}
 			return "", "", err
 		}
 
