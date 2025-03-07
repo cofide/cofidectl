@@ -4,11 +4,16 @@
 package trustzone
 
 import (
-	"fmt"
+	"errors"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+)
+
+var (
+	ErrNoClustersInTrustZone  = errors.New("no clusters in trust zone")
+	ErrOneClusterPerTrustZone = errors.New("expected exactly one cluster per trust zone")
 )
 
 // GetClusterFromTrustZone returns a cluster from a trust zone.
@@ -19,8 +24,11 @@ func GetClusterFromTrustZone(trustZone *trust_zone_proto.TrustZone, ds datasourc
 		return nil, err
 	}
 
-	if clusters == nil || len(clusters) != 1 {
-		return nil, fmt.Errorf("expected exactly one cluster per trust zone")
+	if len(clusters) < 1 {
+		return nil, ErrNoClustersInTrustZone
+	}
+	if len(clusters) > 1 {
+		return nil, ErrOneClusterPerTrustZone
 	}
 	return clusters[0], nil
 }

@@ -87,14 +87,19 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 			data := make([][]string, len(trustZones))
 			for i, trustZone := range trustZones {
 				cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
-				if err != nil {
+				if err != nil && !errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
 					return err
+				}
+
+				clusterName := "N/A"
+				if cluster != nil {
+					clusterName = cluster.GetName()
 				}
 
 				data[i] = []string{
 					trustZone.Name,
 					trustZone.TrustDomain,
-					cluster.GetName(),
+					clusterName,
 				}
 			}
 
@@ -122,6 +127,7 @@ type addOpts struct {
 	profile           string
 	jwtIssuer         string
 	externalServer    bool
+	noCluster         bool
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
@@ -144,14 +150,21 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
-			err = c.getKubernetesContext(cmd, &opts)
-			if err != nil {
-				return err
-			}
+			var trustProviderKind string
+			if !opts.noCluster {
+				if opts.kubernetesCluster == "" {
+					return errors.New("required flag(s) \"kubernetes-cluster\" not set")
+				}
 
-			trustProviderKind, err := trustprovider.GetTrustProviderKindFromProfile(opts.profile)
-			if err != nil {
-				return err
+				err = c.getKubernetesContext(cmd, &opts)
+				if err != nil {
+					return err
+				}
+
+				trustProviderKind, err = trustprovider.GetTrustProviderKindFromProfile(opts.profile)
+				if err != nil {
+					return err
+				}
 			}
 
 			bundleEndpointProfile := trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
@@ -168,18 +181,20 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, err)
 			}
 
-			newCluster := &clusterpb.Cluster{
-				Name:              &opts.kubernetesCluster,
-				TrustZone:         &opts.name,
-				KubernetesContext: &opts.context,
-				TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
-				Profile:           &opts.profile,
-				ExternalServer:    &opts.externalServer,
-			}
+			if !opts.noCluster {
+				newCluster := &clusterpb.Cluster{
+					Name:              &opts.kubernetesCluster,
+					TrustZone:         &opts.name,
+					KubernetesContext: &opts.context,
+					TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
+					Profile:           &opts.profile,
+					ExternalServer:    &opts.externalServer,
+				}
 
-			_, err = ds.AddCluster(newCluster)
-			if err != nil {
-				return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
+				_, err = ds.AddCluster(newCluster)
+				if err != nil {
+					return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
+				}
 			}
 
 			return nil
@@ -193,9 +208,9 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 	f.StringVar(&opts.jwtIssuer, "jwt-issuer", "", "JWT issuer to use for this trust zone")
 	f.BoolVar(&opts.externalServer, "external-server", false, "If the SPIRE server runs externally")
+	f.BoolVar(&opts.noCluster, "no-cluster", false, "Create a trust zone without an associated cluster")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
-	cobra.CheckErr(cmd.MarkFlagRequired("kubernetes-cluster"))
 
 	return cmd
 }

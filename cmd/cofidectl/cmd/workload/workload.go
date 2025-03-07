@@ -5,6 +5,7 @@ package workload
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -197,6 +198,9 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 	for _, trustZone := range trustZones {
 		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 		if err != nil {
+			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
+				continue
+			}
 			return err
 		}
 
@@ -315,6 +319,9 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 	for _, trustZone := range trustZones {
 		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 		if err != nil {
+			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
+				continue
+			}
 			return err
 		}
 
