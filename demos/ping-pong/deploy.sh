@@ -6,16 +6,16 @@ NAMESPACE="$1"
 CLIENT_CTX="$2"
 SERVER_CTX="${3:-$CLIENT_CTX}"
 
-# assume a local kind cluster for the demos unless otherwise configured
-export KO_DOCKER_REPO=${KO_DOCKER_REPO:-kind.local}
+COFIDE_DEMOS_BRANCH="https://raw.githubusercontent.com/cofide/cofide-demos/refs/heads/jsnctl/add-aws-oidc-workloads"
 
-pushd cofide-demos
-
+SERVER_MANIFEST="$COFIDE_DEMOS_BRANCH/workloads/ping-pong/ping-pong-server/deploy.yaml"
+export PING_PONG_SERVER_SERVICE_PORT=8443
+export IMAGE_TAG=v0.1.2-rc3
 echo "Deploying pong server to: $SERVER_CTX"
 if [[ $SERVER_CTX == kind-* ]]; then
     export KIND_CLUSTER_NAME="${SERVER_CTX#kind-}"
 fi
-if ! ko resolve -f workloads/ping-pong/server/deploy.yaml | kubectl apply -n "$NAMESPACE" --context "$SERVER_CTX" -f -; then
+if ! curl $SERVER_MANIFEST | envsubst | kubectl apply -n "$NAMESPACE" --context "$SERVER_CTX" -f -; then
     echo "Error: Server deployment failed" >&2
     exit 1
 fi
@@ -34,7 +34,8 @@ else
     export PING_PONG_SERVER_SERVICE_HOST=ping-pong-server
 fi
 export PING_PONG_SERVER_SERVICE_PORT=8443
-if ! cat workloads/ping-pong/client/deploy.yaml | envsubst | ko resolve -f - | kubectl apply --context "$CLIENT_CTX" -n "$NAMESPACE" -f -; then
+CLIENT_MANIFEST="$COFIDE_DEMOS_BRANCH/workloads/ping-pong/ping-pong-client/deploy.yaml"
+if ! curl $CLIENT_MANIFEST | envsubst | ko resolve -f - | kubectl apply --context "$CLIENT_CTX" -n "$NAMESPACE" -f -; then
     echo "Error: client deployment failed" >&2
     exit 1
 fi
