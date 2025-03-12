@@ -10,7 +10,7 @@ COFIDE_DEMOS_BRANCH="https://raw.githubusercontent.com/cofide/cofide-demos/refs/
 
 SERVER_MANIFEST="$COFIDE_DEMOS_BRANCH/workloads/ping-pong/ping-pong-server/deploy.yaml"
 export PING_PONG_SERVER_SERVICE_PORT=8443
-export IMAGE_TAG=v0.1.2-rc3
+export IMAGE_TAG=v0.1.2-rc4
 echo "Deploying pong server to: $SERVER_CTX"
 if [[ $SERVER_CTX == kind-* ]]; then
     export KIND_CLUSTER_NAME="${SERVER_CTX#kind-}"
