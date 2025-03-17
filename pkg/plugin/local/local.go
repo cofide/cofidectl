@@ -11,6 +11,7 @@ import (
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -367,19 +368,31 @@ func (lds *LocalDataSource) DestroyAPBinding(binding *ap_binding_proto.APBinding
 	return fmt.Errorf("failed to find attestation policy binding for %s in trust zone %s", binding.Policy, binding.TrustZone)
 }
 
-func (lds *LocalDataSource) ListAPBindingsByTrustZone(name string) ([]*ap_binding_proto.APBinding, error) {
-	trustZone, ok := lds.config.GetTrustZoneByName(name)
-	if !ok {
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", name)
-	}
-
-	var bindings []*ap_binding_proto.APBinding
-	for _, binding := range trustZone.AttestationPolicies {
-		binding, err := proto.CloneAPBinding(binding)
-		if err != nil {
-			return nil, err
+func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error) {
+	var trustZones []*trust_zone_proto.TrustZone
+	if filter != nil && filter.TrustZoneName != nil {
+		trustZone, ok := lds.config.GetTrustZoneByName(filter.GetTrustZoneName())
+		if !ok {
+			return nil, fmt.Errorf("failed to find trust zone %s in local config", filter.GetTrustZoneName())
 		}
-		bindings = append(bindings, binding)
+		trustZones = []*trust_zone_proto.TrustZone{trustZone}
+	} else {
+		trustZones = lds.config.TrustZones
+	}
+	bindings := []*ap_binding_proto.APBinding{}
+	for _, trustZone := range trustZones {
+		for _, binding := range trustZone.AttestationPolicies {
+			// nolint:staticcheck
+			if filter != nil && filter.PolicyName != nil && binding.Policy != filter.GetPolicyName() {
+				continue
+			}
+
+			binding, err := proto.CloneAPBinding(binding)
+			if err != nil {
+				return nil, err
+			}
+			bindings = append(bindings, binding)
+		}
 	}
 	return bindings, nil
 }
