@@ -614,6 +614,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			name: "unknown attestation policy",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
+				// nolint:staticcheck
 				tz.AttestationPolicies[0].Policy = "invalid-ap"
 				return tz
 			}(),
@@ -624,6 +625,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			name: "unknown federated trust zone",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
+				// nolint:staticcheck
 				tz.Federations[0].To = "invalid-tz"
 				return tz
 			}(),

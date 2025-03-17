@@ -49,9 +49,11 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 		return nil, fmt.Errorf("unexpected attestation policy kind: %T", policy)
 	}
 
+	// nolint:staticcheck
 	if len(binding.FederatesWith) > 0 {
 		// Convert from trust zones to trust domains.
 		federatesWith := []string{}
+		// nolint:staticcheck
 		for _, tzName := range binding.FederatesWith {
 			if trustZone, err := source.GetTrustZone(tzName); err != nil {
 				return nil, err

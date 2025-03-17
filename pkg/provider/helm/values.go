@@ -159,6 +159,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 
 	// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
 	for _, binding := range g.trustZone.AttestationPolicies {
+		// nolint:staticcheck
 		policy, err := g.source.GetAttestationPolicy(binding.Policy)
 		if err != nil {
 			return nil, err
@@ -175,6 +176,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by the spire-controller-manager.
 	if len(g.trustZone.Federations) > 0 {
 		for _, fed := range g.trustZone.Federations {
+			// nolint:staticcheck
 			tz, err := g.source.GetTrustZone(fed.To)
 			if err != nil {
 				return nil, err
@@ -193,6 +195,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 					return nil, fmt.Errorf("failed to get clusterFederatedTrustDomains map from identities: %w", err)
 				}
 
+				// nolint:staticcheck
 				cftd[fed.To], err = federation.NewFederation(tz).GetHelmConfig()
 				if err != nil {
 					return nil, err

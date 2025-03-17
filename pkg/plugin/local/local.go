@@ -289,29 +289,39 @@ func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_pro
 }
 
 func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
+	// nolint:staticcheck
 	localTrustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
 	if !ok {
+		// nolint:staticcheck
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
 	}
 
+	// nolint:staticcheck
 	_, ok = lds.config.GetAttestationPolicyByName(binding.Policy)
 	if !ok {
+		// nolint:staticcheck
 		return nil, fmt.Errorf("failed to find attestation policy %s in local config", binding.Policy)
 	}
 
 	for _, apb := range localTrustZone.AttestationPolicies {
+		// nolint:staticcheck
 		if apb.Policy == binding.Policy {
+			// nolint:staticcheck
 			return nil, fmt.Errorf("attestation policy %s is already bound to trust zone %s", binding.Policy, binding.TrustZone)
 		}
 	}
 
 	remoteTzs := map[string]bool{}
 	for _, federation := range localTrustZone.Federations {
+		// nolint:staticcheck
 		remoteTzs[federation.To] = true
 	}
+	// nolint:staticcheck
 	for _, remoteTz := range binding.FederatesWith {
+		// nolint:staticcheck
 		if remoteTz == binding.TrustZone {
 			// Is this a problem?
+			// nolint:staticcheck
 			return nil, fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.Policy, binding.TrustZone)
 		}
 		if _, ok := remoteTzs[remoteTz]; !ok {
@@ -335,12 +345,15 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 }
 
 func (lds *LocalDataSource) DestroyAPBinding(binding *ap_binding_proto.APBinding) error {
+	// nolint:staticcheck
 	trustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
 	if !ok {
+		// nolint:staticcheck
 		return fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
 	}
 
 	for i, tzBinding := range trustZone.AttestationPolicies {
+		// nolint:staticcheck
 		if tzBinding.Policy == binding.Policy {
 			trustZone.AttestationPolicies = append(trustZone.AttestationPolicies[:i], trustZone.AttestationPolicies[i+1:]...)
 			if err := lds.updateDataFile(); err != nil {
@@ -350,6 +363,7 @@ func (lds *LocalDataSource) DestroyAPBinding(binding *ap_binding_proto.APBinding
 		}
 	}
 
+	// nolint:staticcheck
 	return fmt.Errorf("failed to find attestation policy binding for %s in trust zone %s", binding.Policy, binding.TrustZone)
 }
 
@@ -371,22 +385,30 @@ func (lds *LocalDataSource) ListAPBindingsByTrustZone(name string) ([]*ap_bindin
 }
 
 func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) (*federation_proto.Federation, error) {
+	// nolint:staticcheck
 	fromTrustZone, ok := lds.config.GetTrustZoneByName(federationProto.From)
 	if !ok {
+		// nolint:staticcheck
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.From)
 	}
 
+	// nolint:staticcheck
 	_, ok = lds.config.GetTrustZoneByName(federationProto.To)
 	if !ok {
+		// nolint:staticcheck
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.To)
 	}
 
+	// nolint:staticcheck
 	if federationProto.From == federationProto.To {
+		// nolint:staticcheck
 		return nil, fmt.Errorf("cannot federate trust zone %s with itself", federationProto.From)
 	}
 
 	for _, federation := range fromTrustZone.Federations {
+		// nolint:staticcheck
 		if federation.To == federationProto.To {
+			// nolint:staticcheck
 			return nil, fmt.Errorf("federation already exists between %s and %s", federationProto.From, federationProto.To)
 		}
 	}
