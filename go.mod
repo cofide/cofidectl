@@ -2,12 +2,12 @@ module github.com/cofide/cofidectl
 
 go 1.23.0
 
-toolchain go1.23.6
+toolchain go1.24.1
 
 require (
 	buf.build/go/protoyaml v0.3.1
 	cuelang.org/go v0.10.1
-	github.com/cofide/cofide-api-sdk v0.12.0
+	github.com/cofide/cofide-api-sdk v0.14.0
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.7.0
