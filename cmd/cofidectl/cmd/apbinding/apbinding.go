@@ -106,6 +106,7 @@ func (c *APBindingCommand) list(source datasource.DataSource, opts ListOpts) ([]
 	var bindings []*ap_binding_proto.APBinding
 	for _, trustZone := range trustZones {
 		for _, binding := range trustZone.AttestationPolicies {
+			// nolint:staticcheck
 			if opts.attestationPolicy == "" || binding.Policy == opts.attestationPolicy {
 				bindings = append(bindings, binding)
 			}
@@ -119,8 +120,11 @@ func renderList(bindings []*ap_binding_proto.APBinding) {
 	data := make([][]string, len(bindings))
 	for i, binding := range bindings {
 		data[i] = []string{
+			// nolint:staticcheck
 			binding.TrustZone,
+			// nolint:staticcheck
 			binding.Policy,
+			// nolint:staticcheck
 			strings.Join(binding.FederatesWith, ", "),
 		}
 	}

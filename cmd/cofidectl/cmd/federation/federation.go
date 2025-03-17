@@ -86,11 +86,13 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 
 			data := make([][]string, len(federations))
 			for i, federation := range federations {
+				// nolint:staticcheck
 				from, err := ds.GetTrustZone(federation.From)
 				if err != nil {
 					return err
 				}
 
+				// nolint:staticcheck
 				to, err := ds.GetTrustZone(federation.To)
 				if err != nil {
 					return err
@@ -102,7 +104,9 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				}
 
 				data[i] = []string{
+					// nolint:staticcheck
 					federation.From,
+					// nolint:staticcheck
 					federation.To,
 					status,
 					reason,

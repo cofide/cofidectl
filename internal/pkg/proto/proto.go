@@ -52,9 +52,11 @@ func CloneAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) 
 
 func CloneAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
 	if clone, ok := proto.Clone(binding).(*ap_binding_proto.APBinding); !ok {
+		// nolint:staticcheck
 		return nil, fmt.Errorf("bug: type assertion failed for attestation policy binding %s/%s", binding.Policy, binding.TrustZone)
 	} else {
 		if clone == binding {
+			// nolint:staticcheck
 			return nil, fmt.Errorf("bug: attestation policy binding %s/%s clones are the same", binding.Policy, binding.TrustZone)
 		}
 		return clone, nil
@@ -62,10 +64,12 @@ func CloneAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBi
 }
 
 func CloneFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error) {
+	// nolint:staticcheck
 	if clone, ok := proto.Clone(federation).(*federation_proto.Federation); !ok {
 		return nil, fmt.Errorf("bug: type assertion failed for federation %s-%s", federation.From, federation.To)
 	} else {
 		if clone == federation {
+			// nolint:staticcheck
 			return nil, fmt.Errorf("bug: federation %s-%s clones are the same", federation.From, federation.To)
 		}
 		return clone, nil
