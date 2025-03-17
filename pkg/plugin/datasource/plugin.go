@@ -197,6 +197,7 @@ func (c *DataSourcePluginClientGRPC) ListFederationsByTrustZone(string) ([]*fede
 }
 
 type GRPCServer struct {
+	cofidectl_proto.UnimplementedDataSourcePluginServiceServer
 	Impl DataSource
 }
 
