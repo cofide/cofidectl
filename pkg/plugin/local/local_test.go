@@ -8,6 +8,7 @@ import (
 	"slices"
 	"testing"
 
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/google/go-cmp/cmp"
 	spiretypes "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
@@ -907,29 +908,70 @@ func TestLocalDataSource_DestroyAPBinding(t *testing.T) {
 	}
 }
 
-func TestLocalDataSource_ListAPBindingsByTrustZone(t *testing.T) {
+func TestLocalDataSource_ListAPBindings(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		trustZone     string
+		filter        *datasourcepb.ListAPBindingsRequest_Filter
+		want          []*ap_binding_proto.APBinding
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:      "none",
-			trustZone: "tz3",
-			wantErr:   false,
+			name:    "no filter",
+			filter:  &datasourcepb.ListAPBindingsRequest_Filter{},
+			want:    append(fixtures.TrustZone("tz1").AttestationPolicies, fixtures.TrustZone("tz3").AttestationPolicies...),
+			wantErr: false,
 		},
 		{
-			name:      "two",
-			trustZone: "tz1",
-			wantErr:   false,
+			name: "filter by trust zone tz1",
+			filter: &datasourcepb.ListAPBindingsRequest_Filter{
+				TrustZoneName: fixtures.StringPtr("tz1"),
+			},
+			want:    fixtures.TrustZone("tz1").AttestationPolicies,
+			wantErr: false,
 		},
 		{
-			name:          "invalid trust zone",
-			trustZone:     "invalid",
+			name: "filter by trust zone tz3",
+			filter: &datasourcepb.ListAPBindingsRequest_Filter{
+				TrustZoneName: fixtures.StringPtr("tz3"),
+			},
+			want:    []*ap_binding_proto.APBinding{},
+			wantErr: false,
+		},
+		{
+			name: "filter by policy ap1",
+			filter: &datasourcepb.ListAPBindingsRequest_Filter{
+				PolicyName: fixtures.StringPtr("ap1"),
+			},
+			want:    fixtures.TrustZone("tz1").AttestationPolicies[:1],
+			wantErr: false,
+		},
+		{
+			name: "filter by trust zone and policy",
+			filter: &datasourcepb.ListAPBindingsRequest_Filter{
+				TrustZoneName: fixtures.StringPtr("tz1"),
+				PolicyName:    fixtures.StringPtr("ap1"),
+			},
+			want:    fixtures.TrustZone("tz1").AttestationPolicies[:1],
+			wantErr: false,
+		},
+		{
+			name: "invalid trust zone",
+			filter: &datasourcepb.ListAPBindingsRequest_Filter{
+				TrustZoneName: fixtures.StringPtr("invalid"),
+			},
+			want:          []*ap_binding_proto.APBinding{},
 			wantErr:       true,
 			wantErrString: "failed to find trust zone invalid in local config",
+		},
+		{
+			name: "invalid policy",
+			filter: &datasourcepb.ListAPBindingsRequest_Filter{
+				PolicyName: fixtures.StringPtr("invalid"),
+			},
+			want:    []*ap_binding_proto.APBinding{},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -942,17 +984,13 @@ func TestLocalDataSource_ListAPBindingsByTrustZone(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
-			got, err := lds.ListAPBindingsByTrustZone(tt.trustZone)
+			got, err := lds.ListAPBindings(tt.filter)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
-				require.Nil(t, err)
-				want, ok := cfg.GetTrustZoneByName(tt.trustZone)
-				require.True(t, ok)
-				if diff := cmp.Diff(got, want.AttestationPolicies, protocmp.Transform()); diff != "" {
-					t.Errorf("LocalDataSource.ListAPBindingsByTrustZone() mismatch (-want,+got):\n%s", diff)
-				}
+				require.NoError(t, err)
+				assert.EqualExportedValues(t, tt.want, got)
 				for _, gotBinding := range got {
 					assert.False(t, slices.Contains(lds.config.TrustZones[0].AttestationPolicies, gotBinding), "Pointer to attestation policy binding in config returned")
 				}
