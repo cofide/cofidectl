@@ -196,8 +196,8 @@ func (c *DataSourcePluginClientGRPC) ListFederations() ([]*federation_proto.Fede
 	return resp.Federations, nil
 }
 
-func (c *DataSourcePluginClientGRPC) ListFederationsByTrustZone(string) ([]*federation_proto.Federation, error) {
-	resp, err := c.client.ListFederationsByTrustZone(c.ctx, &cofidectl_proto.ListFederationsByTrustZoneRequest{})
+func (c *DataSourcePluginClientGRPC) ListFederationsByTrustZone(trustZoneName string) ([]*federation_proto.Federation, error) {
+	resp, err := c.client.ListFederationsByTrustZone(c.ctx, &cofidectl_proto.ListFederationsByTrustZoneRequest{TrustZoneName: &trustZoneName})
 	if err != nil {
 		return nil, err
 	}
