@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
@@ -105,7 +106,12 @@ func (c *APBindingCommand) list(source datasource.DataSource, opts ListOpts) ([]
 
 	var bindings []*ap_binding_proto.APBinding
 	for _, trustZone := range trustZones {
-		for _, binding := range trustZone.AttestationPolicies {
+		filter := &datasourcepb.ListAPBindingsRequest_Filter{TrustZoneName: &trustZone.Name}
+		bindings, err := source.ListAPBindings(filter)
+		if err != nil {
+			return nil, err
+		}
+		for _, binding := range bindings {
 			// nolint:staticcheck
 			if opts.attestationPolicy == "" || binding.Policy == opts.attestationPolicy {
 				bindings = append(bindings, binding)

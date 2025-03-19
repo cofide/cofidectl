@@ -22,19 +22,18 @@ type Values = map[string]any
 
 func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 	tests := []struct {
-		name      string
-		trustZone *trust_zone_proto.TrustZone
-		cluster   *clusterpb.Cluster
-		want      Values
+		name       string
+		trustZone  *trust_zone_proto.TrustZone
+		cluster    *clusterpb.Cluster
+		configFunc func(*config.Config)
+		want       Values
 	}{
 		{
 			name: "tz1 no binding or federation",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.AttestationPolicies = nil
 				tz.Bundle = nil
 				tz.BundleEndpointUrl = nil
-				tz.Federations = nil
 				tz.JwtIssuer = nil
 				return tz
 			}(),
@@ -43,6 +42,12 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				cluster.ExtraHelmValues = nil
 				return cluster
 			}(),
+			configFunc: func(cfg *config.Config) {
+				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				require.True(t, ok)
+				trustZone.AttestationPolicies = nil
+				trustZone.Federations = nil
+			},
 			want: Values{
 				"global": Values{
 					"deleteHooks": Values{
@@ -430,6 +435,9 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
+			if tt.configFunc != nil {
+				tt.configFunc(cfg)
+			}
 			source := newFakeDataSource(t, cfg)
 			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, nil)
 
@@ -442,20 +450,19 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 
 func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 	tests := []struct {
-		name      string
-		trustZone *trust_zone_proto.TrustZone
-		cluster   *clusterpb.Cluster
-		values    Values
-		want      Values
+		name       string
+		trustZone  *trust_zone_proto.TrustZone
+		cluster    *clusterpb.Cluster
+		configFunc func(*config.Config)
+		values     Values
+		want       Values
 	}{
 		{
 			name: "tz1 no binding or federation",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.AttestationPolicies = nil
 				tz.Bundle = nil
 				tz.BundleEndpointUrl = nil
-				tz.Federations = nil
 				tz.JwtIssuer = nil
 				return tz
 			}(),
@@ -464,6 +471,12 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				cluster.ExtraHelmValues = nil
 				return cluster
 			}(),
+			configFunc: func(cfg *config.Config) {
+				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				require.True(t, ok)
+				trustZone.AttestationPolicies = nil
+				trustZone.Federations = nil
+			},
 			values: Values{
 				"spire-server": Values{
 					"controllerManager": Values{
@@ -573,6 +586,9 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
+			if tt.configFunc != nil {
+				tt.configFunc(cfg)
+			}
 			source := newFakeDataSource(t, cfg)
 			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, tt.values)
 
@@ -588,6 +604,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 		name          string
 		trustZone     *trust_zone_proto.TrustZone
 		cluster       *clusterpb.Cluster
+		configFunc    func(*config.Config)
 		wantErrString string
 	}{
 		{
@@ -611,32 +628,38 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			wantErrString: "an unknown trust provider kind was specified: invalid-tp",
 		},
 		{
-			name: "unknown attestation policy",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
+			name:      "unknown attestation policy",
+			trustZone: fixtures.TrustZone("tz1"),
+			cluster:   fixtures.Cluster("local1"),
+			configFunc: func(cfg *config.Config) {
+				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				require.True(t, ok)
 				// nolint:staticcheck
-				tz.AttestationPolicies[0].Policy = "invalid-ap"
-				return tz
-			}(),
-			cluster:       fixtures.Cluster("local1"),
+				trustZone.AttestationPolicies[0].Policy = "invalid-ap"
+			},
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
 		{
-			name: "unknown federated trust zone",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
+			name:      "unknown federated trust zone",
+			trustZone: fixtures.TrustZone("tz1"),
+			cluster:   fixtures.Cluster("local1"),
+			configFunc: func(cfg *config.Config) {
+				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				require.True(t, ok)
 				// nolint:staticcheck
-				tz.Federations[0].To = "invalid-tz"
-				return tz
-			}(),
-			cluster:       fixtures.Cluster("local1"),
+				trustZone.Federations[0].To = "invalid-tz"
+			},
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
+			if tt.configFunc != nil {
+				tt.configFunc(cfg)
+			}
 			source := newFakeDataSource(t, cfg)
+
 			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, nil)
 
 			_, err := g.GenerateValues()
@@ -1609,6 +1632,7 @@ func defaultConfig() *config.Config {
 		TrustZones: []*trust_zone_proto.TrustZone{
 			fixtures.TrustZone("tz1"),
 			fixtures.TrustZone("tz2"),
+			fixtures.TrustZone("tz4"),
 		},
 		Clusters: []*clusterpb.Cluster{
 			fixtures.Cluster("local1"),
