@@ -8,6 +8,7 @@ import (
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
@@ -163,8 +164,14 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("failed to get clusterStaticEntries map from identities: %w", err)
 	}
 
-	// Adds the attestation policies to be reconciled by the spire-controller-manager.
-	for _, binding := range g.trustZone.AttestationPolicies {
+	filter := &datasourcepb.ListAPBindingsRequest_Filter{TrustZoneName: &g.trustZone.Name}
+	bindings, err := g.source.ListAPBindings(filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list attestation policy bindings: %w", err)
+	}
+
+	// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
+	for _, binding := range bindings {
 		// nolint:staticcheck
 		policy, err := g.source.GetAttestationPolicy(binding.Policy)
 		if err != nil {
@@ -188,9 +195,13 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		}
 	}
 
+	federations, err := g.source.ListFederationsByTrustZone(g.trustZone.Name)
+	if err != nil {
+		return nil, err
+	}
 	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by the spire-controller-manager.
-	if len(g.trustZone.Federations) > 0 {
-		for _, fed := range g.trustZone.Federations {
+	if len(federations) > 0 {
+		for _, fed := range federations {
 			// nolint:staticcheck
 			tz, err := g.source.GetTrustZone(fed.To)
 			if err != nil {
