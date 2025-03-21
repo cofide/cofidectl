@@ -45,6 +45,20 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 				clusterSPIFFEID["podSelector"] = selector
 			}
 		}
+	case *attestation_policy_proto.AttestationPolicy_Static:
+		clusterStaticEntry := make(map[string]any)
+
+		static := policy.Static
+		clusterStaticEntry["spiffeID"] = static.SpiffeId
+
+		selectors := []string{}
+		for _, selector := range static.Selectors {
+			selectors = append(selectors, fmt.Sprintf("%s:%s", selector.Type, selector.Value))
+		}
+
+		clusterStaticEntry["selectors"] = selectors
+
+		return clusterStaticEntry, nil
 	default:
 		return nil, fmt.Errorf("unexpected attestation policy kind: %T", policy)
 	}

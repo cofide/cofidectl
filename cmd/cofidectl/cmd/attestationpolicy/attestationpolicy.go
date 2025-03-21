@@ -6,11 +6,13 @@ package attestationpolicy
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -84,6 +86,19 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				"kubernetes",
 				namespaceSelector,
 				podSelector,
+				"",
+				"",
+			}
+		case *attestation_policy_proto.AttestationPolicy_Static:
+			static := p.Static
+			spiffeID := static.GetSpiffeId()
+			data[i] = []string{
+				policy.Name,
+				"static",
+				"",
+				"",
+				spiffeID,
+				formatSelectors(static.GetSelectors()),
 			}
 		default:
 			return fmt.Errorf("unexpected attestation policy type %T", policy)
@@ -91,7 +106,7 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Kind", "Namespace Labels", "Pod Labels"})
+	table.SetHeader([]string{"Name", "Kind", "Namespace Labels", "Pod Labels", "SPIFFE ID", "Selectors"})
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
@@ -128,6 +143,20 @@ func apLabelSelectorToK8sLS(selector *attestation_policy_proto.APLabelSelector) 
 	return k8sSelector
 }
 
+// formatSelectors formats SPIRE selectors into a comma-separated string.
+func formatSelectors(selectors []*types.Selector) string {
+	if len(selectors) == 0 {
+		return ""
+	}
+
+	selectorStrs := make([]string, len(selectors))
+	for i, s := range selectors {
+		selectorStrs[i] = s.Type + ":" + s.Value
+	}
+
+	return strings.Join(selectorStrs, ",")
+}
+
 var attestationPolicyAddCmdDesc = `
 This command consists of multiple sub-commands to add new attestation policies to the Cofide configuration state.
 `
@@ -140,7 +169,10 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 
-	cmd.AddCommand(c.GetAddK8sCommand())
+	cmd.AddCommand(
+		c.GetAddK8sCommand(),
+		c.GetAddStaticCommand(),
+	)
 	return cmd
 }
 
@@ -203,6 +235,71 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 	f.StringVar(&opts.podLabel, "pod-label", "", "Pod label selector in Kubernetes label selector format")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("name"))
+
+	return cmd
+}
+
+var attestationPolicyAddStaticCmdDesc = `
+This command will add a new static attestation policy to the Cofide configuration state.
+`
+
+type AddStaticOpts struct {
+	name      string
+	spiffeID  string
+	selectors []string
+}
+
+func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
+	opts := AddStaticOpts{}
+	cmd := &cobra.Command{
+		Use:   "static [ARGS]",
+		Short: "Add a new static attestation policy",
+		Long:  attestationPolicyAddStaticCmdDesc,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			selectors := make([]*types.Selector, len(opts.selectors))
+			for i, s := range opts.selectors {
+				selectorParts := strings.Split(s, ":")
+				if len(selectorParts) != 2 {
+					return fmt.Errorf("invalid selector format: %s", s)
+				}
+
+				selectors[i] = &types.Selector{
+					Type:  selectorParts[0],
+					Value: selectorParts[1],
+				}
+			}
+
+			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
+				Name: opts.name,
+				Policy: &attestation_policy_proto.AttestationPolicy_Static{
+					Static: &attestation_policy_proto.APStatic{
+						SpiffeId:  &opts.spiffeID,
+						Selectors: selectors,
+					},
+				},
+			}
+			_, err = ds.AddAttestationPolicy(newAttestationPolicy)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.name, "name", "", "Name to use for the attestation policy")
+	f.StringVar(&opts.spiffeID, "spiffeid", "", "SPIFFE ID to use for the attestation policy")
+	f.StringSliceVar(&opts.selectors, "selectors", []string{}, "Workload selectors to use for the attestation policy")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("name"))
+	cobra.CheckErr(cmd.MarkFlagRequired("spiffeid"))
+	cobra.CheckErr(cmd.MarkFlagRequired("selectors"))
 
 	return cmd
 }
