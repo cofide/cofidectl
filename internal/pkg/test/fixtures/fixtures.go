@@ -242,6 +242,20 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 			},
 		},
 	},
+	"ap4": {
+		Name: "ap4",
+		Policy: &attestation_policy_proto.AttestationPolicy_Static{
+			Static: &attestation_policy_proto.APStatic{
+				SpiffeId: StringPtr("spiffe://example.com/foo"),
+				Selectors: []*spiretypes.Selector{
+					{
+						Type:  "k8s",
+						Value: "ns:test",
+					},
+				},
+			},
+		},
+	},
 }
 
 var pluginConfigFixtures map[string]*structpb.Struct = map[string]*structpb.Struct{

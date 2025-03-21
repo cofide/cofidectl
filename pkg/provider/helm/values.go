@@ -6,6 +6,7 @@ package helm
 import (
 	"fmt"
 
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
@@ -157,7 +158,12 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		"enabled": false,
 	}
 
-	// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
+	cses, err := getOrCreateNestedMap(identities, "clusterStaticEntries")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get clusterStaticEntries map from identities: %w", err)
+	}
+
+	// Adds the attestation policies to be reconciled by the spire-controller-manager.
 	for _, binding := range g.trustZone.AttestationPolicies {
 		// nolint:staticcheck
 		policy, err := g.source.GetAttestationPolicy(binding.Policy)
@@ -165,12 +171,21 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 			return nil, err
 		}
 
-		clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
-		if err != nil {
-			return nil, err
-		}
+		if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Kubernetes); ok {
+			clusterSPIFFEID, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+			if err != nil {
+				return nil, err
+			}
 
-		csids[policy.Name] = clusterSPIFFEIDs
+			csids[policy.Name] = clusterSPIFFEID
+		} else if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Static); ok {
+			clusterStaticEntry, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+			if err != nil {
+				return nil, err
+			}
+
+			cses[policy.Name] = clusterStaticEntry
+		}
 	}
 
 	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by the spire-controller-manager.

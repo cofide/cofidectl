@@ -54,14 +54,26 @@
 
 #AttestationPolicy: {
 	name!: string
-	#APKubernetes
+	#APKubernetes | #APStatic
 }
 
 #APKubernetes: {
-	kubernetes!: {
+	kubernetes?: {
 		namespace_selector?: #APLabelSelector
 		pod_selector?: #APLabelSelector
 	}
+}
+
+#APStatic: {
+	static?: {
+		spiffe_id!: string
+		selectors!: [...#APSelector]
+	}
+}
+
+#APSelector: {
+	type!: string
+	value!: string
 }
 
 #APLabelSelector: {
