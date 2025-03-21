@@ -110,6 +110,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled":          true,
@@ -214,6 +215,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled": true,
@@ -328,6 +330,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled": true,
@@ -414,6 +417,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled":          true,
@@ -556,6 +560,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 							"clusterFederatedTrustDomains": Values{
 								"cofide": Values{
 									"bundleEndpointProfile": Values{
@@ -962,6 +967,7 @@ func TestMergeMaps(t *testing.T) {
 									"enabled": true,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled": true,
@@ -978,6 +984,7 @@ func TestMergeMaps(t *testing.T) {
 									"enabled": true,
 								},
 							},
+							"clusterStaticEntries": Values{},
 							"clusterFederatedTrustDomains": map[string]any{
 								"cofide": map[string]any{
 									"bundleEndpointProfile": map[string]any{
