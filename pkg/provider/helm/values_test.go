@@ -45,7 +45,9 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 			configFunc: func(cfg *config.Config) {
 				trustZone, ok := cfg.GetTrustZoneByName("tz1")
 				require.True(t, ok)
+				// nolint:staticcheck
 				trustZone.AttestationPolicies = nil
+				// nolint:staticcheck
 				trustZone.Federations = nil
 			},
 			want: Values{
@@ -474,7 +476,9 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 			configFunc: func(cfg *config.Config) {
 				trustZone, ok := cfg.GetTrustZoneByName("tz1")
 				require.True(t, ok)
+				// nolint:staticcheck
 				trustZone.AttestationPolicies = nil
+				// nolint:staticcheck
 				trustZone.Federations = nil
 			},
 			values: Values{
