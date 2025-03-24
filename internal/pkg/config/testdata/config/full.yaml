@@ -98,6 +98,12 @@ attestation_policies:
                   operator: Exists
                 - key: baz
                   operator: DoesNotExist
+    - name: ap4
+      static:
+        spiffe_id: spiffe://example.com/foo
+        selectors:
+            - type: k8s
+              value: ns:test
 plugin_config:
     plugin1:
         list-cfg:
