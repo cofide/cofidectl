@@ -1649,6 +1649,7 @@ func defaultConfig() *config.Config {
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 			fixtures.AttestationPolicy("ap1"),
 			fixtures.AttestationPolicy("ap2"),
+			fixtures.AttestationPolicy("ap4"),
 		},
 		Plugins: fixtures.Plugins("plugins1"),
 	}

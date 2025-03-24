@@ -56,6 +56,11 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				Policy:        "ap1",
 				FederatesWith: []string{"tz2"},
 			},
+			{
+				TrustZone:     "tz1",
+				Policy:        "ap4",
+				FederatesWith: []string{},
+			},
 		},
 		JwtIssuer:             StringPtr("https://tz1.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),

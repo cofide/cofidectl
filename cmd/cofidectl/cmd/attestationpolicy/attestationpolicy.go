@@ -265,6 +265,10 @@ func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
 			selectors := make([]*types.Selector, len(opts.selectors))
 
 			for i, s := range opts.selectors {
+				if strings.Count(s, ":") > 2 {
+					return fmt.Errorf("invalid selector format %q, too many ':' characters, expected 'type:key:value'", s)
+				}
+
 				selectorParts := strings.SplitN(s, ":", 3)
 				if len(selectorParts) != 3 {
 					return fmt.Errorf("invalid selector format %q, expected 'type:key:value'", s)
