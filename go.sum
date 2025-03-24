@@ -86,8 +86,8 @@ github.com/cncf/xds/go v0.0.0-20211001041855-01bcc9b48dfe/go.mod h1:eXthEFrGJvWH
 github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/cockroachdb/apd/v3 v3.2.1 h1:U+8j7t0axsIgvQUqthuNm82HIrYXodOV2iWLWtEaIwg=
 github.com/cockroachdb/apd/v3 v3.2.1/go.mod h1:klXJcjp+FffLTHlhIG69tezTDvdP065naDsHzKhYSqc=
-github.com/cofide/cofide-api-sdk v0.15.0 h1:OMtOsLB4zsZUXcj1tbK8w1KJaTbdTF1a/MiFHN37qeg=
-github.com/cofide/cofide-api-sdk v0.15.0/go.mod h1:R4RzvFjkoHrpOfLwni4GuzFDZcyelHCdFAZMg5CNBjM=
+github.com/cofide/cofide-api-sdk v0.15.2 h1:om8C8r5kch0Iryoi4SOv2Z8DrjC98mtuo7waadX27bQ=
+github.com/cofide/cofide-api-sdk v0.15.2/go.mod h1:R4RzvFjkoHrpOfLwni4GuzFDZcyelHCdFAZMg5CNBjM=
 github.com/containerd/cgroups v1.1.0 h1:v8rEWFl6EoqHB+swVNjVoCJE8o3jX7e8nqBGPLaDFBM=
 github.com/containerd/cgroups v1.1.0/go.mod h1:6ppBcbh/NOOUU+dMKrykgaBnK9lCIBxHqJDGwsa1mIw=
 github.com/containerd/containerd v1.7.27 h1:yFyEyojddO3MIGVER2xJLWoCIn+Up4GaHFquP7hsFII=
