@@ -78,7 +78,7 @@ func (c *ClustersCommand) ListClusters(ctx context.Context) error {
 			table.Append([]string{
 				cluster.GetName(),
 				zone.GetName(),
-				*cluster.Profile,
+				cluster.GetProfile(),
 			})
 		}
 	}
