@@ -63,7 +63,7 @@ func (c *ClustersCommand) ListClusters(ctx context.Context) error {
 		return fmt.Errorf("failed to list trust zones: %v", err)
 	}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Org ID", "TrustZone ID", "Cluster ID", "Trust Zone", "Cluster Name"})
+	table.SetHeader([]string{"Name", "Trust Zone", "Profile"})
 	table.SetBorder(false)
 
 	for _, zone := range zones {
@@ -76,11 +76,9 @@ func (c *ClustersCommand) ListClusters(ctx context.Context) error {
 		}
 		for _, cluster := range clusters {
 			table.Append([]string{
-				zone.GetOrgId(),
-				zone.GetId(),
-				cluster.GetId(),
-				zone.GetName(),
 				cluster.GetName(),
+				zone.GetName(),
+				*cluster.Profile,
 			})
 		}
 	}
