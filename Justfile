@@ -1,4 +1,6 @@
-build: test
+build: build-only test
+
+build-only:
     go build -o cofidectl ./cmd/cofidectl/main.go
 
 build-test-plugin:

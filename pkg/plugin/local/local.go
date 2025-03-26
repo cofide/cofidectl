@@ -17,7 +17,10 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 )
+
+var _ datasource.DataSource = (*LocalDataSource)(nil)
 
 type LocalDataSource struct {
 	loader config.Loader
