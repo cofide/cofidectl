@@ -88,6 +88,7 @@ function show_config() {
 function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
+  ./cofidectl clusters list
   ./cofidectl trust-zone status $TRUST_ZONE_1
   ./cofidectl trust-zone status $TRUST_ZONE_2
 }
@@ -117,8 +118,8 @@ function wait_for_pong() {
 
 function post_deploy() {
   federations=$(./cofidectl federation list)
-  if echo "$federations" | grep Unhealthy >/dev/null; then 
-      return 1
+  if echo "$federations" | grep Unhealthy >/dev/null; then
+    return 1
   fi
 }
 
