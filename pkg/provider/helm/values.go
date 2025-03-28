@@ -6,6 +6,7 @@ package helm
 import (
 	"fmt"
 
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -166,10 +167,30 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 
 	// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
 	for _, binding := range bindings {
-		// nolint:staticcheck
-		policy, err := g.source.GetAttestationPolicy(binding.Policy)
-		if err != nil {
-			return nil, err
+
+		var policy *attestation_policy_proto.AttestationPolicy
+		if binding.GetPolicy() == "" {
+			// temporary - need to add id based fns to the interface
+			// needed when connect is the datasource
+			policies, err := g.source.ListAttestationPolicies()
+			if err != nil {
+				return nil, err
+			}
+			var policy *attestation_policy_proto.AttestationPolicy
+			for _, p := range policies {
+				if p.GetId() == binding.GetPolicyId() {
+					policy = p
+					break
+				}
+			}
+			if policy == nil {
+				return nil, fmt.Errorf("attestation policy %s not found", binding.GetPolicyId())
+			}
+		} else {
+			policy, err = g.source.GetAttestationPolicy(binding.GetPolicy())
+			if err != nil {
+				return nil, fmt.Errorf("failed to get attestation policy %s: %w", binding.GetPolicy(), err)
+			}
 		}
 
 		clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
