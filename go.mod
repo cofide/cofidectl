@@ -1,13 +1,10 @@
 module github.com/cofide/cofidectl
 
 go 1.24.0
-
-toolchain go1.24.1
-
 require (
 	buf.build/go/protoyaml v0.3.1
 	cuelang.org/go v0.10.1
-	github.com/cofide/cofide-api-sdk v0.15.2
+	github.com/cofide/cofide-api-sdk v0.16.0
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
 	github.com/google/go-cmp v0.7.0
@@ -158,8 +155,8 @@ require (
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250212204824-5a70512c5d8b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250124145028-65684f501c47 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gotest.tools/v3 v3.5.0 // indirect
