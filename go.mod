@@ -1,9 +1,6 @@
 module github.com/cofide/cofidectl
 
 go 1.24.0
-
-toolchain go1.24.1
-
 require (
 	buf.build/go/protoyaml v0.3.1
 	cuelang.org/go v0.10.1
@@ -18,7 +15,7 @@ require (
 	github.com/spiffe/spire-api-sdk v1.12.0
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.2
 )
