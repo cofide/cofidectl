@@ -21,6 +21,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # There is a race condition in the gh CLI that means that this can fail if the file already exists, even with --clobber.
+      # Upload as a separate step in only one of the matrix jobs.
+      - name: Upload artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.ref_name }} LICENSE --clobber
+        if: strategy.job-index == 0
       # https://github.com/actions/setup-go/issues/358 - cache is shared across jobs by default since the dependency
       # graph is the same, however each job results in different dependencies being downloaded and the first one
       # to finish wins with regards to saving the cache.  To workaround, we create a file to include more stuff
@@ -42,4 +50,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ github.ref_name }} dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }} --clobber
-          gh release upload ${{ github.ref_name }} LICENSE --clobber

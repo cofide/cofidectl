@@ -41,7 +41,7 @@ function configure() {
 }
 
 function override_helm_values() {
-  cat << EOF > values.yaml
+  cat <<EOF >values.yaml
 tornjak-frontend:
   enabled: false
 upstream-spire-agent:
@@ -63,6 +63,7 @@ function check_spire() {
 
 function list_resources() {
   ./cofidectl trust-zone list
+  ./cofidectl clusters list
   ./cofidectl attestation-policy list
   ./cofidectl attestation-policy-binding list
 }

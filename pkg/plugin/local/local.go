@@ -17,7 +17,10 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
+	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 )
+
+var _ datasource.DataSource = (*LocalDataSource)(nil)
 
 type LocalDataSource struct {
 	loader config.Loader
@@ -136,9 +139,11 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 		return fmt.Errorf("cannot update trust domain for existing trust zone %s", current.Name)
 	}
 	// The following should be updated though other means.
+	// nolint:staticcheck
 	if !slices.EqualFunc(new.Federations, current.Federations, proto.FederationsEqual) {
 		return fmt.Errorf("cannot update federations for existing trust zone %s", current.Name)
 	}
+	// nolint:staticcheck
 	if !slices.EqualFunc(new.AttestationPolicies, current.AttestationPolicies, proto.APBindingsEqual) {
 		return fmt.Errorf("cannot update attestation policies for existing trust zone %s", current.Name)
 	}
@@ -304,6 +309,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 		return nil, fmt.Errorf("failed to find attestation policy %s in local config", binding.Policy)
 	}
 
+	// nolint:staticcheck
 	for _, apb := range localTrustZone.AttestationPolicies {
 		// nolint:staticcheck
 		if apb.Policy == binding.Policy {
@@ -313,6 +319,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 	}
 
 	remoteTzs := map[string]bool{}
+	// nolint:staticcheck
 	for _, federation := range localTrustZone.Federations {
 		// nolint:staticcheck
 		remoteTzs[federation.To] = true
@@ -338,6 +345,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 	if err != nil {
 		return nil, err
 	}
+	// nolint:staticcheck
 	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, binding)
 	if err := lds.updateDataFile(); err != nil {
 		return nil, fmt.Errorf("failed to add attestation policy to local config: %w", err)
@@ -353,6 +361,7 @@ func (lds *LocalDataSource) DestroyAPBinding(binding *ap_binding_proto.APBinding
 		return fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
 	}
 
+	// nolint:staticcheck
 	for i, tzBinding := range trustZone.AttestationPolicies {
 		// nolint:staticcheck
 		if tzBinding.Policy == binding.Policy {
@@ -381,6 +390,7 @@ func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRe
 	}
 	bindings := []*ap_binding_proto.APBinding{}
 	for _, trustZone := range trustZones {
+		// nolint:staticcheck
 		for _, binding := range trustZone.AttestationPolicies {
 			// nolint:staticcheck
 			if filter != nil && filter.PolicyName != nil && binding.Policy != filter.GetPolicyName() {
@@ -418,6 +428,7 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		return nil, fmt.Errorf("cannot federate trust zone %s with itself", federationProto.From)
 	}
 
+	// nolint:staticcheck
 	for _, federation := range fromTrustZone.Federations {
 		// nolint:staticcheck
 		if federation.To == federationProto.To {
@@ -431,6 +442,7 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		return nil, err
 	}
 
+	// nolint:staticcheck
 	fromTrustZone.Federations = append(fromTrustZone.Federations, federationProto)
 
 	if err := lds.updateDataFile(); err != nil {
@@ -443,6 +455,7 @@ func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, e
 	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
 	federations := []*federation_proto.Federation{}
 	for _, trustZone := range lds.config.TrustZones {
+		// nolint:staticcheck
 		for _, federation := range trustZone.Federations {
 			federation, err := proto.CloneFederation(federation)
 			if err != nil {
@@ -461,6 +474,7 @@ func (lds *LocalDataSource) ListFederationsByTrustZone(tzName string) ([]*federa
 	}
 
 	var federations []*federation_proto.Federation
+	// nolint:staticcheck
 	for _, federation := range trustZone.Federations {
 		federation, err := proto.CloneFederation(federation)
 		if err != nil {
