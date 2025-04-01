@@ -8,7 +8,10 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 )
 
 type AttestationPolicy struct {
@@ -46,17 +49,31 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 			}
 		}
 	case *attestation_policy_proto.AttestationPolicy_Static:
-		clusterStaticEntry := make(map[string]any)
-
-		static := policy.Static
-		clusterStaticEntry["spiffeID"] = static.SpiffeId
-
-		selectors := []string{}
-		for _, selector := range static.Selectors {
-			selectors = append(selectors, fmt.Sprintf("%s:%s", selector.Type, selector.Value))
+		trustZone, err := findTrustZone(source, binding.GetTrustZoneId())
+		if err != nil {
+			return nil, err
 		}
 
-		clusterStaticEntry["selectors"] = selectors
+		clusters, err := source.ListClusters(trustZone.GetName())
+		if err != nil {
+			return nil, err
+		}
+
+		if len(clusters) < 1 {
+			return nil, trustzone.ErrNoClustersInTrustZone
+		}
+
+		if len(clusters) > 1 {
+			return nil, trustzone.ErrOneClusterPerTrustZone
+		}
+
+		static := policy.Static
+
+		clusterStaticEntry := map[string]any{
+			"parentID":  fmt.Sprintf("spiffe://%s/cluster/%s/spire/agents", trustZone.GetTrustDomain(), clusters[0].GetName()),
+			"spiffeID":  static.GetSpiffeId(),
+			"selectors": formatSelectors(static.Selectors),
+		}
 
 		return clusterStaticEntry, nil
 	default:
@@ -104,4 +121,26 @@ func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSele
 		"matchLabels":      matchLabels,
 		"matchExpressions": matchExpressions,
 	}
+}
+
+func findTrustZone(source datasource.DataSource, trustZoneID string) (*trust_zone_proto.TrustZone, error) {
+	trustZones, err := source.ListTrustZones()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, trustZone := range trustZones {
+		if trustZone.GetId() == trustZoneID {
+			return trustZone, nil
+		}
+	}
+	return nil, fmt.Errorf("trust zone not found with ID: %s", trustZoneID)
+}
+
+func formatSelectors(selectors []*types.Selector) []string {
+	result := make([]string, len(selectors))
+	for i, selector := range selectors {
+		result[i] = fmt.Sprintf("%s:%s", selector.Type, selector.Value)
+	}
+	return result
 }
