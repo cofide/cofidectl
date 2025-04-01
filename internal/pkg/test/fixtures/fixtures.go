@@ -56,11 +56,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				Policy:        "ap1",
 				FederatesWith: []string{"tz2"},
 			},
-			{
-				TrustZone:     "tz1",
-				Policy:        "ap4",
-				FederatesWith: []string{},
-			},
 		},
 		JwtIssuer:             StringPtr("https://tz1.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
@@ -109,6 +104,21 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl:   StringPtr("127.0.0.5"),
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
+	},
+	"tz6": {
+		Name:              "tz6",
+		TrustDomain:       "td6",
+		BundleEndpointUrl: StringPtr("127.0.0.5"),
+		Federations:       []*federation_proto.Federation{},
+		AttestationPolicies: []*ap_binding_proto.APBinding{
+			{
+				TrustZone:     "tz6",
+				Policy:        "ap4",
+				FederatesWith: []string{},
+			},
+		},
+		JwtIssuer:             StringPtr("https://tz6.example.com"),
+		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
 	},
 }
 
@@ -255,7 +265,7 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 				Selectors: []*spiretypes.Selector{
 					{
 						Type:  "k8s",
-						Value: "ns:test",
+						Value: "ns:foo",
 					},
 				},
 			},

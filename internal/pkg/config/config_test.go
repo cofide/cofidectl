@@ -36,6 +36,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
+					fixtures.TrustZone("tz6"),
 				},
 				Clusters: []*clusterpb.Cluster{
 					fixtures.Cluster("local1"),
@@ -93,6 +94,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
+					fixtures.TrustZone("tz6"),
 				},
 				Clusters: []*clusterpb.Cluster{
 					fixtures.Cluster("local1"),

@@ -36,6 +36,14 @@ trust_zones:
             - tz1
       jwt_issuer: https://tz2.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
+    - name: tz6
+      trust_domain: td6
+      bundle_endpoint_url: 127.0.0.5
+      attestation_policies:
+        - trust_zone: tz6
+          policy: ap4
+      jwt_issuer: https://tz6.example.com
+      bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
 clusters:
     - name: local1
       trust_zone: tz1
@@ -103,7 +111,7 @@ attestation_policies:
         spiffe_id: spiffe://example.com/foo
         selectors:
             - type: k8s
-              value: ns:test
+              value: ns:foo
 plugin_config:
     plugin1:
         list-cfg:
