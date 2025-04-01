@@ -91,12 +91,11 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 			data:    string(readTestConfig(t, "missing_cluster_field.yaml")),
 			wantErr: "clusters.0.name: field is required but not present",
 		},
-		// TODO: Fix this case.
-		// {
-		// 	name:    "missing attestation policy field",
-		// 	data:    string(readTestConfig(t, "missing_attestation_policy_field.yaml")),
-		// 	wantErr: "attestation_policies.0: incomplete value {name:\"ap1\",kubernetes!:{namespace_selector?:{match_labels?:{},match_expressions?:[]},pod_selector?:{match_labels?:{},match_expressions?:[]}}} | {name:\"ap1\",spiffe_id!:string,selectors:[]}",
-		// },
+		{
+			name:    "missing attestation policy field",
+			data:    string(readTestConfig(t, "missing_attestation_policy_field.yaml")),
+			wantErr: "attestation_policies.0: incomplete value {name:\"ap1\",kubernetes?:{namespace_selector?:{match_labels?:{},match_expressions?:[]},pod_selector?:{match_labels?:{},match_expressions?:[]}}} | {name:\"ap1\",static?:{spiffe_id!:string,selectors!:[]}}",
+		},
 		{
 			name:    "plugins not a map",
 			data:    "plugins: 123",
