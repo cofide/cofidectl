@@ -36,6 +36,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
+					fixtures.TrustZone("tz6"),
 				},
 				Clusters: []*clusterpb.Cluster{
 					fixtures.Cluster("local1"),
@@ -45,6 +46,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
 					fixtures.AttestationPolicy("ap3"),
+					fixtures.AttestationPolicy("ap4"),
 				},
 				PluginConfig: map[string]*structpb.Struct{
 					"plugin1": fixtures.PluginConfig("plugin1"),
@@ -92,6 +94,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				TrustZones: []*trust_zone_proto.TrustZone{
 					fixtures.TrustZone("tz1"),
 					fixtures.TrustZone("tz2"),
+					fixtures.TrustZone("tz6"),
 				},
 				Clusters: []*clusterpb.Cluster{
 					fixtures.Cluster("local1"),
@@ -101,6 +104,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
 					fixtures.AttestationPolicy("ap3"),
+					fixtures.AttestationPolicy("ap4"),
 				},
 				PluginConfig: map[string]*structpb.Struct{
 					"plugin1": fixtures.PluginConfig("plugin1"),

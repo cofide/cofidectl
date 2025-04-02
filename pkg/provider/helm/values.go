@@ -6,6 +6,7 @@ package helm
 import (
 	"fmt"
 
+	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -13,6 +14,16 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/federation"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+)
+
+const (
+	k8sPsatSelectorType                = "k8s_psat"
+	k8sPsatSPIREAgentNamespaceSelector = "agent_ns"
+	k8sPsatSPIREAgentSASelector        = "agent_sa"
+	k8sPsatClusterSelector             = "cluster"
+	serverIdPath                       = "/spire/server"
+	spireAgentNamespace                = "spire-system"
+	spireAgentSA                       = "spire-agent"
 )
 
 type HelmValuesGenerator struct {
@@ -158,13 +169,20 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		"enabled": false,
 	}
 
+	cses, err := getOrCreateNestedMap(identities, "clusterStaticEntries")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get clusterStaticEntries map from identities: %w", err)
+	}
+
 	filter := &datasourcepb.ListAPBindingsRequest_Filter{TrustZoneName: &g.trustZone.Name}
 	bindings, err := g.source.ListAPBindings(filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list attestation policy bindings: %w", err)
 	}
 
-	// Adds the attestation policies as ClusterSPIFFEID CRs to be reconciled by the spire-controller-manager.
+	needSPIREAgentsStaticEntry := false
+
+	// Adds the attestation policies as either ClusterSPIFFEID or ClusterStaticEntry CRs to be reconciled by the spire-controller-manager.
 	for _, binding := range bindings {
 		// nolint:staticcheck
 		policy, err := g.source.GetAttestationPolicy(binding.Policy)
@@ -172,12 +190,36 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 			return nil, err
 		}
 
-		clusterSPIFFEIDs, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
-		if err != nil {
-			return nil, err
-		}
+		if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Kubernetes); ok {
+			clusterSPIFFEID, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+			if err != nil {
+				return nil, err
+			}
 
-		csids[policy.Name] = clusterSPIFFEIDs
+			csids[policy.Name] = clusterSPIFFEID
+		} else if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Static); ok {
+			clusterStaticEntry, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+			if err != nil {
+				return nil, err
+			}
+
+			needSPIREAgentsStaticEntry = true
+
+			cses[policy.Name] = clusterStaticEntry
+		}
+	}
+
+	// Adds a ClusterStaticEntry CR for the SPIRE agents, so that the parent ID is deterministic.
+	if needSPIREAgentsStaticEntry {
+		cses["spire-agents"] = map[string]any{
+			"parentID": fmt.Sprintf("spiffe://%s%s", g.trustZone.GetTrustDomain(), serverIdPath),
+			"spiffeID": fmt.Sprintf("spiffe://%s/cluster/%s/spire/agents", g.trustZone.GetTrustDomain(), g.cluster.GetName()),
+			"selectors": []string{
+				fmt.Sprintf("%s:%s:%s", k8sPsatSelectorType, k8sPsatSPIREAgentNamespaceSelector, spireAgentNamespace),
+				fmt.Sprintf("%s:%s:%s", k8sPsatSelectorType, k8sPsatSPIREAgentSASelector, spireAgentSA),
+				fmt.Sprintf("%s:%s:%s", k8sPsatSelectorType, k8sPsatClusterSelector, g.cluster.GetName()),
+			},
+		}
 	}
 
 	federations, err := g.source.ListFederationsByTrustZone(g.trustZone.Name)
