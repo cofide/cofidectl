@@ -207,6 +207,85 @@ func Test_formatSelectors(t *testing.T) {
 	}
 }
 
+func Test_parseSelectors(t *testing.T) {
+	tests := []struct {
+		name            string
+		selectorStrings []string
+		want            []*types.Selector
+		wantErr         bool
+		wantErrString   string
+	}{
+		{
+			name:            "valid selector",
+			selectorStrings: []string{"k8s:ns:foo"},
+			want: []*types.Selector{
+				{
+					Type:  "k8s",
+					Value: "ns:foo",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:            "multiple selectors",
+			selectorStrings: []string{"k8s:ns:foo", "k8s:ns:bar"},
+			want: []*types.Selector{
+				{
+					Type:  "k8s",
+					Value: "ns:foo",
+				},
+				{
+					Type:  "k8s",
+					Value: "ns:bar",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:            "invalid selector format - too many colons",
+			selectorStrings: []string{"k8s:ns:foo:bar:baz"},
+			wantErr:         true,
+			wantErrString:   "invalid selector format \"k8s:ns:foo:bar:baz\", too many ':' characters, expected 'type:key:value'",
+		},
+		{
+			name:            "invalid selector format - too few parts",
+			selectorStrings: []string{"k8s:ns"},
+			wantErr:         true,
+			wantErrString:   "invalid selector format \"k8s:ns\", expected 'type:key:value'",
+		},
+		{
+			name:            "invalid selector format - empty type",
+			selectorStrings: []string{":ns:foo"},
+			wantErr:         true,
+			wantErrString:   "invalid selector format, type is empty: \":ns:foo\"",
+		},
+		{
+			name:            "invalid selector format - empty key",
+			selectorStrings: []string{"k8s::foo"},
+			wantErr:         true,
+			wantErrString:   "invalid selector format, key is empty: \"k8s::foo\"",
+		},
+		{
+			name:            "invalid selector format - empty value",
+			selectorStrings: []string{"k8s:ns:"},
+			wantErr:         true,
+			wantErrString:   "invalid selector format, value is empty: \"k8s:ns:\"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseSelectors(tt.selectorStrings)
+			if !tt.wantErr {
+				require.Nil(t, err, "unexpected error")
+			} else {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func selectorDiffOpts() []cmp.Option {
 	return []cmp.Option{
 		protocmp.Transform(),
