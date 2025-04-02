@@ -8,7 +8,6 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
@@ -49,12 +48,10 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 			}
 		}
 	case *attestation_policy_proto.AttestationPolicy_Static:
-		trustZone, err := findTrustZone(source, binding.GetTrustZoneId())
-		if err != nil {
-			return nil, err
-		}
+		// nolint:staticcheck
+		trustZoneName := binding.GetTrustZone()
 
-		clusters, err := source.ListClusters(trustZone.GetName())
+		clusters, err := source.ListClusters(trustZoneName)
 		if err != nil {
 			return nil, err
 		}
@@ -65,6 +62,11 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 
 		if len(clusters) > 1 {
 			return nil, trustzone.ErrOneClusterPerTrustZone
+		}
+
+		trustZone, err := source.GetTrustZone(trustZoneName)
+		if err != nil {
+			return nil, err
 		}
 
 		static := policy.Static
@@ -125,25 +127,6 @@ func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSele
 		"matchLabels":      matchLabels,
 		"matchExpressions": matchExpressions,
 	}
-}
-
-func findTrustZone(source datasource.DataSource, trustZoneID string) (*trust_zone_proto.TrustZone, error) {
-	if trustZoneID == "" {
-		return nil, fmt.Errorf("trust zone ID is empty")
-	}
-
-	trustZones, err := source.ListTrustZones()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, trustZone := range trustZones {
-		if trustZone.GetId() == trustZoneID {
-			return trustZone, nil
-		}
-	}
-
-	return nil, fmt.Errorf("trust zone not found with ID: %s", trustZoneID)
 }
 
 func formatSelectors(selectors []*types.Selector) ([]string, error) {

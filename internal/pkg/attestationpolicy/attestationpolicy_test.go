@@ -15,51 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_findTrustZone(t *testing.T) {
-	tests := []struct {
-		name          string
-		trustZoneID   string
-		configFunc    func(*config.Config)
-		want          *trust_zone_proto.TrustZone
-		wantErr       bool
-		wantErrString string
-	}{
-		{
-			name:        "trust zone found",
-			trustZoneID: "tz1-id",
-			want: &trust_zone_proto.TrustZone{
-				Id:   ptrOf("tz1-id"),
-				Name: "tz1",
-			},
-		},
-		{
-			name:          "trust zone not found",
-			trustZoneID:   "tz2-id",
-			wantErr:       true,
-			wantErrString: "trust zone not found with ID: tz2-id",
-		},
-		{
-			name:          "empty trust zone ID",
-			trustZoneID:   "",
-			wantErr:       true,
-			wantErrString: "trust zone ID is empty",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			source := newMockDataSource()
-			got, err := findTrustZone(source, tt.trustZoneID)
-			if !tt.wantErr {
-				require.Nil(t, err, "unexpected error")
-			} else {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.wantErrString)
-			}
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func Test_formatSelectors(t *testing.T) {
 	tests := []struct {
 		name          string
