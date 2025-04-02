@@ -257,6 +257,7 @@ type AddStaticOpts struct {
 	name      string
 	spiffeID  string
 	selectors []string
+	yes       bool
 }
 
 func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
@@ -267,6 +268,18 @@ func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
 		Long:  attestationPolicyAddStaticCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !opts.yes {
+				fmt.Fprintf(os.Stderr, "Warning: Creating a static attestation policy necessitates the creation of an additional alias registration entry for SPIRE agent(s).\n")
+				fmt.Fprintf(os.Stderr, "This means that each SPIRE agent will receive the same SPIFFE ID.\n")
+				fmt.Fprintf(os.Stderr, "Do you want to continue? [y/N]: ")
+
+				var response string
+				_, err := fmt.Scanln(&response)
+				if err != nil || (strings.ToLower(response) != "y" && strings.ToLower(response) != "yes") {
+					return fmt.Errorf("operation cancelled")
+				}
+			}
+
 			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
@@ -298,6 +311,7 @@ func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
 	f.StringVar(&opts.name, "name", "", "Name to use for the attestation policy")
 	f.StringVar(&opts.spiffeID, "spiffeid", "", "SPIFFE ID to use for the attestation policy")
 	f.StringSliceVar(&opts.selectors, "selectors", []string{}, "Workload selectors to use for the attestation policy")
+	f.BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("name"))
 	cobra.CheckErr(cmd.MarkFlagRequired("spiffeid"))
