@@ -68,11 +68,15 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 		}
 
 		static := policy.Static
+		selectors, err := formatSelectors(static.Selectors)
+		if err != nil {
+			return nil, err
+		}
 
 		clusterStaticEntry := map[string]any{
 			"parentID":  fmt.Sprintf("spiffe://%s/cluster/%s/spire/agents", trustZone.GetTrustDomain(), clusters[0].GetName()),
 			"spiffeID":  static.GetSpiffeId(),
-			"selectors": formatSelectors(static.Selectors),
+			"selectors": selectors,
 		}
 
 		return clusterStaticEntry, nil
@@ -124,6 +128,10 @@ func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSele
 }
 
 func findTrustZone(source datasource.DataSource, trustZoneID string) (*trust_zone_proto.TrustZone, error) {
+	if trustZoneID == "" {
+		return nil, fmt.Errorf("trust zone ID is empty")
+	}
+
 	trustZones, err := source.ListTrustZones()
 	if err != nil {
 		return nil, err
@@ -134,13 +142,20 @@ func findTrustZone(source datasource.DataSource, trustZoneID string) (*trust_zon
 			return trustZone, nil
 		}
 	}
+
 	return nil, fmt.Errorf("trust zone not found with ID: %s", trustZoneID)
 }
 
-func formatSelectors(selectors []*types.Selector) []string {
-	result := make([]string, len(selectors))
-	for i, selector := range selectors {
-		result[i] = fmt.Sprintf("%s:%s", selector.Type, selector.Value)
+func formatSelectors(selectors []*types.Selector) ([]string, error) {
+	result := make([]string, 0, len(selectors))
+
+	for _, selector := range selectors {
+		if selector.Type == "" || selector.Value == "" {
+			return nil, fmt.Errorf("invalid selector type=%q, value=%q", selector.Type, selector.Value)
+		}
+
+		result = append(result, fmt.Sprintf("%s:%s", selector.Type, selector.Value))
 	}
-	return result
+
+	return result, nil
 }

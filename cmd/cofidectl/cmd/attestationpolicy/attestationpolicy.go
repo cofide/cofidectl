@@ -91,14 +91,20 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 			}
 		case *attestation_policy_proto.AttestationPolicy_Static:
 			static := p.Static
+
 			spiffeID := static.GetSpiffeId()
+			selectors, err := formatSelectors(static.GetSelectors())
+			if err != nil {
+				return err
+			}
+
 			data[i] = []string{
 				policy.Name,
 				"static",
 				"",
 				"",
 				spiffeID,
-				formatSelectors(static.GetSelectors()),
+				selectors,
 			}
 		default:
 			return fmt.Errorf("unexpected attestation policy type %T", policy)
@@ -144,17 +150,21 @@ func apLabelSelectorToK8sLS(selector *attestation_policy_proto.APLabelSelector) 
 }
 
 // formatSelectors formats SPIRE selectors into a comma-separated string.
-func formatSelectors(selectors []*types.Selector) string {
+func formatSelectors(selectors []*types.Selector) (string, error) {
 	if len(selectors) == 0 {
-		return ""
+		return "", fmt.Errorf("no selectors provided")
 	}
 
 	selectorStrs := make([]string, len(selectors))
 	for i, s := range selectors {
+		if s.Type == "" || s.Value == "" {
+			return "", fmt.Errorf("invalid selector type=%q, value=%q", s.Type, s.Value)
+		}
+
 		selectorStrs[i] = s.Type + ":" + s.Value
 	}
 
-	return strings.Join(selectorStrs, ",")
+	return strings.Join(selectorStrs, ","), nil
 }
 
 var attestationPolicyAddCmdDesc = `
