@@ -6,10 +6,6 @@ package attestationpolicy
 import (
 	"testing"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
-	"github.com/cofide/cofidectl/internal/pkg/config"
-	"github.com/cofide/cofidectl/pkg/plugin/datasource"
-	"github.com/cofide/cofidectl/pkg/plugin/local"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,29 +124,4 @@ func Test_formatSelectors(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
-
-type mockDataSource struct {
-	*local.LocalDataSource
-}
-
-func newMockDataSource() datasource.DataSource {
-	configLoader, _ := config.NewMemoryLoader(&config.Config{})
-	localDS, _ := local.NewLocalDataSource(configLoader)
-	return &mockDataSource{LocalDataSource: localDS}
-}
-
-func (m *mockDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, error) {
-	trustZones := []*trust_zone_proto.TrustZone{
-		{
-			Id:   ptrOf("tz1-id"),
-			Name: "tz1",
-		},
-	}
-
-	return trustZones, nil
-}
-
-func ptrOf[T any](x T) *T {
-	return &x
 }
