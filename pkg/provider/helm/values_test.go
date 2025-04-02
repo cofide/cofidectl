@@ -437,6 +437,92 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "tz6",
+			trustZone: fixtures.TrustZone("tz6"),
+			cluster:   fixtures.Cluster("local6"),
+			want: Values{
+				"global": Values{
+					"deleteHooks": Values{
+						"enabled": false,
+					},
+					"installAndUpgradeHooks": Values{
+						"enabled": false,
+					},
+					"spire": Values{
+						"caSubject": Values{
+							"commonName":   "cofide.io",
+							"country":      "UK",
+							"organization": "Cofide",
+						},
+						"clusterName": "local6",
+						"jwtIssuer":   "https://tz6.example.com",
+						"namespaces": Values{
+							"create": true,
+						},
+						"recommendations": Values{
+							"enabled": true,
+						},
+						"trustDomain": "td6",
+					},
+				},
+				"spiffe-csi-driver": Values{
+					"fullnameOverride": "spiffe-csi-driver",
+				},
+				"spiffe-oidc-discovery-provider": Values{
+					"enabled": false,
+				},
+				"spire-agent": Values{
+					"fullnameOverride": "spire-agent",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPsat": Values{
+							"enabled": true,
+						},
+					},
+					"sds": map[string]any{
+						"enabled":               true,
+						"defaultSvidName":       "default",
+						"defaultBundleName":     "ROOTCA",
+						"defaultAllBundlesName": "ALL",
+					},
+					"workloadAttestors": Values{
+						"k8s": Values{
+							"disableContainerSelectors": true,
+							"enabled":                   true,
+						},
+					},
+				},
+				"spire-server": Values{
+					"controllerManager": Values{
+						"identities": Values{
+							"clusterSPIFFEIDs": Values{
+								"default": Values{
+									"enabled": false,
+								},
+							},
+							"clusterStaticEntries": Values{
+								"ap4": Values{
+									"parentID":  "spiffe://td6/cluster/local6/spire/agents",
+									"spiffeID":  "spiffe://example.com/foo",
+									"selectors": []string{"k8s:ns:foo"},
+								},
+								"spire-agents": Values{
+									"parentID": "spiffe://td6/spire/server",
+									"selectors": []string{
+										"k8s_psat:agent_ns:spire-system",
+										"k8s_psat:agent_sa:spire-agent",
+										"k8s_psat:cluster:local6",
+									},
+									"spiffeID": "spiffe://td6/cluster/local6/spire/agents",
+								},
+							},
+						},
+					},
+					"enabled": false,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1644,11 +1730,13 @@ func defaultConfig() *config.Config {
 			fixtures.TrustZone("tz1"),
 			fixtures.TrustZone("tz2"),
 			fixtures.TrustZone("tz4"),
+			fixtures.TrustZone("tz6"),
 		},
 		Clusters: []*clusterpb.Cluster{
 			fixtures.Cluster("local1"),
 			fixtures.Cluster("local2"),
 			fixtures.Cluster("local4"),
+			fixtures.Cluster("local6"),
 		},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 			fixtures.AttestationPolicy("ap1"),

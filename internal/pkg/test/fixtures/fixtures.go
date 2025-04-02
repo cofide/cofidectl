@@ -195,6 +195,16 @@ var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluste
 		Profile:        StringPtr("kubernetes"),
 		ExternalServer: BoolPtr(true),
 	},
+	"local6": {
+		Name:              StringPtr("local6"),
+		TrustZone:         StringPtr("tz6"),
+		KubernetesContext: StringPtr("kind-local6"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile:        StringPtr("kubernetes"),
+		ExternalServer: BoolPtr(true),
+	},
 }
 
 var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPolicy = map[string]*attestation_policy_proto.AttestationPolicy{
