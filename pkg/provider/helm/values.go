@@ -180,7 +180,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("failed to list attestation policy bindings: %w", err)
 	}
 
-	staticAP := false
+	needSPIREAgentsStaticEntry := false
 
 	// Adds the attestation policies as either ClusterSPIFFEID or ClusterStaticEntry CRs to be reconciled by the spire-controller-manager.
 	for _, binding := range bindings {
@@ -203,16 +203,16 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 				return nil, err
 			}
 
-			staticAP = true
+			needSPIREAgentsStaticEntry = true
 
 			cses[policy.Name] = clusterStaticEntry
 		}
 	}
 
 	// Adds a ClusterStaticEntry CR for the SPIRE agents, so that the parent ID is deterministic.
-	if staticAP {
+	if needSPIREAgentsStaticEntry {
 		cses["spire-agents"] = map[string]any{
-			"parentID": fmt.Sprintf("spiffe://%s/spire/server", g.trustZone.GetTrustDomain()),
+			"parentID": fmt.Sprintf("spiffe://%s%s", g.trustZone.GetTrustDomain(), serverIdPath),
 			"spiffeID": fmt.Sprintf("spiffe://%s/cluster/%s/spire/agents", g.trustZone.GetTrustDomain(), g.cluster.GetName()),
 			"selectors": []string{
 				fmt.Sprintf("%s:%s:%s", k8sPsatSelectorType, k8sPsatSPIREAgentNamespaceSelector, spireAgentNamespace),
