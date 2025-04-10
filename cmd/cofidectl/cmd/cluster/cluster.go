@@ -1,7 +1,7 @@
 // Copyright 2025 Cofide Limited.
 // SPDX-License-Identifier: Apache-2.0
 
-package clusters
+package cluster
 
 import (
 	"context"
@@ -13,25 +13,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var clustersListCmdDesc = `
+var clusterListCmdDesc = `
 This command consists of multiple sub-commands to interact with clusters
 `
 
-type ClustersCommand struct {
+type ClusterCommand struct {
 	cmdCtx *cmdcontext.CommandContext
 }
 
-func NewClustersCommand(cmdCtx *cmdcontext.CommandContext) *ClustersCommand {
-	return &ClustersCommand{
+func NewClusterCommand(cmdCtx *cmdcontext.CommandContext) *ClusterCommand {
+	return &ClusterCommand{
 		cmdCtx: cmdCtx,
 	}
 }
 
-func (c *ClustersCommand) GetRootCommand() *cobra.Command {
+func (c *ClusterCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "clusters",
+		Use:   "cluster",
 		Short: "Manage clusters",
-		Long:  clustersListCmdDesc,
+		Long:  clusterListCmdDesc,
 	}
 
 	cmd.AddCommand(c.getListClustersCommand())
@@ -39,11 +39,11 @@ func (c *ClustersCommand) GetRootCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *ClustersCommand) getListClustersCommand() *cobra.Command {
+func (c *ClusterCommand) getListClustersCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List clusters",
-		Long:  clustersListCmdDesc,
+		Long:  clusterListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return c.ListClusters(cmd.Context())
@@ -53,7 +53,7 @@ func (c *ClustersCommand) getListClustersCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *ClustersCommand) ListClusters(ctx context.Context) error {
+func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err

@@ -13,7 +13,7 @@ import (
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/apbinding"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/attestationpolicy"
-	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/clusters"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/cluster"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/federation"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/workload"
@@ -74,7 +74,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	apbCmd := apbinding.NewAPBindingCommand(r.cmdCtx)
 	fedCmd := federation.NewFederationCommand(r.cmdCtx)
 	wlCmd := workload.NewWorkloadCommand(r.cmdCtx)
-	clusterCmd := clusters.NewClustersCommand(r.cmdCtx)
+	clusterCmd := cluster.NewClusterCommand(r.cmdCtx)
 
 	cmd.AddCommand(
 		initCmd.GetRootCommand(),
