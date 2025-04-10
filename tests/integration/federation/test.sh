@@ -64,7 +64,7 @@ function configure() {
 }
 
 function up() {
-  ./cofidectl up
+  ./cofidectl up --trust-zone $TRUST_ZONE_1 --trust-zone $TRUST_ZONE_2
 }
 
 function check_spire() {
@@ -151,7 +151,7 @@ function teardown_federation_and_verify() {
 }
 
 function down() {
-  ./cofidectl down
+  ./cofidectl down --trust-zone $TRUST_ZONE_1 --trust-zone $TRUST_ZONE_2
 }
 
 function main() {

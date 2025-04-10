@@ -51,32 +51,32 @@ func (h *SpireHelm) Validate(_ context.Context) error {
 	return nil
 }
 
-func (h *SpireHelm) Deploy(ctx context.Context, ds datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (h *SpireHelm) Deploy(ctx context.Context, ds datasource.DataSource, opts *provision.DeployOpts) (<-chan *provisionpb.Status, error) {
 	statusCh := make(chan *provisionpb.Status)
 
 	go func() {
 		defer close(statusCh)
 		// Ignore returned errors - they should be sent via the Status channel.
-		_ = h.deploy(ctx, ds, kubeCfgFile, statusCh)
+		_ = h.deploy(ctx, ds, opts, statusCh)
 	}()
 
 	return statusCh, nil
 }
 
-func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, opts *provision.TearDownOpts) (<-chan *provisionpb.Status, error) {
 	statusCh := make(chan *provisionpb.Status)
 
 	go func() {
 		defer close(statusCh)
 		// Ignore returned errors - they should be sent via the Status channel.
-		_ = h.tearDown(ctx, ds, statusCh)
+		_ = h.tearDown(ctx, ds, opts, statusCh)
 	}()
 
 	return statusCh, nil
 }
 
-func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, kubeCfgFile string, statusCh chan<- *provisionpb.Status) error {
-	trustZoneClusters, err := h.ListTrustZoneClusters(ds)
+func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *provision.DeployOpts, statusCh chan<- *provisionpb.Status) error {
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
 	if err != nil {
 		statusCh <- provision.StatusError("Deploying", "Failed listing trust zones", err)
 		return err
@@ -90,7 +90,7 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, kubeCf
 		return err
 	}
 
-	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, kubeCfgFile, statusCh); err != nil {
+	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
@@ -99,15 +99,15 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, kubeCf
 	}
 
 	// Wait for spire-server to be ready again.
-	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, kubeCfgFile, statusCh); err != nil {
+	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, statusCh chan<- *provisionpb.Status) error {
-	trustZoneClusters, err := h.ListTrustZoneClusters(ds)
+func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, opts *provision.TearDownOpts, statusCh chan<- *provisionpb.Status) error {
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
 	if err != nil {
 		statusCh <- provision.StatusError("Uninstalling", "Failed listing trust zones", err)
 		return err
@@ -120,10 +120,22 @@ func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, stat
 }
 
 // ListTrustZoneClusters returns a slice of TrustZoneClusters. If no trust zones exist, it returns an error.
-func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource) ([]TrustZoneCluster, error) {
-	trustZones, err := ds.ListTrustZones()
-	if err != nil {
-		return nil, err
+func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource, trustZoneNames []string) ([]TrustZoneCluster, error) {
+	var trustZones []*trust_zone_proto.TrustZone
+	if len(trustZoneNames) == 0 {
+		var err error
+		trustZones, err = ds.ListTrustZones()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		for _, trustZoneName := range trustZoneNames {
+			trustZone, err := ds.GetTrustZone(trustZoneName)
+			if err != nil {
+				return nil, err
+			}
+			trustZones = append(trustZones, trustZone)
+		}
 	}
 
 	if len(trustZones) == 0 {

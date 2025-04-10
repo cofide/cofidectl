@@ -28,7 +28,8 @@ func TestSpireHelm_Deploy(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	statusCh, err := spireHelm.Deploy(context.Background(), ds, "fake-kube.cfg")
+	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg"}
+	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
 	statuses := collectStatuses(statusCh)
@@ -75,7 +76,8 @@ func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
 
 	ds := newFakeDataSource(t, config)
 
-	statusCh, err := spireHelm.Deploy(context.Background(), ds, "fake-kube.cfg")
+	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg"}
+	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
 	statuses := collectStatuses(statusCh)
@@ -93,13 +95,41 @@ func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
 	assert.EqualExportedValues(t, want, statuses)
 }
 
+func TestSpireHelm_Deploy_specificTrustZone(t *testing.T) {
+	providerFactory := newFakeHelmSPIREProviderFactory()
+	spireAPIFactory := newFakeSPIREAPIFactory()
+	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
+	ds := newFakeDataSource(t, defaultConfig())
+
+	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz2"}}
+	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
+	require.NoError(t, err, err)
+
+	statuses := collectStatuses(statusCh)
+	want := []*provisionpb.Status{
+		provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
+		provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
+		provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
+		provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
+		provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
+		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
+		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
+		provision.StatusOk("Configuring", "Applying post-installation configuration for local2 in tz2"),
+		provision.StatusDone("Configured", "Post-installation configuration completed for local2 in tz2"),
+		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
+		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
+	}
+	assert.EqualExportedValues(t, want, statuses)
+}
+
 func TestSpireHelm_TearDown(t *testing.T) {
 	providerFactory := newFakeHelmSPIREProviderFactory()
 	spireAPIFactory := newFakeSPIREAPIFactory()
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	statusCh, err := spireHelm.TearDown(context.Background(), ds, "fake-kube.cfg")
+	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg"}
+	statusCh, err := spireHelm.TearDown(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
 	statuses := collectStatuses(statusCh)
@@ -108,6 +138,24 @@ func TestSpireHelm_TearDown(t *testing.T) {
 		provision.StatusDone("Uninstalled", "Uninstallation completed for local1 in tz1"),
 		provision.StatusOk("Uninstalling", "Uninstalling SPIRE chart for local2 in tz2"),
 		provision.StatusDone("Uninstalled", "Uninstallation completed for local2 in tz2"),
+	}
+	assert.EqualExportedValues(t, want, statuses)
+}
+
+func TestSpireHelm_TearDown_specificTrustZone(t *testing.T) {
+	providerFactory := newFakeHelmSPIREProviderFactory()
+	spireAPIFactory := newFakeSPIREAPIFactory()
+	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
+	ds := newFakeDataSource(t, defaultConfig())
+
+	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz1"}}
+	statusCh, err := spireHelm.TearDown(context.Background(), ds, &opts)
+	require.NoError(t, err, err)
+
+	statuses := collectStatuses(statusCh)
+	want := []*provisionpb.Status{
+		provision.StatusOk("Uninstalling", "Uninstalling SPIRE chart for local1 in tz1"),
+		provision.StatusDone("Uninstalled", "Uninstallation completed for local1 in tz1"),
 	}
 	assert.EqualExportedValues(t, want, statuses)
 }
