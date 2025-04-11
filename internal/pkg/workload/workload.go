@@ -20,7 +20,7 @@ import (
 )
 
 const debugContainerNamePrefix = "cofidectl-debug"
-const debugContainerImage = "ghcr.io/cofide/cofidectl-debug-container:v0.1.0"
+const debugContainerImage = "ghcr.io/cofide/cofidectl-debug-container:v0.2.1"
 
 type Workload struct {
 	Name             string

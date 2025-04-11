@@ -1,6 +1,6 @@
 module github.com/cofide/cofidectl
 
-go 1.24.0
+go 1.24.2
 
 require (
 	buf.build/go/protoyaml v0.3.2
@@ -18,7 +18,7 @@ require (
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.17.2
+	helm.sh/helm/v3 v3.17.3
 )
 
 require go.opentelemetry.io/auto/sdk v1.1.0 // indirect
