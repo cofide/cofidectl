@@ -52,10 +52,14 @@ func (c *ProvisionPluginClientGRPC) Validate(ctx context.Context) error {
 	return wrapError(err)
 }
 
-func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasource.DataSource, opts *DeployOpts) (<-chan *provisionpb.Status, error) {
 	server, brokerID := c.startDataSourceServer(source)
 
-	req := provisionpb.DeployRequest{DataSource: &brokerID, KubeCfgFile: &kubeCfgFile}
+	req := provisionpb.DeployRequest{
+		DataSource:     &brokerID,
+		KubeCfgFile:    &opts.KubeCfgFile,
+		TrustZoneNames: opts.TrustZones,
+	}
 	stream, err := c.client.Deploy(ctx, &req)
 	if err != nil {
 		err := wrapError(err)
@@ -82,10 +86,14 @@ func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasourc
 	return statusCh, nil
 }
 
-func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource, opts *TearDownOpts) (<-chan *provisionpb.Status, error) {
 	server, brokerID := c.startDataSourceServer(source)
 
-	req := provisionpb.TearDownRequest{DataSource: &brokerID, KubeCfgFile: &kubeCfgFile}
+	req := provisionpb.TearDownRequest{
+		DataSource:     &brokerID,
+		KubeCfgFile:    &opts.KubeCfgFile,
+		TrustZoneNames: opts.TrustZones,
+	}
 	stream, err := c.client.TearDown(ctx, &req)
 	if err != nil {
 		err := wrapError(err)
@@ -179,7 +187,11 @@ func (s *GRPCServer) Deploy(req *provisionpb.DeployRequest, stream grpc.ServerSt
 	}
 	defer conn.Close()
 
-	statusCh, err := s.impl.Deploy(stream.Context(), client, req.GetKubeCfgFile())
+	opts := DeployOpts{
+		KubeCfgFile: req.GetKubeCfgFile(),
+		TrustZones:  req.GetTrustZoneNames(),
+	}
+	statusCh, err := s.impl.Deploy(stream.Context(), client, &opts)
 	if err != nil {
 		return err
 	}
@@ -201,7 +213,11 @@ func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.Serv
 	}
 	defer conn.Close()
 
-	statusCh, err := s.impl.TearDown(stream.Context(), client, req.GetKubeCfgFile())
+	opts := TearDownOpts{
+		KubeCfgFile: req.GetKubeCfgFile(),
+		TrustZones:  req.GetTrustZoneNames(),
+	}
+	statusCh, err := s.impl.TearDown(stream.Context(), client, &opts)
 	if err != nil {
 		return err
 	}
