@@ -203,7 +203,7 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 			return err
 		}
 
-		if deployed, err := helm.IsClusterDeployed(ctx, cluster); err != nil {
+		if deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 			return err
 		} else if !deployed {
 			return fmt.Errorf("trust zone %s has not been deployed", trustZone.Name)
@@ -324,7 +324,7 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 			return err
 		}
 
-		deployed, err := helm.IsClusterDeployed(ctx, cluster)
+		deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig)
 		if err != nil {
 			return err
 		}
