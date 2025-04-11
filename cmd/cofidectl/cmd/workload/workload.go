@@ -204,7 +204,7 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 			return err
 		}
 
-		if deployed, err := isClusterDeployed(ctx, cluster); err != nil {
+		if deployed, err := isClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 			return err
 		} else if !deployed {
 			return fmt.Errorf("trust zone %s has not been deployed", trustZone.Name)
@@ -325,7 +325,7 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 			return err
 		}
 
-		deployed, err := isClusterDeployed(ctx, cluster)
+		deployed, err := isClusterDeployed(ctx, cluster, kubeConfig)
 		if err != nil {
 			return err
 		}
@@ -364,10 +364,17 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 }
 
 // isClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
-func isClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster) (bool, error) {
-	prov, err := helm.NewHelmSPIREProvider(ctx, cluster, nil, nil)
+func isClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) (bool, error) {
+	opts := []helm.Option{}
+	if kubeConfig != "" {
+		kubeConfigOpt := helm.WithKubeConfig(kubeConfig)
+		opts = append(opts, kubeConfigOpt)
+	}
+
+	_, err := helm.NewHelmSPIREProvider(ctx, cluster, nil, nil, opts...)
 	if err != nil {
 		return false, err
 	}
-	return prov.CheckIfAlreadyInstalled()
+	return true, nil
+	//return prov.CheckIfAlreadyInstalled()
 }

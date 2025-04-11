@@ -55,9 +55,30 @@ type HelmSPIREProvider struct {
 	cluster          *clusterpb.Cluster
 }
 
-func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any) (*HelmSPIREProvider, error) {
+type providerOptions struct {
+	kubeConfigPath string
+}
+
+type Option func(*providerOptions)
+
+func WithKubeConfig(path string) Option {
+	return func(opts *providerOptions) {
+		opts.kubeConfigPath = path
+	}
+}
+
+func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, opts ...Option) (*HelmSPIREProvider, error) {
+	options := providerOptions{}
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
+
+	if options.kubeConfigPath != "" {
+		settings.KubeConfig = options.kubeConfigPath
+	}
 
 	prov := &HelmSPIREProvider{
 		ctx:              ctx,
