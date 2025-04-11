@@ -42,9 +42,14 @@ func NewKubeClient(configPath string) (*Client, error) {
 }
 
 func NewKubeClientFromSpecifiedContext(configPath string, context string) (*Client, error) {
+	fmt.Print(configPath)
 	apiConfig, err := clientcmd.LoadFromFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("load from file: %w", err)
+	}
+
+	for contextName := range apiConfig.Contexts {
+		fmt.Printf("- %s\n", contextName)
 	}
 
 	restConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
