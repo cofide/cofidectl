@@ -65,7 +65,7 @@ function check_spire() {
 
 function list_resources() {
   ./cofidectl trust-zone list
-  ./cofidectl clusters list
+  ./cofidectl cluster list
   ./cofidectl attestation-policy list
   ./cofidectl attestation-policy-binding list
 }

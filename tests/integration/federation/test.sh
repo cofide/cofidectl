@@ -88,7 +88,7 @@ function show_config() {
 function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
-  ./cofidectl clusters list
+  ./cofidectl cluster list
   ./cofidectl trust-zone status $TRUST_ZONE_1
   ./cofidectl trust-zone status $TRUST_ZONE_2
 }
