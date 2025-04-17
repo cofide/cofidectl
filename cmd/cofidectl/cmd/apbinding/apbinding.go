@@ -32,8 +32,8 @@ This command consists of multiple sub-commands to administer Cofide attestation 
 
 func (c *APBindingCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attestation-policy-binding add|list [ARGS]",
-		Short: "Add or list attestation policy bindings",
+		Use:   "attestation-policy-binding add|del|list [ARGS]",
+		Short: "Manage attestation policy bindings",
 		Long:  apBindingRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}

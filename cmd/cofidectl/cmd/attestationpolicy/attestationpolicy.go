@@ -4,6 +4,7 @@
 package attestationpolicy
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -32,14 +33,17 @@ This command consists of multiple sub-commands to administer Cofide attestation 
 
 func (c *AttestationPolicyCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attestation-policy add|list [ARGS]",
-		Short: "Add, list attestation policies",
+		Use:   "attestation-policy add|del|list [ARGS]",
+		Short: "Manage attestation policies",
 		Long:  attestationPolicyRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
-	cmd.AddCommand(c.GetListCommand())
-	cmd.AddCommand(c.GetAddCommand())
+	cmd.AddCommand(
+		c.GetListCommand(),
+		c.GetAddCommand(),
+		c.getDelCommand(),
+	)
 
 	return cmd
 }
@@ -379,4 +383,30 @@ func parseSelectors(selectorStrings []string) ([]*types.Selector, error) {
 	}
 
 	return selectors, nil
+}
+
+var attestationPolicyDelCmdDesc = `
+This command will delete an attestation policy from the Cofide configuration state.
+`
+
+func (c *AttestationPolicyCommand) getDelCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "del [NAME]",
+		Short: "Delete an attestation policy",
+		Long:  attestationPolicyDelCmdDesc,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return c.deletePolicy(cmd.Context(), args[0])
+		},
+	}
+	return cmd
+}
+
+func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, name string) error {
+	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
+	if err != nil {
+		return err
+	}
+
+	return ds.DestroyAttestationPolicy(name)
 }

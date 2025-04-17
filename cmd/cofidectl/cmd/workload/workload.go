@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 
-	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
@@ -204,7 +203,7 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 			return err
 		}
 
-		if deployed, err := isClusterDeployed(ctx, cluster); err != nil {
+		if deployed, err := helm.IsClusterDeployed(ctx, cluster); err != nil {
 			return err
 		} else if !deployed {
 			return fmt.Errorf("trust zone %s has not been deployed", trustZone.Name)
@@ -325,7 +324,7 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 			return err
 		}
 
-		deployed, err := isClusterDeployed(ctx, cluster)
+		deployed, err := helm.IsClusterDeployed(ctx, cluster)
 		if err != nil {
 			return err
 		}
@@ -361,13 +360,4 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 	table.Render()
 
 	return nil
-}
-
-// isClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
-func isClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster) (bool, error) {
-	prov, err := helm.NewHelmSPIREProvider(ctx, cluster, nil, nil)
-	if err != nil {
-		return false, err
-	}
-	return prov.CheckIfAlreadyInstalled()
 }

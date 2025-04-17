@@ -408,3 +408,12 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 	}
 	return len(ledger) > 0, nil
 }
+
+// IsClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
+func IsClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster) (bool, error) {
+	prov, err := NewHelmSPIREProvider(ctx, cluster, nil, nil)
+	if err != nil {
+		return false, err
+	}
+	return prov.CheckIfAlreadyInstalled()
+}
