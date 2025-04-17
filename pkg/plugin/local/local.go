@@ -81,17 +81,20 @@ func (lds *LocalDataSource) updateDataFile() error {
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
-	if trustZone.Id == nil || *trustZone.Id == "" {
-		id, err := generateId()
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate UUID for trust zone: %w", err)
-		}
-		trustZone.Id = id
+	if trustZone.GetId() != "" {
+		return nil, fmt.Errorf("trust zone %s should not have an ID set, this will be auto generated", trustZone.GetId())
 	}
+
+	id, err := generateId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate UUID for trust zone: %w", err)
+	}
+	trustZone.Id = id
+
 	if _, ok := lds.config.GetTrustZoneByName(trustZone.Name); ok {
 		return nil, fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
 	}
-	trustZone, err := proto.CloneTrustZone(trustZone)
+	trustZone, err = proto.CloneTrustZone(trustZone)
 	if err != nil {
 		return nil, err
 	}
@@ -172,13 +175,14 @@ func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.C
 	name := cluster.GetName()
 	trustZone := cluster.GetTrustZone()
 
-	if cluster.Id == nil || *cluster.Id == "" {
-		id, err := generateId()
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate UUID for cluster: %w", err)
-		}
-		cluster.Id = id
+	if cluster.GetId() != "" {
+		return nil, fmt.Errorf("cluster %s should not have an ID set, this will be auto generated", cluster.GetId())
 	}
+	id, err := generateId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate UUID for cluster: %w", err)
+	}
+	cluster.Id = id
 
 	if _, ok := lds.config.GetClusterByName(name, trustZone); ok {
 		return nil, fmt.Errorf("cluster %s already exists in trust zone %s in local config", name, trustZone)
@@ -188,7 +192,7 @@ func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.C
 		return nil, fmt.Errorf("trust zone %s already has a cluster", trustZone)
 	}
 
-	cluster, err := proto.CloneCluster(cluster)
+	cluster, err = proto.CloneCluster(cluster)
 	if err != nil {
 		return nil, err
 	}
@@ -286,17 +290,20 @@ func validateTrustProviderUpdate(cluster, tzName string, current, new *trust_pro
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error) {
-	if policy.Id == nil || *policy.Id == "" {
-		id, err := generateId()
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate UUID for attestation policy: %w", err)
-		}
-		policy.Id = id
+	if policy.GetId() != "" {
+		return nil, fmt.Errorf("attestation policy %s should not have an ID set, this will be auto generated", *policy.Id)
 	}
+
+	id, err := generateId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate UUID for attestation policy: %w", err)
+	}
+	policy.Id = id
+
 	if _, ok := lds.config.GetAttestationPolicyByName(policy.Name); ok {
 		return nil, fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
 	}
-	policy, err := proto.CloneAttestationPolicy(policy)
+	policy, err = proto.CloneAttestationPolicy(policy)
 	if err != nil {
 		return nil, err
 	}
@@ -328,13 +335,16 @@ func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_pro
 }
 
 func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
-	if binding.Id == nil || *binding.Id == "" {
-		id, err := generateId()
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate UUID for attestation policy binding: %w", err)
-		}
-		binding.Id = id
+	if binding.GetId() != "" {
+		return nil, fmt.Errorf("attestation policy binding %s should not have an ID set, this will be auto generated", *binding.Id)
 	}
+
+	id, err := generateId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate UUID for attestation policy binding: %w", err)
+	}
+	binding.Id = id
+
 	// nolint:staticcheck
 	localTrustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
 	if !ok {
@@ -381,7 +391,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 		}
 	}
 
-	binding, err := proto.CloneAPBinding(binding)
+	binding, err = proto.CloneAPBinding(binding)
 	if err != nil {
 		return nil, err
 	}
