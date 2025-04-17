@@ -132,6 +132,7 @@ func TestLocalDataSource_AddTrustZone(t *testing.T) {
 				gotTrustZone, ok := gotConfig.GetTrustZoneByName(tt.trustZone.Name)
 				assert.True(t, ok)
 				assert.EqualExportedValues(t, tt.trustZone, gotTrustZone)
+				assert.NotNil(t, gotTrustZone.Id)
 			}
 		})
 	}
@@ -384,6 +385,7 @@ func TestLocalDataSource_AddCluster(t *testing.T) {
 				gotCluster, ok := gotConfig.GetClusterByName(tt.cluster.GetName(), tt.cluster.GetTrustZone())
 				assert.True(t, ok)
 				assert.EqualExportedValues(t, tt.cluster, gotCluster)
+				assert.NotNil(t, gotCluster.Id)
 			}
 		})
 	}
@@ -651,6 +653,7 @@ func TestLocalDataSource_AddAttestationPolicy(t *testing.T) {
 				gotPolicy, ok := gotConfig.GetAttestationPolicyByName(tt.policy.Name)
 				assert.True(t, ok)
 				assert.EqualExportedValues(t, tt.policy, gotPolicy)
+				assert.NotNil(t, gotPolicy.Id)
 			}
 		})
 	}
@@ -846,6 +849,7 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				// nolint:staticcheck
 				gotBinding := gotConfig.TrustZones[0].AttestationPolicies[1]
 				assert.EqualExportedValues(t, tt.binding, gotBinding)
+				assert.NotNil(t, gotBinding.Id)
 			}
 		})
 	}
@@ -925,8 +929,8 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		wantErrString string
 	}{
 		{
-			name:    "no filter",
-			filter:  &datasourcepb.ListAPBindingsRequest_Filter{},
+			name:   "no filter",
+			filter: &datasourcepb.ListAPBindingsRequest_Filter{},
 			// nolint:staticcheck
 			want:    append(fixtures.TrustZone("tz1").AttestationPolicies, fixtures.TrustZone("tz3").AttestationPolicies...),
 			wantErr: false,
@@ -1089,6 +1093,7 @@ func TestLocalDataSource_AddFederation(t *testing.T) {
 				// nolint:staticcheck
 				gotFederation := gotConfig.TrustZones[0].Federations[1]
 				assert.EqualExportedValues(t, tt.federation, gotFederation)
+				assert.NotNil(t, gotFederation.Id)
 			}
 		})
 	}
