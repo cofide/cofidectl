@@ -18,7 +18,18 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+
+	"github.com/google/uuid"
 )
+
+func generateId() (*string, error) {
+	uid, err := uuid.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate UUID: %w", err)
+	}
+	id := uid.String()
+	return &id, nil
+}
 
 var _ datasource.DataSource = (*LocalDataSource)(nil)
 
@@ -70,6 +81,13 @@ func (lds *LocalDataSource) updateDataFile() error {
 }
 
 func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
+	if trustZone.Id == nil || *trustZone.Id == "" {
+		id, err := generateId()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate UUID for trust zone: %w", err)
+		}
+		trustZone.Id = id
+	}
 	if _, ok := lds.config.GetTrustZoneByName(trustZone.Name); ok {
 		return nil, fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
 	}
@@ -153,6 +171,14 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
 	name := cluster.GetName()
 	trustZone := cluster.GetTrustZone()
+
+	if cluster.Id == nil || *cluster.Id == "" {
+		id, err := generateId()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate UUID for cluster: %w", err)
+		}
+		cluster.Id = id
+	}
 
 	if _, ok := lds.config.GetClusterByName(name, trustZone); ok {
 		return nil, fmt.Errorf("cluster %s already exists in trust zone %s in local config", name, trustZone)
@@ -260,6 +286,13 @@ func validateTrustProviderUpdate(cluster, tzName string, current, new *trust_pro
 }
 
 func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error) {
+	if policy.Id == nil || *policy.Id == "" {
+		id, err := generateId()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate UUID for attestation policy: %w", err)
+		}
+		policy.Id = id
+	}
 	if _, ok := lds.config.GetAttestationPolicyByName(policy.Name); ok {
 		return nil, fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
 	}
@@ -295,6 +328,13 @@ func (lds *LocalDataSource) ListAttestationPolicies() ([]*attestation_policy_pro
 }
 
 func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
+	if binding.Id == nil || *binding.Id == "" {
+		id, err := generateId()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate UUID for attestation policy binding: %w", err)
+		}
+		binding.Id = id
+	}
 	// nolint:staticcheck
 	localTrustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
 	if !ok {
@@ -408,6 +448,13 @@ func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRe
 }
 
 func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) (*federation_proto.Federation, error) {
+	if federationProto.Id == nil || *federationProto.Id == "" {
+		id, err := generateId()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate UUID for federation: %w", err)
+		}
+		federationProto.Id = id
+	}
 	// nolint:staticcheck
 	fromTrustZone, ok := lds.config.GetTrustZoneByName(federationProto.From)
 	if !ok {
