@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"strconv"
@@ -45,8 +46,8 @@ This command consists of multiple sub-commands to administer Cofide trust zones.
 
 func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "trust-zone add|list|status [ARGS]",
-		Short: "Add, list or interact with trust zones",
+		Use:   "trust-zone add|del|list|status [ARGS]",
+		Short: "Manage trust zones",
 		Long:  trustZoneRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -56,6 +57,7 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd.AddCommand(
 		c.GetListCommand(),
 		c.GetAddCommand(),
+		c.GetDelCommand(),
 		c.GetStatusCommand(),
 		helmCmd.GetRootCommand(),
 	)
@@ -193,6 +195,9 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 
 				_, err = ds.AddCluster(newCluster)
 				if err != nil {
+					if err := ds.DestroyTrustZone(opts.name); err != nil {
+						slog.Error("Failed to destroy trust zone during rollback", "error", err)
+					}
 					return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
 				}
 			}
@@ -213,6 +218,63 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
 
 	return cmd
+}
+
+var trustZoneDelCmdDesc = `
+This command will delete a trust zone from the Cofide configuration state.
+`
+
+func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "del [NAME]",
+		Short: "Delete a trust zone",
+		Long:  trustZoneDelCmdDesc,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return c.deleteTrustZone(cmd.Context(), args[0])
+		},
+	}
+	return cmd
+}
+
+func (c *TrustZoneCommand) deleteTrustZone(ctx context.Context, name string) error {
+	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
+	if err != nil {
+		return err
+	}
+
+	clusters, err := ds.ListClusters(name)
+	if err != nil {
+		return err
+	}
+
+	// Fail if any clusters in the trust zone are up.
+	for _, cluster := range clusters {
+		if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster); err != nil {
+			return err
+		} else if deployed {
+			return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", cluster.GetName(), name)
+		}
+	}
+
+	for i, cluster := range clusters {
+		err = ds.DestroyCluster(cluster.GetName(), name)
+		if err != nil {
+			for _, rollbackCluster := range clusters[:i] {
+				if _, err := ds.AddCluster(rollbackCluster); err != nil {
+					slog.Error("Failed recreating cluster during rollback", "error", err)
+				}
+			}
+			return fmt.Errorf("failed to destroy cluster %s: %w", cluster.GetName(), err)
+		}
+	}
+
+	err = ds.DestroyTrustZone(name)
+	if err != nil {
+		return fmt.Errorf("failed to destroy trust zone %s: %w", name, err)
+	}
+
+	return nil
 }
 
 var trustZoneStatusCmdDesc = `
