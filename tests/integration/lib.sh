@@ -23,3 +23,21 @@ function check_spire_csi_driver() {
     return 1
   fi
 }
+
+function check_delete() {
+  trust_zones="$(yq '.trust_zones' cofide.yaml -r)"
+  clusters="$(yq '.clusters' cofide.yaml -r)"
+  attestation_policies="$(yq '.attestation_policies' cofide.yaml -r)"
+  if [[ "$trust_zones" != "null" ]]; then
+    echo "Unexpected trust zones in cofide.yaml: $trust_zones"
+    exit 1
+  fi
+  if [[ "$clusters" != "null" ]]; then
+    echo "Unexpected clusters in cofide.yaml: $clusters"
+    exit 1
+  fi
+  if [[ "$attestation_policies" != "null" ]]; then
+    echo "Unexpected attestation policies in cofide.yaml: $attestation_policies"
+    exit 1
+  fi
+}
