@@ -165,7 +165,7 @@ func lockPath(filePath string) string {
 // Execute installs the SPIRE Helm stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.cluster.GetTrustZone(), h.cluster.GetName())
+	sb := provision.NewStatusBuilder(h.cluster.GetTrustZoneId(), h.cluster.GetName())
 	statusCh <- sb.Ok("Installing", "Installing SPIRE CRDs")
 	_, err := h.installSPIRECRDs()
 	if err != nil {
@@ -187,7 +187,7 @@ func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) error {
 // ExecutePostInstallUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.cluster.GetTrustZone(), h.cluster.GetName())
+	sb := provision.NewStatusBuilder(h.cluster.GetTrustZoneId(), h.cluster.GetName())
 	statusCh <- sb.Ok("Configuring", "Applying post-installation configuration")
 	_, err := h.upgradeSPIRE()
 	if err != nil {
@@ -202,7 +202,7 @@ func (h *HelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provision
 // ExecuteUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.cluster.GetTrustZone(), h.cluster.GetName())
+	sb := provision.NewStatusBuilder(h.cluster.GetTrustZoneId(), h.cluster.GetName())
 	statusCh <- sb.Ok("Upgrading", "Upgrading SPIRE chart")
 	_, err := h.upgradeSPIRE()
 	if err != nil {
@@ -217,7 +217,7 @@ func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) 
 // ExecuteUninstall uninstalls the SPIRE stack from the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.cluster.GetTrustZone(), h.cluster.GetName())
+	sb := provision.NewStatusBuilder(h.cluster.GetTrustZoneId(), h.cluster.GetName())
 	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE CRDs")
 	_, err := h.uninstallSPIRECRDs()
 	if err != nil {

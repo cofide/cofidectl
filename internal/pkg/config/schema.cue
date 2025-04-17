@@ -35,7 +35,8 @@
 #Cluster: {
 	id?: string
 	name!: string
-	trust_zone!: string
+	trust_zone?: string
+	trust_zone_id!: string
 	kubernetes_context!: string
 	trust_provider!: #TrustProvider
 	profile!: string
@@ -50,8 +51,8 @@
 
 #APBinding: {
 	id?: string
-	trust_zone!: string
-	policy!: string
+	trust_zone_id!: string
+	policy_id!: string
 	federates_with: [...string]
 }
 
@@ -94,8 +95,8 @@
 
 #Federation: {
 	id?: string
-	from!: string
-	to!: string
+	trust_zone_id!: string
+	remote_trust_zone_id!: string
 }
 
 #HelmValues: {

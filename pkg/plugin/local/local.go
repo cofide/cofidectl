@@ -107,7 +107,7 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 }
 
 func (lds *LocalDataSource) GetTrustZone(id string) (*trust_zone_proto.TrustZone, error) {
-	trustZone, ok := lds.config.GetTrustZoneByName(id)
+	trustZone, ok := lds.config.GetTrustZoneByID(id)
 	if !ok {
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", id)
 	}
@@ -129,7 +129,7 @@ func (lds *LocalDataSource) ListTrustZones() ([]*trust_zone_proto.TrustZone, err
 
 func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
 	for i, current := range lds.config.TrustZones {
-		if current.Name == trustZone.Name {
+		if current.GetId() == trustZone.GetId() {
 			if err := validateTrustZoneUpdate(current, trustZone); err != nil {
 				return nil, err
 			}
@@ -142,38 +142,41 @@ func (lds *LocalDataSource) UpdateTrustZone(trustZone *trust_zone_proto.TrustZon
 			lds.config.TrustZones[i] = trustZone
 
 			if err := lds.updateDataFile(); err != nil {
-				return nil, fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.Name, err)
+				return nil, fmt.Errorf("failed to update trust zone %s in local config: %s", trustZone.GetId(), err)
 			}
 
 			return proto.CloneTrustZone(trustZone)
 		}
 	}
 
-	return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.Name)
+	return nil, fmt.Errorf("failed to find trust zone %s in local config", trustZone.GetId())
 }
 
 func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
+	if new.GetId() != current.GetId() {
+		return fmt.Errorf("cannot update id for existing trust zone %s", *current.Id)
+	}
 	if new.Name != current.Name {
-		return fmt.Errorf("cannot update name for existing trust zone %s", current.Name)
+		return fmt.Errorf("cannot update name for existing trust zone %s", *current.Id)
 	}
 	if new.TrustDomain != current.TrustDomain {
-		return fmt.Errorf("cannot update trust domain for existing trust zone %s", current.Name)
+		return fmt.Errorf("cannot update trust domain for existing trust zone %s", *current.Id)
 	}
 	// The following should be updated though other means.
 	// nolint:staticcheck
 	if !slices.EqualFunc(new.Federations, current.Federations, proto.FederationsEqual) {
-		return fmt.Errorf("cannot update federations for existing trust zone %s", current.Name)
+		return fmt.Errorf("cannot update federations for existing trust zone %s", *current.Id)
 	}
 	// nolint:staticcheck
 	if !slices.EqualFunc(new.AttestationPolicies, current.AttestationPolicies, proto.APBindingsEqual) {
-		return fmt.Errorf("cannot update attestation policies for existing trust zone %s", current.Name)
+		return fmt.Errorf("cannot update attestation policies for existing trust zone %s", *current.Id)
 	}
 	return nil
 }
 
 func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
 	name := cluster.GetName()
-	trustZone := cluster.GetTrustZone()
+	trustZoneID := cluster.GetTrustZoneId()
 
 	if cluster.GetId() != "" {
 		return nil, fmt.Errorf("cluster %s should not have an ID set, this will be auto generated", cluster.GetId())
@@ -184,12 +187,12 @@ func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.C
 	}
 	cluster.Id = id
 
-	if _, ok := lds.config.GetClusterByName(name, trustZone); ok {
-		return nil, fmt.Errorf("cluster %s already exists in trust zone %s in local config", name, trustZone)
+	if _, ok := lds.config.GetClusterByID(cluster.GetId(), trustZoneID); ok {
+		return nil, fmt.Errorf("cluster %s already exists in trust zone %s in local config", cluster.GetId(), trustZoneID)
 	}
 
-	if len(lds.config.GetClustersByTrustZone(trustZone)) != 0 {
-		return nil, fmt.Errorf("trust zone %s already has a cluster", trustZone)
+	if len(lds.config.GetClustersByTrustZone(trustZoneID)) != 0 {
+		return nil, fmt.Errorf("trust zone %s already has a cluster", trustZoneID)
 	}
 
 	cluster, err = proto.CloneCluster(cluster)
@@ -199,15 +202,15 @@ func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.C
 
 	lds.config.Clusters = append(lds.config.Clusters, cluster)
 	if err := lds.updateDataFile(); err != nil {
-		return nil, fmt.Errorf("failed to add cluster %s in trust zone %s to local config: %s", name, trustZone, err)
+		return nil, fmt.Errorf("failed to add cluster %s in trust zone %s to local config: %s", name, trustZoneID, err)
 	}
 	return cluster, nil
 }
 
-func (lds *LocalDataSource) GetCluster(name, trustZone string) (*clusterpb.Cluster, error) {
-	cluster, ok := lds.config.GetClusterByName(name, trustZone)
+func (lds *LocalDataSource) GetCluster(id, trustZone string) (*clusterpb.Cluster, error) {
+	cluster, ok := lds.config.GetClusterByID(id, trustZone)
 	if !ok {
-		return nil, fmt.Errorf("failed to find cluster %s in trust zone %s in local config", name, trustZone)
+		return nil, fmt.Errorf("failed to find cluster %s in trust zone %s in local config", id, trustZone)
 	}
 
 	return proto.CloneCluster(cluster)
@@ -226,11 +229,11 @@ func (lds *LocalDataSource) ListClusters(trustZone string) ([]*clusterpb.Cluster
 }
 
 func (lds *LocalDataSource) UpdateCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
-	name := cluster.GetName()
-	trustZone := cluster.GetTrustZone()
+	id := cluster.GetId()
+	trustZoneId := cluster.GetTrustZoneId()
 
 	for i, current := range lds.config.Clusters {
-		if current.GetName() == name {
+		if current.GetId() == id {
 			if err := validateClusterUpdate(current, cluster); err != nil {
 				return nil, err
 			}
@@ -243,33 +246,37 @@ func (lds *LocalDataSource) UpdateCluster(cluster *clusterpb.Cluster) (*clusterp
 			lds.config.Clusters[i] = cluster
 
 			if err := lds.updateDataFile(); err != nil {
-				return nil, fmt.Errorf("failed to update cluster %s in trust zone %s in local config: %s", name, trustZone, err)
+				return nil, fmt.Errorf("failed to update cluster %s in trust zone %s in local config: %s", id, trustZoneId, err)
 			}
 
 			return proto.CloneCluster(cluster)
 		}
 	}
 
-	return nil, fmt.Errorf("failed to find cluster %s in trust zone %s in local config", name, trustZone)
+	return nil, fmt.Errorf("failed to find cluster %s in trust zone %s in local config", id, trustZoneId)
 }
 
 func validateClusterUpdate(current, new *clusterpb.Cluster) error {
-	name := current.GetName()
-	trustZone := current.GetTrustZone()
+	id := current.GetId()
+	trustZoneID := current.GetTrustZoneId()
 
-	if new.GetName() != current.GetName() {
-		return fmt.Errorf("cannot update name for existing cluster %s in trust zone %s", name, trustZone)
+	if new.GetId() != current.GetId() {
+		return fmt.Errorf("cannot update id for existing cluster %s in trust zone %s", id, trustZoneID)
 	}
 
-	if new.GetTrustZone() != current.GetTrustZone() {
-		return fmt.Errorf("cannot update trust zone for existing cluster %s in trust zone %s", name, trustZone)
+	if new.GetName() != current.GetName() {
+		return fmt.Errorf("cannot update name for existing cluster %s in trust zone %s", id, trustZoneID)
+	}
+
+	if new.GetTrustZoneId() != current.GetTrustZoneId() {
+		return fmt.Errorf("cannot update trust zone for existing cluster %s in trust zone %s", id, trustZoneID)
 	}
 
 	if new.GetProfile() != current.GetProfile() {
-		return fmt.Errorf("cannot update profile for existing cluster %s in trust zone %s", name, trustZone)
+		return fmt.Errorf("cannot update profile for existing cluster %s in trust zone %s", id, trustZoneID)
 	}
 
-	if err := validateTrustProviderUpdate(current.GetName(), current.GetTrustZone(), current.TrustProvider, new.TrustProvider); err != nil {
+	if err := validateTrustProviderUpdate(current.GetId(), current.GetTrustZoneId(), current.TrustProvider, new.TrustProvider); err != nil {
 		return err
 	}
 
@@ -300,9 +307,10 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 	}
 	policy.Id = id
 
-	if _, ok := lds.config.GetAttestationPolicyByName(policy.Name); ok {
-		return nil, fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
+	if _, ok := lds.config.GetAttestationPolicyByID(policy.GetId()); ok {
+		return nil, fmt.Errorf("attestation policy %s already exists in local config", policy.GetId())
 	}
+
 	policy, err = proto.CloneAttestationPolicy(policy)
 	if err != nil {
 		return nil, err
@@ -315,7 +323,7 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 }
 
 func (lds *LocalDataSource) GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error) {
-	if policy, ok := lds.config.GetAttestationPolicyByName(id); ok {
+	if policy, ok := lds.config.GetAttestationPolicyByID(id); ok {
 		return proto.CloneAttestationPolicy(policy)
 	} else {
 		return nil, fmt.Errorf("failed to find attestation policy %s in local config", id)
@@ -345,26 +353,20 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 	}
 	binding.Id = id
 
-	// nolint:staticcheck
-	localTrustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
+	localTrustZone, ok := lds.config.GetTrustZoneByID(binding.GetTrustZoneId())
 	if !ok {
-		// nolint:staticcheck
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", binding.GetTrustZoneId())
 	}
 
-	// nolint:staticcheck
-	_, ok = lds.config.GetAttestationPolicyByName(binding.Policy)
+	_, ok = lds.config.GetAttestationPolicyByID(binding.GetPolicyId())
 	if !ok {
-		// nolint:staticcheck
-		return nil, fmt.Errorf("failed to find attestation policy %s in local config", binding.Policy)
+		return nil, fmt.Errorf("failed to find attestation policy %s in local config", binding.GetPolicyId())
 	}
 
 	// nolint:staticcheck
 	for _, apb := range localTrustZone.AttestationPolicies {
-		// nolint:staticcheck
-		if apb.Policy == binding.Policy {
-			// nolint:staticcheck
-			return nil, fmt.Errorf("attestation policy %s is already bound to trust zone %s", binding.Policy, binding.TrustZone)
+		if apb.GetPolicyId() == binding.GetPolicyId() {
+			return nil, fmt.Errorf("attestation policy %s is already bound to trust zone %s", binding.GetPolicyId(), binding.GetTrustZoneId())
 		}
 	}
 
@@ -372,21 +374,19 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 	// nolint:staticcheck
 	for _, federation := range localTrustZone.Federations {
 		// nolint:staticcheck
-		remoteTzs[federation.To] = true
+		remoteTzs[federation.GetRemoteTrustZoneId()] = true
 	}
-	// nolint:staticcheck
-	for _, remoteTz := range binding.FederatesWith {
-		// nolint:staticcheck
-		if remoteTz == binding.TrustZone {
+
+	for _, remoteTz := range binding.Federations {
+		if remoteTz.GetTrustZoneId() == binding.GetTrustZoneId() {
 			// Is this a problem?
-			// nolint:staticcheck
-			return nil, fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.Policy, binding.TrustZone)
+			return nil, fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.GetPolicyId(), binding.GetTrustZoneId())
 		}
-		if _, ok := remoteTzs[remoteTz]; !ok {
-			if _, ok := lds.config.GetTrustZoneByName(remoteTz); !ok {
-				return nil, fmt.Errorf("attestation policy %s federates with unknown trust zone %s", binding.Policy, remoteTz)
+		if _, ok := remoteTzs[remoteTz.GetTrustZoneId()]; !ok {
+			if _, ok := lds.config.GetTrustZoneByID(remoteTz.GetTrustZoneId()); !ok {
+				return nil, fmt.Errorf("attestation policy %s federates with unknown trust zone %s", binding.GetPolicyId(), remoteTz.GetTrustZoneId())
 			} else {
-				return nil, fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", binding.Policy, remoteTz, binding.TrustZone)
+				return nil, fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", binding.GetPolicyId(), remoteTz.GetTrustZoneId(), binding.GetTrustZoneId())
 			}
 		}
 	}
@@ -404,17 +404,14 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 }
 
 func (lds *LocalDataSource) DestroyAPBinding(binding *ap_binding_proto.APBinding) error {
-	// nolint:staticcheck
-	trustZone, ok := lds.config.GetTrustZoneByName(binding.TrustZone)
+	trustZone, ok := lds.config.GetTrustZoneByID(binding.GetTrustZoneId())
 	if !ok {
-		// nolint:staticcheck
-		return fmt.Errorf("failed to find trust zone %s in local config", binding.TrustZone)
+		return fmt.Errorf("failed to find trust zone %s in local config", binding.GetTrustZoneId())
 	}
 
 	// nolint:staticcheck
 	for i, tzBinding := range trustZone.AttestationPolicies {
-		// nolint:staticcheck
-		if tzBinding.Policy == binding.Policy {
+		if tzBinding.GetPolicyId() == binding.GetPolicyId() {
 			trustZone.AttestationPolicies = append(trustZone.AttestationPolicies[:i], trustZone.AttestationPolicies[i+1:]...)
 			if err := lds.updateDataFile(); err != nil {
 				return fmt.Errorf("failed to remove attestation policy binding from local config: %w", err)
@@ -424,7 +421,7 @@ func (lds *LocalDataSource) DestroyAPBinding(binding *ap_binding_proto.APBinding
 	}
 
 	// nolint:staticcheck
-	return fmt.Errorf("failed to find attestation policy binding for %s in trust zone %s", binding.Policy, binding.TrustZone)
+	return fmt.Errorf("failed to find attestation policy binding for %s in trust zone %s", binding.GetPolicyId(), binding.GetTrustZoneId())
 }
 
 func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error) {
@@ -443,7 +440,7 @@ func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRe
 		// nolint:staticcheck
 		for _, binding := range trustZone.AttestationPolicies {
 			// nolint:staticcheck
-			if filter != nil && filter.PolicyName != nil && binding.Policy != filter.GetPolicyName() {
+			if filter != nil && filter.PolicyName != nil && binding.GetPolicyId() != filter.GetPolicyName() {
 				continue
 			}
 
@@ -458,43 +455,38 @@ func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRe
 }
 
 func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) (*federation_proto.Federation, error) {
-	if federationProto.Id == nil || *federationProto.Id == "" {
+	if federationProto.GetId() == "" {
 		id, err := generateId()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate UUID for federation: %w", err)
 		}
 		federationProto.Id = id
 	}
-	// nolint:staticcheck
-	fromTrustZone, ok := lds.config.GetTrustZoneByName(federationProto.From)
+	fromTrustZone, ok := lds.config.GetTrustZoneByID(federationProto.GetTrustZoneId())
 	if !ok {
-		// nolint:staticcheck
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.From)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.GetTrustZoneId())
 	}
 
-	// nolint:staticcheck
-	_, ok = lds.config.GetTrustZoneByName(federationProto.To)
+	_, ok = lds.config.GetTrustZoneByID(federationProto.GetRemoteTrustZoneId())
 	if !ok {
-		// nolint:staticcheck
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.To)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.GetRemoteTrustZoneId())
 	}
 
-	// nolint:staticcheck
-	if federationProto.From == federationProto.To {
-		// nolint:staticcheck
-		return nil, fmt.Errorf("cannot federate trust zone %s with itself", federationProto.From)
+	if federationProto.GetTrustZoneId() == federationProto.GetRemoteTrustZoneId() {
+		return nil, fmt.Errorf("cannot federate trust zone %s with itself", federationProto.GetTrustZoneId())
 	}
 
-	// nolint:staticcheck
-	for _, federation := range fromTrustZone.Federations {
-		// nolint:staticcheck
-		if federation.To == federationProto.To {
-			// nolint:staticcheck
-			return nil, fmt.Errorf("federation already exists between %s and %s", federationProto.From, federationProto.To)
+	federations, err := lds.ListFederationsByTrustZone(federationProto.GetTrustZoneId())
+	if err != nil {
+		return nil, fmt.Errorf("failed to list federations for trust zone %s: %w", federationProto.GetTrustZoneId(), err)
+	}
+	for _, federation := range federations {
+		if federation.GetTrustZoneId() == federationProto.GetTrustZoneId() && federation.GetRemoteTrustZoneId() == federationProto.GetRemoteTrustZoneId() {
+			return nil, fmt.Errorf("federation already exists between %s and %s", federationProto.GetTrustZoneId(), federationProto.GetRemoteTrustZoneId())
 		}
 	}
 
-	federationProto, err := proto.CloneFederation(federationProto)
+	federationProto, err = proto.CloneFederation(federationProto)
 	if err != nil {
 		return nil, err
 	}
@@ -524,10 +516,10 @@ func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, e
 	return federations, nil
 }
 
-func (lds *LocalDataSource) ListFederationsByTrustZone(tzName string) ([]*federation_proto.Federation, error) {
-	trustZone, ok := lds.config.GetTrustZoneByName(tzName)
+func (lds *LocalDataSource) ListFederationsByTrustZone(tzID string) ([]*federation_proto.Federation, error) {
+	trustZone, ok := lds.config.GetTrustZoneByID(tzID)
 	if !ok {
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", tzName)
+		return nil, fmt.Errorf("failed to find trust zone %s in local config", tzID)
 	}
 
 	var federations []*federation_proto.Federation

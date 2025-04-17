@@ -222,7 +222,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		}
 	}
 
-	federations, err := g.source.ListFederationsByTrustZone(g.trustZone.Name)
+	federations, err := g.source.ListFederationsByTrustZone(*g.trustZone.Id)
 	if err != nil {
 		return nil, err
 	}

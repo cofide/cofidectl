@@ -55,6 +55,7 @@ func TestSpireHelm_Deploy(t *testing.T) {
 		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
 		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
 	}
+
 	assert.EqualExportedValues(t, want, statuses)
 }
 
