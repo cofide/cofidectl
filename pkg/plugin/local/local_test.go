@@ -132,6 +132,7 @@ func TestLocalDataSource_AddTrustZone(t *testing.T) {
 				gotTrustZone, ok := gotConfig.GetTrustZoneByName(tt.trustZone.Name)
 				assert.True(t, ok)
 				assert.EqualExportedValues(t, tt.trustZone, gotTrustZone)
+				assert.NotNil(t, gotTrustZone.Id)
 			}
 		})
 	}
