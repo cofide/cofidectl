@@ -97,6 +97,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 				}
 
 				data[i] = []string{
+					trustZone.GetId(),
 					trustZone.Name,
 					trustZone.TrustDomain,
 					clusterName,
@@ -104,7 +105,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Domain", "Cluster"})
+			table.SetHeader([]string{"ID", "Name", "Trust Domain", "Cluster"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -176,15 +177,20 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 				BundleEndpointProfile: &bundleEndpointProfile,
 			}
 
-			_, err = ds.AddTrustZone(newTrustZone)
+			newTrustZone, err = ds.AddTrustZone(newTrustZone)
 			if err != nil {
 				return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, err)
+			}
+
+			tzID := newTrustZone.GetId()
+			if tzID == "" {
+				return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, errors.New("trust zone ID is empty"))
 			}
 
 			if !opts.noCluster {
 				newCluster := &clusterpb.Cluster{
 					Name:              &opts.kubernetesCluster,
-					TrustZone:         &opts.name,
+					TrustZoneId:       &tzID,
 					KubernetesContext: &opts.context,
 					TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
 					Profile:           &opts.profile,
