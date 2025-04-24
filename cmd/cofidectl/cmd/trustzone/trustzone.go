@@ -244,8 +244,8 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string) error {
-	trustZone, err := source.GetTrustZone(tzName)
+func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzID string) error {
+	trustZone, err := source.GetTrustZone(tzID)
 	if err != nil {
 		return err
 	}

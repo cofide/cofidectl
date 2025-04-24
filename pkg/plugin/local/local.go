@@ -216,9 +216,9 @@ func (lds *LocalDataSource) GetCluster(id, trustZone string) (*clusterpb.Cluster
 	return proto.CloneCluster(cluster)
 }
 
-func (lds *LocalDataSource) ListClusters(trustZone string) ([]*clusterpb.Cluster, error) {
+func (lds *LocalDataSource) ListClusters(trustZoneID string) ([]*clusterpb.Cluster, error) {
 	clusters := []*clusterpb.Cluster{}
-	for _, cluster := range lds.config.GetClustersByTrustZone(trustZone) {
+	for _, cluster := range lds.config.GetClustersByTrustZone(trustZoneID) {
 		cluster, err := proto.CloneCluster(cluster)
 		if err != nil {
 			return nil, err

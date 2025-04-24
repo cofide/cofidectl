@@ -53,7 +53,12 @@
 	id?: string
 	trust_zone_id!: string
 	policy_id!: string
+	federations: [...#APBFederation]
 	federates_with: [...string]
+}
+
+#APBFederation: {
+	trust_zone_id!: string
 }
 
 #AttestationPolicy: {

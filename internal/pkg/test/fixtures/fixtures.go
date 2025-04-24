@@ -53,9 +53,14 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
-				TrustZoneId:   StringPtr("tz1-id"),
-				PolicyId:      StringPtr("ap1-id"),
-				FederatesWith: []string{"tz2"},
+				TrustZoneId: StringPtr("tz1-id"),
+				PolicyId:    StringPtr("ap1-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{
+					{
+						TrustZoneId: StringPtr("tz2-id"),
+					},
+				},
+				FederatesWith: []string{"tz2-id"},
 			},
 		},
 		JwtIssuer:             StringPtr("https://tz1.example.com"),
@@ -74,9 +79,14 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
-				TrustZoneId:   StringPtr("tz2-id"),
-				PolicyId:      StringPtr("ap2-id"),
-				FederatesWith: []string{"tz1"},
+				TrustZoneId: StringPtr("tz2-id"),
+				PolicyId:    StringPtr("ap2-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{
+					{
+						TrustZoneId: StringPtr("tz1-id"),
+					},
+				},
+				FederatesWith: []string{"tz1-id"},
 			},
 		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
@@ -120,6 +130,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 			{
 				TrustZoneId:   StringPtr("tz6-id"),
 				PolicyId:      StringPtr("ap4-id"),
+				Federations:   []*ap_binding_proto.APBindingFederation{},
 				FederatesWith: []string{},
 			},
 		},
