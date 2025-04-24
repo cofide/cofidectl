@@ -102,8 +102,8 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				}
 
 				data[i] = []string{
-					*federation.TrustZoneId,
-					*federation.RemoteTrustZoneId,
+					federation.GetTrustZoneId(),
+					federation.GetRemoteTrustZoneId(),
 					status,
 					reason,
 				}
@@ -192,6 +192,9 @@ This command will add a new federation to the Cofide configuration state.
 type Opts struct {
 	from string
 	to   string
+
+	fromID string
+	toID   string
 }
 
 func (c *FederationCommand) GetAddCommand() *cobra.Command {
@@ -201,15 +204,60 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		Short: "Add a new federation",
 		Long:  federationAddCmdDesc,
 		Args:  cobra.NoArgs,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if opts.fromID != "" && opts.from != "" {
+				return errors.New("cannot specify both --from and --from-id")
+			}
+			if opts.toID != "" && opts.to != "" {
+				return errors.New("cannot specify both --to and --to-id")
+			}
+			if opts.from == "" && opts.fromID == "" {
+				return errors.New("must specify --from or --from-id")
+			}
+			if opts.to == "" && opts.toID == "" {
+				return errors.New("must specify --to or --to-id")
+			}
+
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
 
+			fromId := opts.fromID
+			if fromId == "" {
+				tzs, err := ds.ListTrustZones()
+				if err != nil {
+					return err
+
+				}
+				for _, tz := range tzs {
+					if tz.Name == opts.from {
+						fromId = tz.GetId()
+						break
+					}
+				}
+			}
+
+			toId := opts.toID
+			if toId == "" {
+				tzs, err := ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
+				for _, tz := range tzs {
+					if tz.Name == opts.to {
+						toId = tz.GetId()
+						break
+					}
+				}
+			}
+
 			newFederation := &federation_proto.Federation{
-				From: opts.from,
-				To:   opts.to,
+				TrustZoneId:       &fromId,
+				RemoteTrustZoneId: &toId,
 			}
 			_, err = ds.AddFederation(newFederation)
 			return err
@@ -217,11 +265,11 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.from, "from", "", "Trust zone to federate from")
+	f.StringVar(&opts.from, "from", "", "Trust zone name to federate from")
 	f.StringVar(&opts.to, "to", "", "Trust zone to federate to")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("from"))
-	cobra.CheckErr(cmd.MarkFlagRequired("to"))
+	f.StringVar(&opts.fromID, "from-id", "", "Trust zone ID to federate from")
+	f.StringVar(&opts.toID, "to-id", "", "Trust zone ID to federate to")
 
 	return cmd
 }
