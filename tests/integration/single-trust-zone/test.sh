@@ -49,7 +49,13 @@ tornjak-frontend:
 upstream-spire-agent:
   upstream: false
 EOF
-  ./cofidectl trust-zone helm override $TRUST_ZONE --input-file values.yaml
+  TZ_INFO=$(./cofidectl trust-zone list | grep $TRUST_ZONE)
+  if [[ -z $TZ_INFO ]]; then
+    echo "Error: Trust zone $TRUST_ZONE not found"
+    exit 1
+  fi
+  TZ_ID=$(echo $TZ_INFO | awk '{print $1}')
+  ./cofidectl trust-zone helm override $TZ_ID --input-file values.yaml
   rm -f values.yaml
 }
 
