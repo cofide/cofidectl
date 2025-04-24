@@ -89,8 +89,10 @@ function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
   ./cofidectl cluster list
-  ./cofidectl trust-zone status $TRUST_ZONE_1
-  ./cofidectl trust-zone status $TRUST_ZONE_2
+  TZ1_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE_1 | awk '{print $1}')
+  TZ2_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE_2 | awk '{print $1}')
+  ./cofidectl trust-zone status $TZ1_ID
+  ./cofidectl trust-zone status $TZ2_ID
 }
 
 function run_tests() {
