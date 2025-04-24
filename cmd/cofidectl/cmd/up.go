@@ -25,8 +25,9 @@ This command installs a Cofide configuration
 `
 
 type UpOpts struct {
-	quiet      bool
-	trustZones []string
+	quiet        bool
+	trustZones   []string
+	trustzoneIDs []string
 }
 
 func (u *UpCommand) UpCmd() *cobra.Command {
@@ -47,9 +48,24 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
+			trustZones := opts.trustzoneIDs
+			if len(opts.trustZones) > 0 {
+				tzs, err := ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
+				for _, tz := range tzs {
+					for _, tzName := range opts.trustZones {
+						if tz.Name == tzName {
+							trustZones = append(trustZones, tz.GetId())
+							break
+						}
+					}
+				}
+			}
 			deployOpts := provisionplugin.DeployOpts{
 				KubeCfgFile: kubeCfgFile,
-				TrustZones:  opts.trustZones,
+				TrustZones:  trustZones,
 			}
 			statusCh, err := provision.Deploy(cmd.Context(), ds, &deployOpts)
 			if err != nil {
@@ -67,6 +83,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from installation")
 	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to install, or all if none is specified")
+	f.StringSliceVar(&opts.trustzoneIDs, "trust-zone-id", []string{}, "Trust zone IDs to install, or all if none is specified")
 
 	return cmd
 }
