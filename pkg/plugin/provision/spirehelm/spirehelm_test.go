@@ -102,7 +102,7 @@ func TestSpireHelm_Deploy_specificTrustZone(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz2"}}
+	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz2-id"}}
 	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
@@ -149,7 +149,7 @@ func TestSpireHelm_TearDown_specificTrustZone(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz1"}}
+	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz1-id"}}
 	statusCh, err := spireHelm.TearDown(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
