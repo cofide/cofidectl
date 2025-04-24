@@ -216,7 +216,7 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 	cluster *clusterpb.Cluster,
 	kubeCfgFile string,
 ) error {
-	sb := provision.NewStatusBuilder(trustZone.GetId(), cluster.GetName())
+	sb := provision.NewStatusBuilder(trustZone.GetName(), cluster.GetName())
 	statusCh <- sb.Ok("Waiting", "Waiting for SPIRE server pod and service")
 
 	spireAPI, err := h.spireAPIFactory.Build(kubeCfgFile, cluster.GetKubernetesContext())
