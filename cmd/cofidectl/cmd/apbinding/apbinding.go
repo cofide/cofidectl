@@ -4,6 +4,7 @@
 package apbinding
 
 import (
+	"errors"
 	"os"
 	"strings"
 
@@ -120,9 +121,12 @@ var apBindingAddCmdDesc = `
 This command will bind an attestation policy to a trust zone.`
 
 type AddOpts struct {
-	trustZone         string
-	attestationPolicy string
-	federatesWith     []string
+	trustZone           string
+	trustZoneID         string
+	attestationPolicy   string
+	attestationPolicyID string
+	federatesWith       []string
+	federatesWithIDs    []string
 }
 
 func (c *APBindingCommand) GetAddCommand() *cobra.Command {
@@ -132,16 +136,93 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 		Short: "Bind an attestation policy to a trust zone",
 		Long:  apBindingAddCmdDesc,
 		Args:  cobra.NoArgs,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if opts.trustZone == "" && opts.trustZoneID == "" {
+				return errors.New("either --trust-zone or --trust-zone-id must be specified")
+			}
+			if opts.attestationPolicy == "" && opts.attestationPolicyID == "" {
+				return errors.New("either --attestation-policy or --attestation-policy-id must be specified")
+			}
+			if opts.trustZone != "" && opts.trustZoneID != "" {
+				return errors.New("only one of --trust-zone or --trust-zone-id can be specified")
+			}
+			if opts.attestationPolicy != "" && opts.attestationPolicyID != "" {
+				return errors.New("only one of --attestation-policy or --attestation-policy-id can be specified")
+			}
+
+			if len(opts.federatesWith) != 0 && len(opts.federatesWithIDs) != 0 {
+				return errors.New("only one of --federates-with or --federates-with-id can be specified")
+			}
+
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
 
+			trustZoneID := opts.trustZoneID
+			if trustZoneID == "" {
+				tzs, err := ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
+				for _, tz := range tzs {
+					if tz.Name == opts.trustZone {
+						trustZoneID = tz.GetId()
+						break
+					}
+				}
+			}
+			if trustZoneID == "" {
+				return errors.New("trust zone not found")
+			}
+
+			policyID := opts.attestationPolicyID
+			if policyID == "" {
+				policies, err := ds.ListAttestationPolicies()
+				if err != nil {
+					return err
+				}
+				for _, policy := range policies {
+					if policy.Name == opts.attestationPolicy {
+						policyID = policy.GetId()
+						break
+					}
+				}
+			}
+			if policyID == "" {
+				return errors.New("attestation policy not found")
+			}
+
+			federatesWith := opts.federatesWithIDs
+			if len(opts.federatesWith) > 0 {
+				federatesWith = []string{}
+				tzs, err := ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
+				for _, tz := range tzs {
+					for _, federate := range opts.federatesWith {
+						if tz.Name == federate {
+							federatesWith = append(federatesWith, tz.GetId())
+							break
+						}
+					}
+				}
+			}
+			federations := []*ap_binding_proto.APBindingFederation{}
+			for _, federate := range federatesWith {
+				federations = append(federations, &ap_binding_proto.APBindingFederation{
+					TrustZoneId: &federate,
+				})
+			}
+
 			binding := &ap_binding_proto.APBinding{
-				TrustZone:     opts.trustZone,
-				Policy:        opts.attestationPolicy,
-				FederatesWith: opts.federatesWith,
+				TrustZoneId: &trustZoneID,
+				PolicyId:    &policyID,
+				Federations: federations,
 			}
 			_, err = ds.AddAPBinding(binding)
 			return err
@@ -150,12 +231,11 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone name")
+	f.StringVar(&opts.trustZone, "trust-zone-id", "", "Trust zone ID")
 	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "Attestation policy name")
+	f.StringVar(&opts.attestationPolicy, "attestation-policy-id", "", "Attestation policy ID")
 	f.StringSliceVar(&opts.federatesWith, "federates-with", nil, "Defines a trust zone to federate identity with. May be specified multiple times")
-
-	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
-	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))
-
+	f.StringSliceVar(&opts.federatesWithIDs, "federates-with-id", nil, "Defines a trust zone to federate identity with. May be specified multiple times")
 	return cmd
 }
 
