@@ -143,9 +143,16 @@ function show_workload_status() {
 }
 
 function teardown_federation_and_verify() {
-  kubectl --context $K8S_CLUSTER_2_CONTEXT delete clusterspiffeids.spire.spiffe.io spire-mgmt-spire-namespace
+  kubectl --context $K8S_CLUSTER_2_CONTEXT get clusterspiffeids.spire.spiffe.io 
+
+  for federation in $(kubectl --context kind-local2 get clusterspiffeids.spire.spiffe.io | tail -n +2 | grep -v test | grep -v oidc | awk '{print $1}'); do
+    kubectl --context $K8S_CLUSTER_2_CONTEXT delete clusterspiffeids.spire.spiffe.io $federation
+  done
+
+  kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server federation list
   kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server federation delete -id td1
   kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server bundle delete -id td1
+  kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server bundle list
   federations=$(./cofidectl federation list)
   if ! echo "$federations" | grep "Unhealthy | No bundle found" >/dev/null; then
     return 1

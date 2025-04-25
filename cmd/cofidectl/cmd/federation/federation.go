@@ -102,6 +102,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				}
 
 				data[i] = []string{
+					federation.GetId(),
 					federation.GetTrustZoneId(),
 					federation.GetRemoteTrustZoneId(),
 					status,
@@ -110,7 +111,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"From Trust Zone", "To Trust Zone", "Status", "Reason"})
+			table.SetHeader([]string{"Federation ID", "From Trust Zone", "To Trust Zone", "Status", "Reason"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
