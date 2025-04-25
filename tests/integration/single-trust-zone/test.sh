@@ -83,7 +83,8 @@ function show_config() {
 function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
-  ./cofidectl trust-zone status $TRUST_ZONE
+  TZ_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE | awk '{print $1}')
+  ./cofidectl trust-zone status $TZ_ID
 }
 
 function run_tests() {
