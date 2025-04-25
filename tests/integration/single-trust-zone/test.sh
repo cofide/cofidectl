@@ -129,7 +129,8 @@ function show_workload_status() {
 
 function check_overridden_values() {
   echo "Generated Helm values:"
-  ./cofidectl trust-zone helm values $TRUST_ZONE --output-file -
+  TZ_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE | awk '{print $1}')
+  ./cofidectl trust-zone helm values $TZ_ID --output-file -
 
   check_overridden_value '."tornjak-frontend".enabled' "false"
   check_overridden_value '."upstream-spire-agent".upstream' "false"
