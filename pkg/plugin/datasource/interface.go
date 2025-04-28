@@ -18,16 +18,19 @@ type DataSource interface {
 	validator.Validator
 
 	AddTrustZone(*trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
+	DestroyTrustZone(string) error
 	GetTrustZone(string) (*trust_zone_proto.TrustZone, error)
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
 	UpdateTrustZone(*trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
 
 	AddCluster(*clusterpb.Cluster) (*clusterpb.Cluster, error)
+	DestroyCluster(string, string) error
 	GetCluster(string, string) (*clusterpb.Cluster, error)
 	ListClusters(string) ([]*clusterpb.Cluster, error)
 	UpdateCluster(*clusterpb.Cluster) (*clusterpb.Cluster, error)
 
 	AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error)
+	DestroyAttestationPolicy(string) error
 	GetAttestationPolicy(string) (*attestation_policy_proto.AttestationPolicy, error)
 	ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error)
 
@@ -36,6 +39,7 @@ type DataSource interface {
 	ListAPBindings(*datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error)
 
 	AddFederation(*federation_proto.Federation) (*federation_proto.Federation, error)
+	DestroyFederation(*federation_proto.Federation) error
 	ListFederations() ([]*federation_proto.Federation, error)
 	ListFederationsByTrustZone(string) ([]*federation_proto.Federation, error)
 }

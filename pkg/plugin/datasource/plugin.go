@@ -65,6 +65,11 @@ func (c *DataSourcePluginClientGRPC) AddTrustZone(trustZone *trust_zone_proto.Tr
 	return resp.TrustZone, nil
 }
 
+func (c *DataSourcePluginClientGRPC) DestroyTrustZone(name string) error {
+	_, err := c.client.DestroyTrustZone(c.ctx, &cofidectl_proto.DestroyTrustZoneRequest{Name: &name})
+	return err
+}
+
 func (c *DataSourcePluginClientGRPC) GetTrustZone(name string) (*trust_zone_proto.TrustZone, error) {
 	resp, err := c.client.GetTrustZone(c.ctx, &cofidectl_proto.GetTrustZoneRequest{Name: &name})
 	if err != nil {
@@ -101,6 +106,11 @@ func (c *DataSourcePluginClientGRPC) AddCluster(cluster *clusterpb.Cluster) (*cl
 	return resp.Cluster, nil
 }
 
+func (c *DataSourcePluginClientGRPC) DestroyCluster(name, trustZoneName string) error {
+	_, err := c.client.DestroyCluster(c.ctx, &cofidectl_proto.DestroyClusterRequest{Name: &name, TrustZone: &trustZoneName})
+	return err
+}
+
 func (c *DataSourcePluginClientGRPC) GetCluster(name, trustZone string) (*clusterpb.Cluster, error) {
 	resp, err := c.client.GetCluster(c.ctx, &cofidectl_proto.GetClusterRequest{Name: &name, TrustZone: &trustZone})
 	if err != nil {
@@ -135,6 +145,11 @@ func (c *DataSourcePluginClientGRPC) AddAttestationPolicy(policy *attestation_po
 	}
 
 	return resp.Policy, nil
+}
+
+func (c *DataSourcePluginClientGRPC) DestroyAttestationPolicy(name string) error {
+	_, err := c.client.DestroyAttestationPolicy(c.ctx, &cofidectl_proto.DestroyAttestationPolicyRequest{Name: &name})
+	return err
 }
 
 func (c *DataSourcePluginClientGRPC) GetAttestationPolicy(name string) (*attestation_policy_proto.AttestationPolicy, error) {
@@ -187,6 +202,11 @@ func (c *DataSourcePluginClientGRPC) AddFederation(federation *federation_proto.
 	return resp.Federation, nil
 }
 
+func (c *DataSourcePluginClientGRPC) DestroyFederation(federation *federation_proto.Federation) error {
+	_, err := c.client.DestroyFederation(c.ctx, &cofidectl_proto.DestroyFederationRequest{Federation: federation})
+	return err
+}
+
 func (c *DataSourcePluginClientGRPC) ListFederations() ([]*federation_proto.Federation, error) {
 	resp, err := c.client.ListFederations(c.ctx, &cofidectl_proto.ListFederationsRequest{})
 	if err != nil {
@@ -226,6 +246,14 @@ func (s *GRPCServer) AddTrustZone(_ context.Context, req *cofidectl_proto.AddTru
 	return &cofidectl_proto.AddTrustZoneResponse{TrustZone: trustZone}, nil
 }
 
+func (s *GRPCServer) DestroyTrustZone(_ context.Context, req *cofidectl_proto.DestroyTrustZoneRequest) (*cofidectl_proto.DestroyTrustZoneResponse, error) {
+	err := s.Impl.DestroyTrustZone(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.DestroyTrustZoneResponse{}, nil
+}
+
 func (s *GRPCServer) GetTrustZone(_ context.Context, req *cofidectl_proto.GetTrustZoneRequest) (*cofidectl_proto.GetTrustZoneResponse, error) {
 	trustZone, err := s.Impl.GetTrustZone(req.GetName())
 	if err != nil {
@@ -258,6 +286,14 @@ func (s *GRPCServer) AddCluster(_ context.Context, req *cofidectl_proto.AddClust
 	return &cofidectl_proto.AddClusterResponse{Cluster: cluster}, nil
 }
 
+func (s *GRPCServer) DestroyCluster(_ context.Context, req *cofidectl_proto.DestroyClusterRequest) (*cofidectl_proto.DestroyClusterResponse, error) {
+	err := s.Impl.DestroyCluster(req.GetName(), req.GetTrustZone())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.DestroyClusterResponse{}, nil
+}
+
 func (s *GRPCServer) GetCluster(_ context.Context, req *cofidectl_proto.GetClusterRequest) (*cofidectl_proto.GetClusterResponse, error) {
 	cluster, err := s.Impl.GetCluster(req.GetName(), req.GetTrustZone())
 	if err != nil {
@@ -288,6 +324,14 @@ func (s *GRPCServer) AddAttestationPolicy(_ context.Context, req *cofidectl_prot
 		return nil, err
 	}
 	return &cofidectl_proto.AddAttestationPolicyResponse{Policy: policy}, nil
+}
+
+func (s *GRPCServer) DestroyAttestationPolicy(_ context.Context, req *cofidectl_proto.DestroyAttestationPolicyRequest) (*cofidectl_proto.DestroyAttestationPolicyResponse, error) {
+	err := s.Impl.DestroyAttestationPolicy(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.DestroyAttestationPolicyResponse{}, nil
 }
 
 func (s *GRPCServer) GetAttestationPolicy(_ context.Context, req *cofidectl_proto.GetAttestationPolicyRequest) (*cofidectl_proto.GetAttestationPolicyResponse, error) {
@@ -336,6 +380,14 @@ func (s *GRPCServer) AddFederation(_ context.Context, req *cofidectl_proto.AddFe
 		return nil, err
 	}
 	return &cofidectl_proto.AddFederationResponse{Federation: federation}, nil
+}
+
+func (s *GRPCServer) DestroyFederation(_ context.Context, req *cofidectl_proto.DestroyFederationRequest) (*cofidectl_proto.DestroyFederationResponse, error) {
+	err := s.Impl.DestroyFederation(req.GetFederation())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.DestroyFederationResponse{}, nil
 }
 
 func (s *GRPCServer) ListFederations(_ context.Context, req *cofidectl_proto.ListFederationsRequest) (*cofidectl_proto.ListFederationsResponse, error) {

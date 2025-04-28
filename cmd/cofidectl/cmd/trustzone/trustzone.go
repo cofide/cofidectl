@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"strconv"
@@ -45,8 +46,8 @@ This command consists of multiple sub-commands to administer Cofide trust zones.
 
 func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "trust-zone add|list|status [ARGS]",
-		Short: "Add, list or interact with trust zones",
+		Use:   "trust-zone add|del|list|status [ARGS]",
+		Short: "Manage trust zones",
 		Long:  trustZoneRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -56,6 +57,7 @@ func (c *TrustZoneCommand) GetRootCommand() *cobra.Command {
 	cmd.AddCommand(
 		c.GetListCommand(),
 		c.GetAddCommand(),
+		c.GetDelCommand(),
 		c.GetStatusCommand(),
 		helmCmd.GetRootCommand(),
 	)
@@ -145,59 +147,22 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
-			if err != nil {
-				return err
-			}
-
-			var trustProviderKind string
 			if !opts.noCluster {
 				if opts.kubernetesCluster == "" {
 					return errors.New("required flag(s) \"kubernetes-cluster\" not set")
 				}
 
-				err = c.getKubernetesContext(cmd, &opts)
-				if err != nil {
-					return err
-				}
-
-				trustProviderKind, err = trustprovider.GetTrustProviderKindFromProfile(opts.profile)
+				err := c.getKubernetesContext(cmd, &opts)
 				if err != nil {
 					return err
 				}
 			}
 
-			bundleEndpointProfile := trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
-
-			newTrustZone := &trust_zone_proto.TrustZone{
-				Name:                  opts.name,
-				TrustDomain:           opts.trustDomain,
-				JwtIssuer:             &opts.jwtIssuer,
-				BundleEndpointProfile: &bundleEndpointProfile,
-			}
-
-			_, err = ds.AddTrustZone(newTrustZone)
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
-				return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, err)
+				return err
 			}
-
-			if !opts.noCluster {
-				newCluster := &clusterpb.Cluster{
-					Name:              &opts.kubernetesCluster,
-					TrustZone:         &opts.name,
-					KubernetesContext: &opts.context,
-					TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
-					Profile:           &opts.profile,
-					ExternalServer:    &opts.externalServer,
-				}
-
-				_, err = ds.AddCluster(newCluster)
-				if err != nil {
-					return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
-				}
-			}
-
-			return nil
+			return c.addTrustZone(cmd.Context(), opts, ds)
 		},
 	}
 
@@ -213,6 +178,111 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-domain"))
 
 	return cmd
+}
+
+func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds datasource.DataSource) error {
+	var trustProviderKind string
+	var err error
+	if !opts.noCluster {
+		trustProviderKind, err = trustprovider.GetTrustProviderKindFromProfile(opts.profile)
+		if err != nil {
+			return err
+		}
+	}
+
+	bundleEndpointProfile := trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
+
+	newTrustZone := &trust_zone_proto.TrustZone{
+		Name:                  opts.name,
+		TrustDomain:           opts.trustDomain,
+		JwtIssuer:             &opts.jwtIssuer,
+		BundleEndpointProfile: &bundleEndpointProfile,
+	}
+
+	_, err = ds.AddTrustZone(newTrustZone)
+	if err != nil {
+		return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, err)
+	}
+
+	if !opts.noCluster {
+		newCluster := &clusterpb.Cluster{
+			Name:              &opts.kubernetesCluster,
+			TrustZone:         &opts.name,
+			KubernetesContext: &opts.context,
+			TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
+			Profile:           &opts.profile,
+			ExternalServer:    &opts.externalServer,
+		}
+
+		_, err = ds.AddCluster(newCluster)
+		if err != nil {
+			if err := ds.DestroyTrustZone(opts.name); err != nil {
+				slog.Error("Failed to destroy trust zone during rollback", "error", err)
+			}
+			return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
+		}
+	}
+
+	return nil
+}
+
+var trustZoneDelCmdDesc = `
+This command will delete a trust zone from the Cofide configuration state.
+`
+
+func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "del [NAME]",
+		Short: "Delete a trust zone",
+		Long:  trustZoneDelCmdDesc,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
+			if err != nil {
+				return err
+			}
+			return deleteTrustZone(cmd.Context(), args[0], ds, true)
+		},
+	}
+	return cmd
+}
+
+func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, checkDeployed bool) error {
+	clusters, err := ds.ListClusters(name)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Add IsClusterDeployed to ProvisionPlugin interface and mock in tests.
+	if checkDeployed {
+		// Fail if any clusters in the trust zone are up.
+		for _, cluster := range clusters {
+			if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster); err != nil {
+				return err
+			} else if deployed {
+				return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", cluster.GetName(), name)
+			}
+		}
+	}
+
+	for i, cluster := range clusters {
+		err = ds.DestroyCluster(cluster.GetName(), name)
+		if err != nil {
+			for _, rollbackCluster := range clusters[:i] {
+				if _, err := ds.AddCluster(rollbackCluster); err != nil {
+					slog.Error("Failed recreating cluster during rollback", "error", err)
+				}
+			}
+			return fmt.Errorf("failed to destroy cluster %s: %w", cluster.GetName(), err)
+		}
+	}
+
+	err = ds.DestroyTrustZone(name)
+	if err != nil {
+		return fmt.Errorf("failed to destroy trust zone %s: %w", name, err)
+	}
+
+	return nil
 }
 
 var trustZoneStatusCmdDesc = `
