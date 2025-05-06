@@ -351,7 +351,7 @@ func createPodWatcher(ctx context.Context, client *kubeutil.Client) (watch.Inter
 		})
 	}
 
-	watcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	watcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create watcher for context %s: %v", client.CmdConfig.CurrentContext, err)
 	}
@@ -368,7 +368,7 @@ func createServiceWatcher(ctx context.Context, client *kubeutil.Client) (watch.I
 		})
 	}
 
-	watcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	watcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create service watcher for context %s: %v", client.CmdConfig.CurrentContext, err)
 	}
