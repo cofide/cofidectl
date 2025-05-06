@@ -3,7 +3,7 @@ module github.com/cofide/cofidectl
 go 1.24.2
 
 require (
-	buf.build/go/protoyaml v0.5.0
+	buf.build/go/protoyaml v0.6.0
 	cuelang.org/go v0.10.1
 	github.com/cofide/cofide-api-sdk v0.18.2
 	github.com/fatih/color v1.18.0
@@ -22,12 +22,13 @@ require (
 )
 
 require (
+	buf.build/go/protovalidate v0.11.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250423154025-7712fb530c57.1 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250425153114-8976f5be98c1.1 // indirect
 	cel.dev/expr v0.23.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
@@ -43,7 +44,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/briandowns/spinner v1.23.2
-	github.com/bufbuild/protovalidate-go v0.10.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
