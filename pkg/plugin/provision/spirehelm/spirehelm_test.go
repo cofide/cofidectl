@@ -160,6 +160,19 @@ func TestSpireHelm_TearDown_specificTrustZone(t *testing.T) {
 	assert.EqualExportedValues(t, want, statuses)
 }
 
+func TestSpireHelm_GetHelmValues(t *testing.T) {
+	providerFactory := newFakeHelmSPIREProviderFactory()
+	spireAPIFactory := newFakeSPIREAPIFactory()
+	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
+	ds := newFakeDataSource(t, defaultConfig())
+
+	opts := provision.GetValuesOpts{TrustZoneName: "tz1", ClusterName: "local1"}
+	values, err := spireHelm.GetHelmValues(context.Background(), ds, &opts)
+	require.NoError(t, err, err)
+	want := map[string]any{"key1": "value1", "key2": "value2"}
+	assert.EqualExportedValues(t, want, values)
+}
+
 func collectStatuses(statusCh <-chan *provisionpb.Status) []*provisionpb.Status {
 	statuses := []*provisionpb.Status{}
 	for status := range statusCh {
@@ -182,6 +195,15 @@ func (f *fakeHelmSPIREProviderFactory) Build(
 	genValues bool,
 ) (helm.Provider, error) {
 	return newFakeHelmSPIREProvider(trustZone, cluster), nil
+}
+
+func (f *fakeHelmSPIREProviderFactory) GetHelmValues(
+	ctx context.Context,
+	ds datasource.DataSource,
+	trustZone *trust_zone_proto.TrustZone,
+	cluster *clusterpb.Cluster,
+) (map[string]any, error) {
+	return map[string]any{"key1": "value1", "key2": "value2"}, nil
 }
 
 // fakeHelmSPIREProvider implements a fake helm.Provider that can be used in testing.

@@ -4,18 +4,22 @@
 package helm
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
 
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
-	"github.com/cofide/cofidectl/pkg/provider/helm"
+	"github.com/cofide/cofidectl/pkg/plugin/provision"
 )
 
 type HelmCommand struct {
@@ -85,7 +89,7 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 				return err
 			}
 
-			return c.overrideValues(ds, args[0], values)
+			return c.overrideValues(cmd.Context(), ds, args[0], values)
 		},
 	}
 
@@ -96,7 +100,12 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 }
 
 // overrideValues overrides Helm values for a trust zone.
-func (c *HelmCommand) overrideValues(ds datasource.DataSource, tzName string, values map[string]any) error {
+func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSource, tzName string, values map[string]any) error {
+	provisionPlugin, err := c.cmdCtx.PluginManager.GetProvision(ctx)
+	if err != nil {
+		return err
+	}
+
 	trustZone, err := ds.GetTrustZone(tzName)
 	if err != nil {
 		return err
@@ -107,19 +116,34 @@ func (c *HelmCommand) overrideValues(ds datasource.DataSource, tzName string, va
 		return err
 	}
 
+	// Make a copy of the cluster to rollback if needed.
+	oldCluster := proto.Clone(cluster).(*clusterpb.Cluster)
+
 	cluster.ExtraHelmValues, err = structpb.NewStruct(values)
 	if err != nil {
 		return err
 	}
 
-	// Check that the values are acceptable.
-	generator := helm.NewHelmValuesGenerator(trustZone, cluster, ds, nil)
-	if _, err = generator.GenerateValues(); err != nil {
+	_, err = ds.UpdateCluster(cluster)
+	if err != nil {
 		return err
 	}
 
-	_, err = ds.UpdateCluster(cluster)
-	return err
+	// Check that the values are acceptable.
+	_, err = provisionPlugin.GetHelmValues(ctx, ds, &provision.GetValuesOpts{
+		TrustZoneName: tzName,
+		ClusterName:   cluster.GetName(),
+	})
+	if err != nil {
+		slog.Error("Failed to generate Helm values, rolling back", "error", err)
+		// Rollback the cluster to the old state.
+		_, rollbackErr := ds.UpdateCluster(oldCluster)
+		if rollbackErr != nil {
+			return fmt.Errorf("failed to rollback cluster: %w", rollbackErr)
+		}
+		return err
+	}
+	return nil
 }
 
 // readValues reads values in YAML format from the specified reader.
@@ -151,7 +175,7 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 				return err
 			}
 
-			values, err := c.getValues(ds, args[0])
+			values, err := c.getValues(cmd.Context(), ds, args[0])
 			if err != nil {
 				return err
 			}
@@ -184,7 +208,7 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 }
 
 // getValues returns the Helm values for a trust zone.
-func (c *HelmCommand) getValues(ds datasource.DataSource, tzName string) (map[string]any, error) {
+func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, tzName string) (map[string]any, error) {
 	trustZone, err := ds.GetTrustZone(tzName)
 	if err != nil {
 		return nil, err
@@ -195,8 +219,15 @@ func (c *HelmCommand) getValues(ds datasource.DataSource, tzName string) (map[st
 		return nil, err
 	}
 
-	generator := helm.NewHelmValuesGenerator(trustZone, cluster, ds, nil)
-	values, err := generator.GenerateValues()
+	provisionPlugin, err := c.cmdCtx.PluginManager.GetProvision(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	values, err := provisionPlugin.GetHelmValues(ctx, ds, &provision.GetValuesOpts{
+		TrustZoneName: tzName,
+		ClusterName:   cluster.GetName(),
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -14,6 +14,7 @@ import (
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // ProvisionPluginName is the name that should be used in the plugin map.
@@ -118,6 +119,24 @@ func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasou
 	}()
 
 	return statusCh, nil
+}
+
+func (c *ProvisionPluginClientGRPC) GetHelmValues(ctx context.Context, source datasource.DataSource, opts *GetValuesOpts) (map[string]any, error) {
+	server, brokerID := c.startDataSourceServer(source)
+	defer server.Stop()
+
+	req := provisionpb.GetHelmValuesRequest{
+		DataSource:    &brokerID,
+		TrustZoneName: &opts.TrustZoneName,
+		ClusterName:   &opts.ClusterName,
+	}
+	resp, err := c.client.GetHelmValues(ctx, &req)
+	if err != nil {
+		err := wrapError(err)
+		return nil, err
+	}
+
+	return resp.GetHelmValues().AsMap(), nil
 }
 
 // startDataSourceServer returns a grpc.Server and associated broker ID, allowing for bidirectional
@@ -230,6 +249,30 @@ func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.Serv
 		}
 	}
 	return nil
+}
+
+func (s *GRPCServer) GetHelmValues(ctx context.Context, req *provisionpb.GetHelmValuesRequest) (*provisionpb.GetHelmValuesResponse, error) {
+	client, conn, err := s.getDataSourceClient(ctx, req.GetDataSource())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	opts := GetValuesOpts{
+		TrustZoneName: req.GetTrustZoneName(),
+		ClusterName:   req.GetClusterName(),
+	}
+	values, err := s.impl.GetHelmValues(ctx, client, &opts)
+	if err != nil {
+		return nil, err
+	}
+
+	helmValues, err := structpb.NewStruct(values)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provisionpb.GetHelmValuesResponse{HelmValues: helmValues}, nil
 }
 
 // getDataSourceClient returns a DataSource and associated gRPC connection, allowing for
