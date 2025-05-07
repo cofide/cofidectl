@@ -24,6 +24,9 @@ type Provision interface {
 	// The method is asynchronous, returning a channel over which Status messages are sent
 	// describing the various stages of tear down and their outcomes.
 	TearDown(ctx context.Context, ds datasource.DataSource, opts *TearDownOpts) (<-chan *provisionpb.Status, error)
+
+	// GetHelmValues retrieves the Helm values for the specified trust zone and cluster.
+	GetHelmValues(ctx context.Context, ds datasource.DataSource, opts *GetHelmValuesOpts) (map[string]any, error)
 }
 
 type DeployOpts struct {
@@ -34,4 +37,9 @@ type DeployOpts struct {
 type TearDownOpts struct {
 	KubeCfgFile string
 	TrustZones  []string
+}
+
+type GetHelmValuesOpts struct {
+	TrustZoneName string
+	ClusterName   string
 }
