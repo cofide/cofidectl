@@ -224,10 +224,12 @@ func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, t
 		return nil, err
 	}
 
+	slog.Error("getValues cmd", "tzName", tzName, "cluster", cluster.GetName())
 	values, err := provisionPlugin.GetHelmValues(ctx, ds, &provision.GetValuesOpts{
 		TrustZoneName: tzName,
 		ClusterName:   cluster.GetName(),
 	})
+	slog.Error("getValues cmd", "error", err, "values", values)
 	if err != nil {
 		return nil, err
 	}

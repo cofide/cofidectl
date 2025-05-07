@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 
 	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+	"github.com/hashicorp/go-hclog"
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -26,7 +28,8 @@ const ProvisionPluginName = "provision"
 // interface.
 type ProvisionPlugin struct {
 	go_plugin.Plugin
-	Impl Provision
+	Impl   Provision
+	Logger hclog.Logger
 }
 
 func (pp *ProvisionPlugin) GRPCClient(ctx context.Context, broker *go_plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
@@ -34,7 +37,7 @@ func (pp *ProvisionPlugin) GRPCClient(ctx context.Context, broker *go_plugin.GRP
 }
 
 func (pp *ProvisionPlugin) GRPCServer(broker *go_plugin.GRPCBroker, s *grpc.Server) error {
-	provisionpb.RegisterProvisionPluginServiceServer(s, &GRPCServer{impl: pp.Impl, broker: broker})
+	provisionpb.RegisterProvisionPluginServiceServer(s, &GRPCServer{impl: pp.Impl, broker: broker, logger: pp.Logger})
 	return nil
 }
 
@@ -130,7 +133,9 @@ func (c *ProvisionPluginClientGRPC) GetHelmValues(ctx context.Context, source da
 		TrustZoneName: &opts.TrustZoneName,
 		ClusterName:   &opts.ClusterName,
 	}
+	slog.Error("GetHelmValues client", "req", req, "opts", opts)
 	resp, err := c.client.GetHelmValues(ctx, &req)
+	slog.Error("GetHelmValues client", "resp", resp, "err", err)
 	if err != nil {
 		err := wrapError(err)
 		return nil, err
@@ -189,6 +194,7 @@ func (ce *clientError) Error() string {
 type GRPCServer struct {
 	impl   Provision
 	broker *go_plugin.GRPCBroker
+	logger hclog.Logger
 }
 
 func (s *GRPCServer) Validate(ctx context.Context, req *provisionpb.ValidateRequest) (*provisionpb.ValidateResponse, error) {
@@ -262,16 +268,18 @@ func (s *GRPCServer) GetHelmValues(ctx context.Context, req *provisionpb.GetHelm
 		TrustZoneName: req.GetTrustZoneName(),
 		ClusterName:   req.GetClusterName(),
 	}
+	s.logger.Error("GetHelmValues server", "req", req, "opts", opts)
 	values, err := s.impl.GetHelmValues(ctx, client, &opts)
+	slog.Error("GetHelmValues server", "values", values, "err", err)
 	if err != nil {
 		return nil, err
 	}
 
 	helmValues, err := structpb.NewStruct(values)
+	s.logger.Error("GetHelmValues server", "helmvalues", helmValues, "err", err)
 	if err != nil {
 		return nil, err
 	}
-
 	return &provisionpb.GetHelmValuesResponse{HelmValues: helmValues}, nil
 }
 
