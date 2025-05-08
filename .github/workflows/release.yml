@@ -50,6 +50,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BINARY="dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }}"
-          gh release upload ${{ github.ref_name }} $BINARY --clobber
           shasum -a 256 $BINARY > $BINARY.sha256 
           gh release upload ${{ github.ref_name }} $BINARY.sha256 --clobber
+          gh release upload ${{ github.ref_name }} $BINARY --clobber
