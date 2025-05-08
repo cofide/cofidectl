@@ -51,5 +51,5 @@ jobs:
         run: |
           BINARY="dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }}"
           shasum -a 256 $BINARY > $BINARY.sha256 
-          gh release upload ${{ github.ref_name }} $BINARY.sha256 --clobber
-          gh release upload ${{ github.ref_name }} $BINARY --clobber
+          gh release upload ${{ github.ref_name }} $BINARY.sha256
+          gh release upload ${{ github.ref_name }} $BINARY
