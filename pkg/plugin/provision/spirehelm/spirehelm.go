@@ -75,6 +75,20 @@ func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, opts
 	return statusCh, nil
 }
 
+func (h *SpireHelm) GetHelmValues(ctx context.Context, ds datasource.DataSource, opts *provision.GetHelmValuesOpts) (map[string]any, error) {
+	trustZone, err := ds.GetTrustZone(opts.TrustZoneName)
+	if err != nil {
+		return nil, err
+	}
+
+	cluster, err := ds.GetCluster(opts.ClusterName, opts.TrustZoneName)
+	if err != nil {
+		return nil, err
+	}
+
+	return h.providerFactory.GetHelmValues(ctx, ds, trustZone, cluster)
+}
+
 func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *provision.DeployOpts, statusCh chan<- *provisionpb.Status) error {
 	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
 	if err != nil {

@@ -26,6 +26,13 @@ type ProviderFactory interface {
 		cluster *clusterpb.Cluster,
 		genValues bool,
 	) (helm.Provider, error)
+
+	GetHelmValues(
+		ctx context.Context,
+		ds datasource.DataSource,
+		trustZone *trust_zone_proto.TrustZone,
+		cluster *clusterpb.Cluster,
+	) (map[string]any, error)
 }
 
 // HelmSPIREProviderFactory implements the ProviderFactory interface, building a HelmSPIREProvider
@@ -42,12 +49,21 @@ func (f *HelmSPIREProviderFactory) Build(
 	spireValues := map[string]any{}
 	var err error
 	if genValues {
-		generator := helm.NewHelmValuesGenerator(trustZone, cluster, ds, nil)
-		spireValues, err = generator.GenerateValues()
+		spireValues, err = f.GetHelmValues(ctx, ds, trustZone, cluster)
 		if err != nil {
 			return nil, err
 		}
 	}
 	spireCRDsValues := map[string]any{}
 	return helm.NewHelmSPIREProvider(ctx, cluster, spireValues, spireCRDsValues)
+}
+
+func (f *HelmSPIREProviderFactory) GetHelmValues(
+	ctx context.Context,
+	ds datasource.DataSource,
+	trustZone *trust_zone_proto.TrustZone,
+	cluster *clusterpb.Cluster,
+) (map[string]any, error) {
+	generator := helm.NewHelmValuesGenerator(trustZone, cluster, ds, nil)
+	return generator.GenerateValues()
 }

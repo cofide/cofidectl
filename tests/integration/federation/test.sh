@@ -81,6 +81,11 @@ function list_resources() {
   ./cofidectl attestation-policy-binding list
 }
 
+function show_helm_values() {
+  ./cofidectl trust-zone helm values $TRUST_ZONE_1 --output-file -
+  ./cofidectl trust-zone helm values $TRUST_ZONE_2 --output-file -
+}
+
 function show_config() {
   cat cofide.yaml
 }
@@ -175,6 +180,7 @@ function main() {
   up
   check_spire
   list_resources
+  show_helm_values
   show_config
   show_status
   run_tests
