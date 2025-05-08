@@ -129,7 +129,7 @@ function check_overridden_values() {
 }
 
 function check_overridden_value() {
-  value=$(helm --kube-context $K8S_CLUSTER_CONTEXT get values spire | yq $1)
+  value=$(helm --kube-context $K8S_CLUSTER_CONTEXT get values spire --namespace spire-mgmt | yq $1)
   if [[ $value != $2 ]]; then
     echo "Error: Did not find expected overridden Helm value $1: expected $2, actual $value"
     return 1

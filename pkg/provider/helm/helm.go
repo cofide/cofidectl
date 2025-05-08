@@ -58,6 +58,7 @@ type HelmSPIREProvider struct {
 func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
+	settings.SetNamespace(SPIREManagementNamespace)
 
 	prov := &HelmSPIREProvider{
 		ctx:              ctx,
