@@ -49,7 +49,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BINARY="dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }}"
+          BINARY="cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }}"
+          mv dist/$BINARY . # move to this directory to remove dist/ from shasum check
           shasum -a 256 $BINARY > $BINARY.sha256 
           gh release upload ${{ github.ref_name }} $BINARY.sha256
           gh release upload ${{ github.ref_name }} $BINARY
