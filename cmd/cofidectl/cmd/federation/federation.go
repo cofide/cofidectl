@@ -147,6 +147,10 @@ func checkFederationStatus(ctx context.Context, ds datasource.DataSource, kubeCo
 			return "", "", err
 		}
 
+		if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
+			return "Unknown", err.Error(), nil
+		}
+
 		if deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 			return "", "", err
 		} else if !deployed {

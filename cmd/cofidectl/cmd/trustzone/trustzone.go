@@ -230,7 +230,12 @@ var trustZoneDelCmdDesc = `
 This command will delete a trust zone from the Cofide configuration state.
 `
 
+type delOpts struct {
+	force bool
+}
+
 func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
+	opts := &delOpts{}
 	cmd := &cobra.Command{
 		Use:   "del [NAME]",
 		Short: "Delete a trust zone",
@@ -247,21 +252,25 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 				return err
 			}
 
-			return deleteTrustZone(cmd.Context(), args[0], ds, true, kubeConfig)
+			return deleteTrustZone(cmd.Context(), args[0], ds, kubeConfig, opts.force)
 		},
 	}
+
+	f := cmd.Flags()
+	f.BoolVar(&opts.force, "force", false, "Skip pre-delete checks")
+
 	return cmd
 }
 
-func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, checkDeployed bool, kubeConfig string) error {
+func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, kubeConfig string, force bool) error {
 	clusters, err := ds.ListClusters(name)
 	if err != nil {
 		return err
 	}
 
 	// TODO: Add IsClusterDeployed to ProvisionPlugin interface and mock in tests.
-	if checkDeployed {
-		// Fail if any clusters in the trust zone are up.
+	if !force {
+		// Fail if any clusters in the trust zone are reachable and SPIRE is deployed.
 		for _, cluster := range clusters {
 			if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 				return err
