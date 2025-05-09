@@ -137,7 +137,7 @@ function check_overridden_values() {
 }
 
 function check_overridden_value() {
-  value=$(helm --kube-context $K8S_CLUSTER_CONTEXT get values spire | yq $1)
+  value=$(helm --kube-context $K8S_CLUSTER_CONTEXT get values spire --namespace spire-mgmt | yq $1)
   if [[ $value != $2 ]]; then
     echo "Error: Did not find expected overridden Helm value $1: expected $2, actual $value"
     return 1
@@ -146,6 +146,17 @@ function check_overridden_value() {
 
 function down() {
   ./cofidectl down
+}
+
+function delete() {
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy namespace
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy pod-label
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy static-namespace
+  ./cofidectl attestation-policy del namespace
+  ./cofidectl attestation-policy del pod-label
+  ./cofidectl attestation-policy del static-namespace
+  ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE
+  ./cofidectl trust-zone del $TRUST_ZONE
 }
 
 function main() {
@@ -160,6 +171,8 @@ function main() {
   show_workload_status
   check_overridden_values
   down
+  delete
+  check_delete
   echo "Success!"
 }
 

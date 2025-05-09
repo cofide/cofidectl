@@ -55,9 +55,14 @@ type HelmSPIREProvider struct {
 	cluster          *clusterpb.Cluster
 }
 
-func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any) (*HelmSPIREProvider, error) {
+func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, kubeConfig string) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
+	settings.SetNamespace(SPIREManagementNamespace)
+
+	if kubeConfig != "" {
+		settings.KubeConfig = kubeConfig
+	}
 
 	prov := &HelmSPIREProvider{
 		ctx:              ctx,
@@ -407,4 +412,13 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 		return false, err
 	}
 	return len(ledger) > 0, nil
+}
+
+// IsClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
+func IsClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) (bool, error) {
+	prov, err := NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
+	if err != nil {
+		return false, err
+	}
+	return prov.CheckIfAlreadyInstalled()
 }
