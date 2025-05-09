@@ -97,6 +97,7 @@ This command will delete a cluster from the Cofide configuration state.
 
 type delOpts struct {
 	trustZone string
+	force     bool
 }
 
 func (c *ClusterCommand) getDelCommand() *cobra.Command {
@@ -111,17 +112,18 @@ func (c *ClusterCommand) getDelCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return c.deleteCluster(cmd.Context(), args[0], opts.trustZone, kubeConfig)
+			return c.deleteCluster(cmd.Context(), args[0], opts.trustZone, kubeConfig, opts.force)
 		},
 	}
 	f := cmd.Flags()
 	f.StringVar(&opts.trustZone, "trust-zone", "", "Name of the cluster's trust zone")
+	f.BoolVar(&opts.force, "force", false, "Skip pre-delete checks")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
 	return cmd
 }
 
-func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName, kubeConfig string) error {
+func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName, kubeConfig string, force bool) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err
@@ -132,11 +134,13 @@ func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName,
 		return err
 	}
 
-	// Fail if the cluster is up.
-	if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
-		return err
-	} else if deployed {
-		return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", name, trustZoneName)
+	if !force {
+		// Fail if the cluster is reachable and SPIRE is deployed.
+		if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
+			return err
+		} else if deployed {
+			return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", name, trustZoneName)
+		}
 	}
 
 	return ds.DestroyCluster(name, trustZoneName)
