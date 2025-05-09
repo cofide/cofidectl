@@ -147,7 +147,7 @@ func checkFederationStatus(ctx context.Context, ds datasource.DataSource, kubeCo
 			return "", "", err
 		}
 
-		if deployed, err := helm.IsClusterDeployed(ctx, cluster); err != nil {
+		if deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 			return "", "", err
 		} else if !deployed {
 			return "Inactive", "", nil

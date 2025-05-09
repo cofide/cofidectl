@@ -241,13 +241,19 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return deleteTrustZone(cmd.Context(), args[0], ds, true)
+
+			kubeConfig, err := cmd.Flags().GetString("kube-config")
+			if err != nil {
+				return err
+			}
+
+			return deleteTrustZone(cmd.Context(), args[0], ds, true, kubeConfig)
 		},
 	}
 	return cmd
 }
 
-func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, checkDeployed bool) error {
+func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, checkDeployed bool, kubeConfig string) error {
 	clusters, err := ds.ListClusters(name)
 	if err != nil {
 		return err
@@ -257,7 +263,7 @@ func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource,
 	if checkDeployed {
 		// Fail if any clusters in the trust zone are up.
 		for _, cluster := range clusters {
-			if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster); err != nil {
+			if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 				return err
 			} else if deployed {
 				return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", cluster.GetName(), name)
@@ -330,7 +336,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 		return err
 	}
 
-	prov, err := helmprovider.NewHelmSPIREProvider(ctx, cluster, nil, nil)
+	prov, err := helmprovider.NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
 	if err != nil {
 		return err
 	}

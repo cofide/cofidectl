@@ -107,7 +107,11 @@ func (c *ClusterCommand) getDelCommand() *cobra.Command {
 		Long:  clusterDelCmdDesc,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.deleteCluster(cmd.Context(), args[0], opts.trustZone)
+			kubeConfig, err := cmd.Flags().GetString("kube-config")
+			if err != nil {
+				return err
+			}
+			return c.deleteCluster(cmd.Context(), args[0], opts.trustZone, kubeConfig)
 		},
 	}
 	f := cmd.Flags()
@@ -117,7 +121,7 @@ func (c *ClusterCommand) getDelCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName string) error {
+func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName, kubeConfig string) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err
@@ -129,7 +133,7 @@ func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName 
 	}
 
 	// Fail if the cluster is up.
-	if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster); err != nil {
+	if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 		return err
 	} else if deployed {
 		return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", name, trustZoneName)

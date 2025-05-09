@@ -25,6 +25,7 @@ type ProviderFactory interface {
 		trustZone *trust_zone_proto.TrustZone,
 		cluster *clusterpb.Cluster,
 		genValues bool,
+		kubeConfig string,
 	) (helm.Provider, error)
 
 	GetHelmValues(
@@ -45,6 +46,7 @@ func (f *HelmSPIREProviderFactory) Build(
 	trustZone *trust_zone_proto.TrustZone,
 	cluster *clusterpb.Cluster,
 	genValues bool,
+	kubeConfig string,
 ) (helm.Provider, error) {
 	spireValues := map[string]any{}
 	var err error
@@ -55,7 +57,7 @@ func (f *HelmSPIREProviderFactory) Build(
 		}
 	}
 	spireCRDsValues := map[string]any{}
-	return helm.NewHelmSPIREProvider(ctx, cluster, spireValues, spireCRDsValues)
+	return helm.NewHelmSPIREProvider(ctx, cluster, spireValues, spireCRDsValues, kubeConfig)
 }
 
 func (f *HelmSPIREProviderFactory) GetHelmValues(

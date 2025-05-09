@@ -193,6 +193,7 @@ func (f *fakeHelmSPIREProviderFactory) Build(
 	trustZone *trust_zone_proto.TrustZone,
 	cluster *clusterpb.Cluster,
 	genValues bool,
+	kubeConfig string,
 ) (helm.Provider, error) {
 	return newFakeHelmSPIREProvider(trustZone, cluster), nil
 }
