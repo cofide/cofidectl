@@ -89,6 +89,7 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 				return err
 			}
 
+			// FIXME: pass the trust zone name instead of the ID.
 			return c.overrideValues(cmd.Context(), ds, args[0], values)
 		},
 	}
@@ -100,13 +101,13 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 }
 
 // overrideValues overrides Helm values for a trust zone.
-func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSource, tzName string, values map[string]any) error {
+func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSource, tzID string, values map[string]any) error {
 	provisionPlugin, err := c.cmdCtx.PluginManager.GetProvision(ctx)
 	if err != nil {
 		return err
 	}
 
-	trustZone, err := ds.GetTrustZone(tzName)
+	trustZone, err := ds.GetTrustZone(tzID)
 	if err != nil {
 		return err
 	}
@@ -131,8 +132,8 @@ func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSour
 
 	// Check that the values are acceptable.
 	_, err = provisionPlugin.GetHelmValues(ctx, ds, &provision.GetHelmValuesOpts{
-		TrustZoneName: tzName,
-		ClusterName:   cluster.GetName(),
+		TrustZoneID: tzID,
+		ClusterID:   cluster.GetId(),
 	})
 	if err != nil {
 		slog.Error("Failed to generate Helm values, rolling back", "error", err)
@@ -208,8 +209,8 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 }
 
 // getValues returns the Helm values for a trust zone.
-func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, tzName string) (map[string]any, error) {
-	trustZone, err := ds.GetTrustZone(tzName)
+func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, tzID string) (map[string]any, error) {
+	trustZone, err := ds.GetTrustZone(tzID)
 	if err != nil {
 		return nil, err
 	}
@@ -225,8 +226,8 @@ func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, t
 	}
 
 	values, err := provisionPlugin.GetHelmValues(ctx, ds, &provision.GetHelmValuesOpts{
-		TrustZoneName: tzName,
-		ClusterName:   cluster.GetName(),
+		TrustZoneID: tzID,
+		ClusterID:   cluster.GetId(),
 	})
 	if err != nil {
 		return nil, err

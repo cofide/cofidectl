@@ -91,19 +91,30 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrMessage)
 
-				// Check that trust zone and cluster were not added.
-				_, err := ds.GetTrustZone("tz3")
-				require.Error(t, err)
-				_, err = ds.GetCluster("local3", "tz3")
-				require.Error(t, err)
+				// Check that trust zone was not added.
+				trustZones, err := ds.ListTrustZones()
+				require.NoError(t, err)
+				for _, trustZone := range trustZones {
+					require.NotEqual(t, "tz3", trustZone.Name)
+				}
 			} else {
 				require.NoError(t, err)
 
 				// Check that trust zone and cluster were added.
-				_, err := ds.GetTrustZone(tt.trustZoneName)
+				// TODO: get by name
+				trustZones, err := ds.ListTrustZones()
 				require.NoError(t, err)
-				_, err = ds.GetCluster("local3", tt.trustZoneName)
-				require.NoError(t, err)
+				found := false
+				for _, trustZone := range trustZones {
+					if trustZone.Name == tt.trustZoneName {
+						found = true
+						clusters, err := ds.ListClusters(trustZone.GetId())
+						require.NoError(t, err)
+						require.Len(t, clusters, 1)
+						assert.Equal(t, "local3", clusters[0].GetName())
+					}
+				}
+				assert.True(t, found)
 			}
 		})
 	}
@@ -112,24 +123,24 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 	tests := []struct {
 		name           string
-		trustZoneName  string
+		trustZoneID    string
 		injectFailure  bool
 		wantErr        bool
 		wantErrMessage string
 	}{
 		{
-			name:          "exists",
-			trustZoneName: "tz1",
+			name:        "exists",
+			trustZoneID: "tz1-id",
 		},
 		{
 			name:           "doesn't exist",
-			trustZoneName:  "invalid tz",
+			trustZoneID:    "invalid tz",
 			wantErr:        true,
 			wantErrMessage: "failed to find trust zone invalid tz in local config",
 		},
 		{
 			name:           "cluster delete rollback",
-			trustZoneName:  "tz1",
+			trustZoneID:    "tz1-id",
 			injectFailure:  true,
 			wantErr:        true,
 			wantErrMessage: "fake destroy failure",
@@ -141,20 +152,20 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 			if tt.injectFailure {
 				ds = &failingDS{LocalDataSource: ds.(*local.LocalDataSource)}
 			}
-			err := deleteTrustZone(context.Background(), tt.trustZoneName, ds, false, "")
+			err := deleteTrustZone(context.Background(), tt.trustZoneID, ds, false, "")
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrMessage)
 
 				// Check that trust zone and clusters were not deleted.
-				_, err := ds.GetTrustZone("tz1")
+				_, err := ds.GetTrustZone("tz1-id")
 				require.NoError(t, err)
 				if tt.injectFailure {
 					// Currently the local datasource limits us to one cluster per trust zone, so rolling back deletion fails.
 					assert.Equal(t, 1, ds.(*failingDS).clustersAdded)
 				} else {
 					for _, cluster := range defaultConfig().Clusters {
-						_, err := ds.GetCluster(cluster.GetName(), cluster.GetTrustZone())
+						_, err := ds.GetCluster(cluster.GetId(), cluster.GetTrustZoneId())
 						require.NoError(t, err)
 					}
 				}
@@ -162,10 +173,10 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 				require.NoError(t, err)
 
 				// Check that trust zone and clusters were deleted.
-				_, err := ds.GetTrustZone(tt.trustZoneName)
+				_, err := ds.GetTrustZone(tt.trustZoneID)
 				require.Error(t, err)
 				for _, cluster := range defaultConfig().Clusters {
-					_, err := ds.GetCluster(cluster.GetName(), cluster.GetTrustZone())
+					_, err := ds.GetCluster(cluster.GetId(), tt.trustZoneID)
 					require.Error(t, err)
 				}
 			}

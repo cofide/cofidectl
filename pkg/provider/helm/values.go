@@ -184,8 +184,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 
 	// Adds the attestation policies as either ClusterSPIFFEID or ClusterStaticEntry CRs to be reconciled by the spire-controller-manager.
 	for _, binding := range bindings {
-		// nolint:staticcheck
-		policy, err := g.source.GetAttestationPolicy(binding.Policy)
+		policy, err := g.source.GetAttestationPolicy(binding.GetPolicyId())
 		if err != nil {
 			return nil, err
 		}
@@ -196,7 +195,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 				return nil, err
 			}
 
-			csids[policy.Name] = clusterSPIFFEID
+			csids[policy.GetId()] = clusterSPIFFEID
 		} else if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Static); ok {
 			clusterStaticEntry, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
 			if err != nil {
@@ -205,7 +204,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 
 			needSPIREAgentsStaticEntry = true
 
-			cses[policy.Name] = clusterStaticEntry
+			cses[policy.GetId()] = clusterStaticEntry
 		}
 	}
 
@@ -222,15 +221,14 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		}
 	}
 
-	federations, err := g.source.ListFederationsByTrustZone(g.trustZone.Name)
+	federations, err := g.source.ListFederationsByTrustZone(g.trustZone.GetId())
 	if err != nil {
 		return nil, err
 	}
 	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by the spire-controller-manager.
 	if len(federations) > 0 {
 		for _, fed := range federations {
-			// nolint:staticcheck
-			tz, err := g.source.GetTrustZone(fed.To)
+			tz, err := g.source.GetTrustZone(fed.GetRemoteTrustZoneId())
 			if err != nil {
 				return nil, err
 			}
@@ -248,8 +246,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 					return nil, fmt.Errorf("failed to get clusterFederatedTrustDomains map from identities: %w", err)
 				}
 
-				// nolint:staticcheck
-				cftd[fed.To], err = federation.NewFederation(tz).GetHelmConfig()
+				cftd[fed.GetRemoteTrustZoneId()], err = federation.NewFederation(tz).GetHelmConfig()
 				if err != nil {
 					return nil, err
 				}

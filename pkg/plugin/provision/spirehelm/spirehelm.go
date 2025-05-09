@@ -76,12 +76,12 @@ func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, opts
 }
 
 func (h *SpireHelm) GetHelmValues(ctx context.Context, ds datasource.DataSource, opts *provision.GetHelmValuesOpts) (map[string]any, error) {
-	trustZone, err := ds.GetTrustZone(opts.TrustZoneName)
+	trustZone, err := ds.GetTrustZone(opts.TrustZoneID)
 	if err != nil {
 		return nil, err
 	}
 
-	cluster, err := ds.GetCluster(opts.ClusterName, opts.TrustZoneName)
+	cluster, err := ds.GetCluster(opts.ClusterID, opts.TrustZoneID)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (h *SpireHelm) WatchAndConfigure(ctx context.Context, ds datasource.DataSou
 		cluster := tzc.Cluster
 
 		if cluster.GetExternalServer() {
-			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
+			sb := provision.NewStatusBuilder(trustZone.GetId(), cluster.GetName())
 			statusCh <- sb.Done("Ready", "Skipped waiting for external SPIRE server pod and service")
 			continue
 		}
@@ -230,7 +230,7 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 	cluster *clusterpb.Cluster,
 	kubeCfgFile string,
 ) error {
-	sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
+	sb := provision.NewStatusBuilder(trustZone.GetName(), cluster.GetName())
 	statusCh <- sb.Ok("Waiting", "Waiting for SPIRE server pod and service")
 
 	spireAPI, err := h.spireAPIFactory.Build(kubeCfgFile, cluster.GetKubernetesContext())

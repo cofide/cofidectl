@@ -55,6 +55,7 @@ func TestSpireHelm_Deploy(t *testing.T) {
 		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
 		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
 	}
+
 	assert.EqualExportedValues(t, want, statuses)
 }
 
@@ -87,10 +88,10 @@ func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
 		provision.StatusOk("Installing", "Installing SPIRE CRDs for local5 in tz5"),
 		provision.StatusOk("Installing", "Installing SPIRE chart for local5 in tz5"),
 		provision.StatusDone("Installed", "Installation completed for local5 in tz5"),
-		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
+		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5-id"),
 		provision.StatusOk("Configuring", "Applying post-installation configuration for local5 in tz5"),
 		provision.StatusDone("Configured", "Post-installation configuration completed for local5 in tz5"),
-		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
+		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5-id"),
 	}
 	assert.EqualExportedValues(t, want, statuses)
 }
@@ -101,7 +102,7 @@ func TestSpireHelm_Deploy_specificTrustZone(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz2"}}
+	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz2-id"}}
 	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
@@ -148,7 +149,7 @@ func TestSpireHelm_TearDown_specificTrustZone(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz1"}}
+	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz1-id"}}
 	statusCh, err := spireHelm.TearDown(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
@@ -166,7 +167,7 @@ func TestSpireHelm_GetHelmValues(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.GetHelmValuesOpts{TrustZoneName: "tz1", ClusterName: "local1"}
+	opts := provision.GetHelmValuesOpts{TrustZoneID: "tz1-id", ClusterID: "local1-id"}
 	values, err := spireHelm.GetHelmValues(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 	want := map[string]any{"key1": "value1", "key2": "value2"}

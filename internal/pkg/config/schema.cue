@@ -1,6 +1,7 @@
 #DataSource: string
 
 #TrustZone: {
+	id?: string
 	name!: string
 	trust_domain!: string
 	bundle_endpoint_url?: string
@@ -32,8 +33,10 @@
 }
 
 #Cluster: {
+	id?: string
 	name!: string
-	trust_zone!: string
+	trust_zone?: string
+	trust_zone_id!: string
 	kubernetes_context!: string
 	trust_provider!: #TrustProvider
 	profile!: string
@@ -47,12 +50,19 @@
 }
 
 #APBinding: {
-	trust_zone!: string
-	policy!: string
+	id?: string
+	trust_zone_id!: string
+	policy_id!: string
+	federations: [...#APBFederation]
 	federates_with: [...string]
 }
 
+#APBFederation: {
+	trust_zone_id!: string
+}
+
 #AttestationPolicy: {
+	id?: string
 	name!: string
 	#APKubernetes | #APStatic
 }
@@ -89,8 +99,9 @@
 }
 
 #Federation: {
-	from!: string
-	to!: string
+	id?: string
+	trust_zone_id!: string
+	remote_trust_zone_id!: string
 }
 
 #HelmValues: {

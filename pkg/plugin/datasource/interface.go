@@ -17,29 +17,33 @@ import (
 type DataSource interface {
 	validator.Validator
 
-	AddTrustZone(*trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
-	DestroyTrustZone(string) error
-	GetTrustZone(string) (*trust_zone_proto.TrustZone, error)
+	AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
+	DestroyTrustZone(id string) error
+	GetTrustZone(id string) (*trust_zone_proto.TrustZone, error)
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
-	UpdateTrustZone(*trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
+	UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
 
-	AddCluster(*clusterpb.Cluster) (*clusterpb.Cluster, error)
-	DestroyCluster(string, string) error
-	GetCluster(string, string) (*clusterpb.Cluster, error)
-	ListClusters(string) ([]*clusterpb.Cluster, error)
-	UpdateCluster(*clusterpb.Cluster) (*clusterpb.Cluster, error)
+	AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error)
+	// TODO: only clusterID is needed
+	DestroyCluster(clusterID, trustZoneID string) error
+	// TODO: only clusterID is needed
+	GetCluster(clusterID, trustZoneID string) (*clusterpb.Cluster, error)
+	ListClusters(trustZoneID string) ([]*clusterpb.Cluster, error)
+	UpdateCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error)
 
-	AddAttestationPolicy(*attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error)
-	DestroyAttestationPolicy(string) error
-	GetAttestationPolicy(string) (*attestation_policy_proto.AttestationPolicy, error)
+	AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error)
+	DestroyAttestationPolicy(id string) error
+	GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error)
 	ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error)
 
-	AddAPBinding(*ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error)
-	DestroyAPBinding(*ap_binding_proto.APBinding) error
-	ListAPBindings(*datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error)
+	AddAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error)
+	// TODO: ID
+	DestroyAPBinding(binding *ap_binding_proto.APBinding) error
+	ListAPBindings(filter *datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error)
 
-	AddFederation(*federation_proto.Federation) (*federation_proto.Federation, error)
-	DestroyFederation(*federation_proto.Federation) error
+	AddFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error)
+	// TODO: ID
+	DestroyFederation(federation *federation_proto.Federation) error
 	ListFederations() ([]*federation_proto.Federation, error)
-	ListFederationsByTrustZone(string) ([]*federation_proto.Federation, error)
+	ListFederationsByTrustZone(trustZoneID string) ([]*federation_proto.Federation, error)
 }

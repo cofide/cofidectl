@@ -19,7 +19,7 @@ var (
 // GetClusterFromTrustZone returns a cluster from a trust zone.
 // For now there should be exactly one cluster per trust zone.
 func GetClusterFromTrustZone(trustZone *trust_zone_proto.TrustZone, ds datasource.DataSource) (*clusterpb.Cluster, error) {
-	clusters, err := ds.ListClusters(trustZone.Name)
+	clusters, err := ds.ListClusters(trustZone.GetId())
 	if err != nil {
 		return nil, err
 	}
