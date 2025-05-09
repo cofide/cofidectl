@@ -248,14 +248,15 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 				return err
 			}
 
+			// TODO: Support trust zone name and ID?
 			return deleteTrustZone(cmd.Context(), args[0], ds, true, kubeConfig)
 		},
 	}
 	return cmd
 }
 
-func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, checkDeployed bool, kubeConfig string) error {
-	clusters, err := ds.ListClusters(name)
+func deleteTrustZone(ctx context.Context, id string, ds datasource.DataSource, checkDeployed bool, kubeConfig string) error {
+	clusters, err := ds.ListClusters(id)
 	if err != nil {
 		return err
 	}
@@ -267,13 +268,13 @@ func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource,
 			if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 				return err
 			} else if deployed {
-				return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", cluster.GetName(), name)
+				return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", cluster.GetName(), id)
 			}
 		}
 	}
 
 	for i, cluster := range clusters {
-		err = ds.DestroyCluster(cluster.GetName(), name)
+		err = ds.DestroyCluster(cluster.GetId(), id)
 		if err != nil {
 			for _, rollbackCluster := range clusters[:i] {
 				if _, err := ds.AddCluster(rollbackCluster); err != nil {
@@ -284,9 +285,9 @@ func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource,
 		}
 	}
 
-	err = ds.DestroyTrustZone(name)
+	err = ds.DestroyTrustZone(id)
 	if err != nil {
-		return fmt.Errorf("failed to destroy trust zone %s: %w", name, err)
+		return fmt.Errorf("failed to destroy trust zone %s: %w", id, err)
 	}
 
 	return nil

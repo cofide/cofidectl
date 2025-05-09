@@ -40,9 +40,6 @@ type TearDownOpts struct {
 }
 
 type GetHelmValuesOpts struct {
-	// TODO: remove names
-	TrustZoneName string
-	ClusterName   string
-	TrustZoneID   string
-	ClusterID     string
+	TrustZoneID string
+	ClusterID   string
 }

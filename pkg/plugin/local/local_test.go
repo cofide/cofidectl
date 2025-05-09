@@ -150,7 +150,7 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 	}{
 		{
 			name:      "success",
-			trustZone: "tz1",
+			trustZone: "tz1-id",
 			wantErr:   false,
 		},
 		{
@@ -161,9 +161,9 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 		},
 		{
 			name:          "cluster exists in trust zone",
-			trustZone:     "tz2",
+			trustZone:     "tz2-id",
 			wantErr:       true,
-			wantErrString: "one or more clusters exist in trust zone tz2 in local config",
+			wantErrString: "one or more clusters exist in trust zone tz2-id in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -449,30 +449,30 @@ func TestLocalDataSource_DestroyCluster(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		cluster       string
-		trustZoneName string
+		clusterID     string
+		trustZoneID   string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:          "success",
-			cluster:       "local1",
-			trustZoneName: "tz1",
-			wantErr:       false,
+			name:        "success",
+			clusterID:   "local1-id",
+			trustZoneID: "tz1-id",
+			wantErr:     false,
 		},
 		{
 			name:          "invalid cluster",
-			cluster:       "invalid-cluster",
-			trustZoneName: "tz1",
+			clusterID:     "invalid-cluster",
+			trustZoneID:   "tz1-id",
 			wantErr:       true,
-			wantErrString: "failed to find cluster invalid-cluster in trust zone tz1 in local config",
+			wantErrString: "failed to find cluster invalid-cluster in trust zone tz1-id in local config",
 		},
 		{
 			name:          "wrong trust zone",
-			cluster:       "local1",
-			trustZoneName: "invalid-tz",
+			clusterID:     "local1-id",
+			trustZoneID:   "invalid-tz",
 			wantErr:       true,
-			wantErrString: "failed to find cluster local1 in trust zone invalid-tz in local config",
+			wantErrString: "failed to find cluster local1-id in trust zone invalid-tz in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -490,7 +490,7 @@ func TestLocalDataSource_DestroyCluster(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
-			err := lds.DestroyCluster(tt.cluster, tt.trustZoneName)
+			err := lds.DestroyCluster(tt.clusterID, tt.trustZoneID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
@@ -773,7 +773,7 @@ func TestLocalDataSource_DestroyAttestationPolicy(t *testing.T) {
 	}{
 		{
 			name:    "success",
-			policy:  "ap1",
+			policy:  "ap1-id",
 			wantErr: false,
 		},
 		{
@@ -784,9 +784,9 @@ func TestLocalDataSource_DestroyAttestationPolicy(t *testing.T) {
 		},
 		{
 			name:          "bound to trust zone",
-			policy:        "ap2",
+			policy:        "ap2-id",
 			wantErr:       true,
-			wantErrString: "attestation policy ap2 is bound to trust zone tz2 in local config",
+			wantErrString: "attestation policy ap2-id is bound to trust zone tz2 in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -1269,19 +1269,28 @@ func TestLocalDataSource_DestroyFederation(t *testing.T) {
 		wantErrString string
 	}{
 		{
-			name:       "success",
-			federation: &federation_proto.Federation{From: "tz1", To: "tz2"},
-			wantErr:    false,
+			name: "success",
+			federation: &federation_proto.Federation{
+				TrustZoneId:       fixtures.StringPtr("tz1-id"),
+				RemoteTrustZoneId: fixtures.StringPtr("tz2-id"),
+			},
+			wantErr: false,
 		},
 		{
-			name:          "invalid federation",
-			federation:    &federation_proto.Federation{From: "tz1", To: "invalid-tz"},
+			name: "invalid federation",
+			federation: &federation_proto.Federation{
+				TrustZoneId:       fixtures.StringPtr("tz1-id"),
+				RemoteTrustZoneId: fixtures.StringPtr("invalid-tz"),
+			},
 			wantErr:       true,
-			wantErrString: "failed to find federation for trust zone tz1 in local config",
+			wantErrString: "failed to find federation for trust zone tz1-id in local config",
 		},
 		{
-			name:          "invalid trust zone",
-			federation:    &federation_proto.Federation{From: "invalid-tz", To: "tz2"},
+			name: "invalid trust zone",
+			federation: &federation_proto.Federation{
+				TrustZoneId:       fixtures.StringPtr("invalid-tz"),
+				RemoteTrustZoneId: fixtures.StringPtr("tz2-id"),
+			},
 			wantErr:       true,
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
