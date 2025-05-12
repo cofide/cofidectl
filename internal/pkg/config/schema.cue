@@ -1,6 +1,7 @@
 #DataSource: string
 
 #TrustZone: {
+	id?: string
 	name!: string
 	trust_domain!: string
 	bundle_endpoint_url?: string
@@ -32,6 +33,7 @@
 }
 
 #Cluster: {
+	id?: string
 	name!: string
 	trust_zone!: string
 	kubernetes_context!: string
@@ -47,12 +49,14 @@
 }
 
 #APBinding: {
+	id?: string
 	trust_zone!: string
 	policy!: string
 	federates_with: [...string]
 }
 
 #AttestationPolicy: {
+	id?: string
 	name!: string
 	#APKubernetes | #APStatic
 }
@@ -89,6 +93,7 @@
 }
 
 #Federation: {
+	id?: string
 	from!: string
 	to!: string
 }
