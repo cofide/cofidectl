@@ -14,13 +14,13 @@ trust_zones:
         refresh_hint: "2"
         sequence_number: "3"
       federations:
-        - trust_zone_id: tz1-id
+        - id: fed1-id
+          trust_zone_id: tz1-id
           remote_trust_zone_id: tz2-id
       attestation_policies:
-        - trust_zone_id: tz1-id
+        - id: apb1-id
+          trust_zone_id: tz1-id
           policy_id: ap1-id
-          federates_with:
-            - tz2-id
           federations:
             - trust_zone_id: tz2-id
       jwt_issuer: https://tz1.example.com
@@ -30,13 +30,13 @@ trust_zones:
       trust_domain: td2
       bundle_endpoint_url: 127.0.0.2
       federations:
-        - trust_zone_id: tz2-id
+        - id: fed2-id
+          trust_zone_id: tz2-id
           remote_trust_zone_id: tz1-id
       attestation_policies:
-        - trust_zone_id: tz2-id
+        - id: apb2-id
+          trust_zone_id: tz2-id
           policy_id: ap2-id
-          federates_with:
-            - tz1-id
           federations:
             - trust_zone_id: tz1-id
       jwt_issuer: https://tz2.example.com
@@ -46,7 +46,8 @@ trust_zones:
       trust_domain: td6
       bundle_endpoint_url: 127.0.0.5
       attestation_policies:
-        - trust_zone_id: tz6-id
+        - id: apb3-id
+          trust_zone_id: tz6-id
           policy_id: ap4-id
       jwt_issuer: https://tz6.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB

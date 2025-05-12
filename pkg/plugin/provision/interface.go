@@ -40,6 +40,5 @@ type TearDownOpts struct {
 }
 
 type GetHelmValuesOpts struct {
-	TrustZoneID string
-	ClusterID   string
+	ClusterID string
 }

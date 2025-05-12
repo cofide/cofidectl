@@ -105,9 +105,9 @@ func (c *Config) GetClusterByName(name, trustZoneID string) (*clusterpb.Cluster,
 	return nil, false
 }
 
-func (c *Config) GetClusterByID(id, trustZoneID string) (*clusterpb.Cluster, bool) {
+func (c *Config) GetClusterByID(id string) (*clusterpb.Cluster, bool) {
 	for _, cluster := range c.Clusters {
-		if cluster.GetId() == id && cluster.GetTrustZoneId() == trustZoneID {
+		if cluster.GetId() == id {
 			return cluster, true
 		}
 	}

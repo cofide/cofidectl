@@ -132,8 +132,7 @@ func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSour
 
 	// Check that the values are acceptable.
 	_, err = provisionPlugin.GetHelmValues(ctx, ds, &provision.GetHelmValuesOpts{
-		TrustZoneID: tzID,
-		ClusterID:   cluster.GetId(),
+		ClusterID: cluster.GetId(),
 	})
 	if err != nil {
 		slog.Error("Failed to generate Helm values, rolling back", "error", err)
@@ -226,8 +225,7 @@ func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, t
 	}
 
 	values, err := provisionPlugin.GetHelmValues(ctx, ds, &provision.GetHelmValuesOpts{
-		TrustZoneID: tzID,
-		ClusterID:   cluster.GetId(),
+		ClusterID: cluster.GetId(),
 	})
 	if err != nil {
 		return nil, err

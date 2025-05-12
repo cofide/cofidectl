@@ -167,7 +167,7 @@ func TestSpireHelm_GetHelmValues(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.GetHelmValuesOpts{TrustZoneID: "tz1-id", ClusterID: "local1-id"}
+	opts := provision.GetHelmValuesOpts{ClusterID: "local1-id"}
 	values, err := spireHelm.GetHelmValues(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 	want := map[string]any{"key1": "value1", "key2": "value2"}

@@ -165,7 +165,7 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 					assert.Equal(t, 1, ds.(*failingDS).clustersAdded)
 				} else {
 					for _, cluster := range defaultConfig().Clusters {
-						_, err := ds.GetCluster(cluster.GetId(), cluster.GetTrustZoneId())
+						_, err := ds.GetCluster(cluster.GetId())
 						require.NoError(t, err)
 					}
 				}
@@ -176,7 +176,7 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 				_, err := ds.GetTrustZone(tt.trustZoneID)
 				require.Error(t, err)
 				for _, cluster := range defaultConfig().Clusters {
-					_, err := ds.GetCluster(cluster.GetId(), tt.trustZoneID)
+					_, err := ds.GetCluster(cluster.GetId())
 					require.Error(t, err)
 				}
 			}
@@ -202,12 +202,12 @@ func (f *failingDS) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, 
 }
 
 // DestroyCluster fails when a second cluster is destroyed, allowing testing of rollback.
-func (f *failingDS) DestroyCluster(name, trustZoneName string) error {
+func (f *failingDS) DestroyCluster(id string) error {
 	f.clustersDestroyed++
 	if f.clustersDestroyed == 2 {
 		return errors.New("fake destroy failure")
 	}
-	return f.LocalDataSource.DestroyCluster(name, trustZoneName)
+	return f.LocalDataSource.DestroyCluster(id)
 }
 
 func newFakeDataSource(t *testing.T, cfg *config.Config) datasource.DataSource {

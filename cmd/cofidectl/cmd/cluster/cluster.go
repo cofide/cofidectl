@@ -127,7 +127,8 @@ func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName,
 		return err
 	}
 
-	cluster, err := ds.GetCluster(name, trustZoneName)
+	// TODO: Support delete by ID?
+	cluster, err := ds.GetClusterByName(name, trustZoneName)
 	if err != nil {
 		return err
 	}
@@ -139,5 +140,5 @@ func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName,
 		return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", name, trustZoneName)
 	}
 
-	return ds.DestroyCluster(name, trustZoneName)
+	return ds.DestroyCluster(cluster.GetId())
 }

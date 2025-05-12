@@ -129,10 +129,8 @@ func (c *ProvisionPluginClientGRPC) GetHelmValues(ctx context.Context, source da
 	req := provisionpb.GetHelmValuesRequest{
 		DataSource: &brokerID,
 		// FIXME:
-		// TrustZoneID: &opts.TrustZoneID,
 		// ClusterID:   &opts.ClusterID,
-		TrustZoneName: &opts.TrustZoneID,
-		ClusterName:   &opts.ClusterID,
+		ClusterName: &opts.ClusterID,
 	}
 	resp, err := c.client.GetHelmValues(ctx, &req)
 	if err != nil {
@@ -263,11 +261,9 @@ func (s *GRPCServer) GetHelmValues(ctx context.Context, req *provisionpb.GetHelm
 	defer conn.Close()
 
 	opts := GetHelmValuesOpts{
-		// FIXME:
-		// TrustZoneID: req.GetTrustZoneId(),
+		// FIXME: use cluster ID
 		// ClusterID:   req.GetClusterId(),
-		TrustZoneID: req.GetTrustZoneName(),
-		ClusterID:   req.GetClusterName(),
+		ClusterID: req.GetClusterName(),
 	}
 	values, err := s.impl.GetHelmValues(ctx, client, &opts)
 	if err != nil {

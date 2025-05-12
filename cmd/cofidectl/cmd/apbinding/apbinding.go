@@ -243,6 +243,7 @@ var apBindingDelCmdDesc = `
 This command will unbind an attestation policy from a trust zone.`
 
 type DelOpts struct {
+	// TODO: Add ID args.
 	trustZone         string
 	attestationPolicy string
 }
@@ -260,11 +261,33 @@ func (c *APBindingCommand) GetDelCommand() *cobra.Command {
 				return err
 			}
 
-			binding := &ap_binding_proto.APBinding{
-				TrustZone: opts.trustZone,
-				Policy:    opts.attestationPolicy,
+			/*
+				trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
+				if err != nil {
+					return err
+				}
+				policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
+				if err != nil {
+					return err
+				}
+			*/
+
+			bindings, err := ds.ListAPBindings(&datasourcepb.ListAPBindingsRequest_Filter{
+				// TODO: support filtering by ID.
+				// TrustZoneId:         &trustZone.Id,
+				// AttestationPolicyId: &policy.Id,
+			})
+			if err != nil {
+				return err
 			}
-			return ds.DestroyAPBinding(binding)
+			if len(bindings) == 0 {
+				return errors.New("no binding found")
+			}
+			if len(bindings) > 1 {
+				return errors.New("multiple bindings found")
+			}
+			binding := bindings[0]
+			return ds.DestroyAPBinding(binding.GetId())
 		},
 	}
 

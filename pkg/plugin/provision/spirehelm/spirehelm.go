@@ -76,12 +76,12 @@ func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, opts
 }
 
 func (h *SpireHelm) GetHelmValues(ctx context.Context, ds datasource.DataSource, opts *provision.GetHelmValuesOpts) (map[string]any, error) {
-	trustZone, err := ds.GetTrustZone(opts.TrustZoneID)
+	cluster, err := ds.GetCluster(opts.ClusterID)
 	if err != nil {
 		return nil, err
 	}
 
-	cluster, err := ds.GetCluster(opts.ClusterID, opts.TrustZoneID)
+	trustZone, err := ds.GetTrustZone(cluster.GetTrustZoneId())
 	if err != nil {
 		return nil, err
 	}

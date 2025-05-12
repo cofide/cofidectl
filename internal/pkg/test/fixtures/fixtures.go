@@ -47,12 +47,14 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl: StringPtr("127.0.0.1"),
 		Federations: []*federation_proto.Federation{
 			{
+				Id:                StringPtr("fed1-id"),
 				TrustZoneId:       StringPtr("tz1-id"),
 				RemoteTrustZoneId: StringPtr("tz2-id"),
 			},
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
+				Id:          StringPtr("apb1-id"),
 				TrustZoneId: StringPtr("tz1-id"),
 				PolicyId:    StringPtr("ap1-id"),
 				Federations: []*ap_binding_proto.APBindingFederation{
@@ -60,7 +62,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 						TrustZoneId: StringPtr("tz2-id"),
 					},
 				},
-				FederatesWith: []string{"tz2-id"},
 			},
 		},
 		JwtIssuer:             StringPtr("https://tz1.example.com"),
@@ -73,12 +74,14 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl: StringPtr("127.0.0.2"),
 		Federations: []*federation_proto.Federation{
 			{
+				Id:                StringPtr("fed2-id"),
 				TrustZoneId:       StringPtr("tz2-id"),
 				RemoteTrustZoneId: StringPtr("tz1-id"),
 			},
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
+				Id:          StringPtr("apb2-id"),
 				TrustZoneId: StringPtr("tz2-id"),
 				PolicyId:    StringPtr("ap2-id"),
 				Federations: []*ap_binding_proto.APBindingFederation{
@@ -86,7 +89,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 						TrustZoneId: StringPtr("tz1-id"),
 					},
 				},
-				FederatesWith: []string{"tz1-id"},
 			},
 		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
@@ -128,10 +130,10 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		Federations:       []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
-				TrustZoneId:   StringPtr("tz6-id"),
-				PolicyId:      StringPtr("ap4-id"),
-				Federations:   []*ap_binding_proto.APBindingFederation{},
-				FederatesWith: []string{},
+				Id:          StringPtr("apb3-id"),
+				TrustZoneId: StringPtr("tz6-id"),
+				PolicyId:    StringPtr("ap4-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{},
 			},
 		},
 		JwtIssuer:             StringPtr("https://tz6.example.com"),

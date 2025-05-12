@@ -274,7 +274,7 @@ func deleteTrustZone(ctx context.Context, id string, ds datasource.DataSource, c
 	}
 
 	for i, cluster := range clusters {
-		err = ds.DestroyCluster(cluster.GetId(), id)
+		err = ds.DestroyCluster(cluster.GetId())
 		if err != nil {
 			for _, rollbackCluster := range clusters[:i] {
 				if _, err := ds.AddCluster(rollbackCluster); err != nil {

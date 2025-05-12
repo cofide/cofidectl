@@ -295,9 +295,19 @@ func (c *FederationCommand) deleteFederation(ctx context.Context, trustZone, rem
 		return err
 	}
 
-	federation := &federation_proto.Federation{
-		From: trustZone,
-		To:   remoteTrustZone,
+	// TODO: get by name/ID
+	// TODO: filter by remote trust zone
+	federations, err := ds.ListFederationsByTrustZone(trustZone)
+	if err != nil {
+		return err
 	}
-	return ds.DestroyFederation(federation)
+	if len(federations) == 0 {
+		return errors.New("no federation found")
+	}
+	for _, federation := range federations {
+		if federation.GetRemoteTrustZoneId() == remoteTrustZone {
+			return ds.DestroyFederation(federation.GetId())
+		}
+	}
+	return errors.New("no federation found")
 }

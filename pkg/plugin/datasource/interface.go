@@ -20,30 +20,33 @@ type DataSource interface {
 	AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
 	DestroyTrustZone(id string) error
 	GetTrustZone(id string) (*trust_zone_proto.TrustZone, error)
+	GetTrustZoneByName(name string) (*trust_zone_proto.TrustZone, error)
 	ListTrustZones() ([]*trust_zone_proto.TrustZone, error)
 	UpdateTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error)
 
 	AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error)
-	// TODO: only clusterID is needed
-	DestroyCluster(clusterID, trustZoneID string) error
-	// TODO: only clusterID is needed
-	GetCluster(clusterID, trustZoneID string) (*clusterpb.Cluster, error)
+	DestroyCluster(id string) error
+	GetCluster(id string) (*clusterpb.Cluster, error)
+	GetClusterByName(name, trustZoneID string) (*clusterpb.Cluster, error)
+	// TODO: Replace with filter
 	ListClusters(trustZoneID string) ([]*clusterpb.Cluster, error)
 	UpdateCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error)
 
 	AddAttestationPolicy(policy *attestation_policy_proto.AttestationPolicy) (*attestation_policy_proto.AttestationPolicy, error)
 	DestroyAttestationPolicy(id string) error
 	GetAttestationPolicy(id string) (*attestation_policy_proto.AttestationPolicy, error)
+	GetAttestationPolicyByName(name string) (*attestation_policy_proto.AttestationPolicy, error)
 	ListAttestationPolicies() ([]*attestation_policy_proto.AttestationPolicy, error)
 
 	AddAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error)
-	// TODO: ID
-	DestroyAPBinding(binding *ap_binding_proto.APBinding) error
+	DestroyAPBinding(id string) error
+	// TODO: Use IDs in filter
 	ListAPBindings(filter *datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error)
 
 	AddFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error)
-	// TODO: ID
-	DestroyFederation(federation *federation_proto.Federation) error
+	DestroyFederation(id string) error
+	// TODO: Add filter in SDK, similar to ListAPBindings
 	ListFederations() ([]*federation_proto.Federation, error)
+	// TODO: remove, replace with filter
 	ListFederationsByTrustZone(trustZoneID string) ([]*federation_proto.Federation, error)
 }
