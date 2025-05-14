@@ -230,15 +230,14 @@ func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.C
 
 	if cluster.GetId() == "" {
 		id, err := generateId()
-	  if err != nil {
-		  return nil, fmt.Errorf("failed to generate UUID for cluster: %w", err)
-	  }
-	  cluster.Id = id
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate UUID for cluster: %w", err)
+		}
+		cluster.Id = id
 	}
-	
 
-	if _, ok := lds.config.GetClusterByName(name, trustZone); ok {
-		return nil, fmt.Errorf("cluster %s already exists in trust zone %s in local config", name, trustZone)
+	if _, ok := lds.config.GetClusterByName(name, trustZoneID); ok {
+		return nil, fmt.Errorf("cluster %s already exists in trust zone %s in local config", name, trustZoneID)
 	}
 
 	if len(lds.config.GetClustersByTrustZone(trustZoneID)) != 0 {
@@ -392,14 +391,6 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 	if _, ok := lds.config.GetAttestationPolicyByID(policy.GetId()); ok {
 		return nil, fmt.Errorf("attestation policy %s already exists in local config", policy.GetId())
 	}
-
-	}
-
-	id, err := generateId()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate UUID for attestation policy: %w", err)
-	}
-	policy.Id = id
 
 	if _, ok := lds.config.GetAttestationPolicyByName(policy.Name); ok {
 		return nil, fmt.Errorf("attestation policy %s already exists in local config", policy.Name)

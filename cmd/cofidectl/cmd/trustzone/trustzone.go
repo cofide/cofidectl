@@ -264,7 +264,7 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 	return cmd
 }
 
-func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, kubeConfig string, force bool) error {
+func deleteTrustZone(ctx context.Context, id string, ds datasource.DataSource, kubeConfig string, force bool) error {
 	clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
 		TrustZoneId: &id,
 	})
