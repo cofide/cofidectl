@@ -50,10 +50,13 @@ function check_init() {
   fi
 }
 
-function configure() {
+function configure_trust_zones() {
   ./cofidectl trust-zone add $TRUST_ZONE_1 --trust-domain $TRUST_DOMAIN_1 --kubernetes-context $K8S_CLUSTER_1_CONTEXT --kubernetes-cluster $K8S_CLUSTER_1_NAME --profile kubernetes
   ./cofidectl trust-zone add $TRUST_ZONE_2 --trust-domain $TRUST_DOMAIN_2 --kubernetes-context $K8S_CLUSTER_2_CONTEXT --kubernetes-cluster $K8S_CLUSTER_2_NAME --profile kubernetes
-  ./cofidectl federation add --from $TRUST_ZONE_1 --to $TRUST_ZONE_2
+ }
+
+function configure_federations() {
+  ./cofidectl federation add --trust-zone $TRUST_ZONE_1 --remote-trust-zone $TRUST_ZONE_2
   ./cofidectl federation add --trust-zone $TRUST_ZONE_2 --remote-trust-zone $TRUST_ZONE_1
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
@@ -176,7 +179,9 @@ function delete() {
 function main() {
   init
   check_init
-  configure
+  configure_trust_zones
+  up
+  configure_federations
   up
   check_spire
   list_resources
