@@ -155,7 +155,7 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 			if tt.injectFailure {
 				ds = &failingDS{LocalDataSource: ds.(*local.LocalDataSource)}
 			}
-			err := deleteTrustZone(context.Background(), tt.trustZoneID, ds, false, "")
+			err := deleteTrustZone(context.Background(), tt.trustZoneID, ds, "", true)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrMessage)

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
@@ -239,6 +240,11 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 			return err
 		}
 
+		if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
+			slog.Warn("Cluster is unreachable", "cluster", cluster.GetName(), "error", err)
+			continue
+		}
+
 		if deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 			return err
 		} else if !deployed {
@@ -369,6 +375,11 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 				continue
 			}
 			return err
+		}
+
+		if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
+			slog.Warn("Cluster is unreachable", "cluster", cluster.GetName(), "error", err)
+			continue
 		}
 
 		deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig)
