@@ -64,8 +64,8 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 			}
 
 			tearDownOpts := provisionplugin.TearDownOpts{
-				KubeCfgFile: kubeCfgFile,
-				TrustZones:  trustZones,
+				KubeCfgFile:  kubeCfgFile,
+				TrustZoneIDs: trustZones,
 			}
 			statusCh, err := provision.TearDown(cmd.Context(), ds, &tearDownOpts)
 			if err != nil {

@@ -11,7 +11,7 @@ import (
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -279,14 +279,24 @@ func (lds *LocalDataSource) GetClusterByName(name, trustZoneID string) (*cluster
 	return proto.CloneCluster(cluster)
 }
 
-func (lds *LocalDataSource) ListClusters(trustZoneID string) ([]*clusterpb.Cluster, error) {
+func (lds *LocalDataSource) ListClusters(filter *datasourcepb.ListClustersRequest_Filter) ([]*clusterpb.Cluster, error) {
 	clusters := []*clusterpb.Cluster{}
-	for _, cluster := range lds.config.GetClustersByTrustZone(trustZoneID) {
-		cluster, err := proto.CloneCluster(cluster)
-		if err != nil {
-			return nil, err
+	if filter != nil && filter.GetTrustZoneId() != "" {
+		for _, cluster := range lds.config.GetClustersByTrustZone(filter.GetTrustZoneId()) {
+			cluster, err := proto.CloneCluster(cluster)
+			if err != nil {
+				return nil, err
+			}
+			clusters = append(clusters, cluster)
 		}
-		clusters = append(clusters, cluster)
+	} else {
+		for _, cluster := range lds.config.Clusters {
+			cluster, err := proto.CloneCluster(cluster)
+			if err != nil {
+				return nil, err
+			}
+			clusters = append(clusters, cluster)
+		}
 	}
 	return clusters, nil
 }
@@ -518,10 +528,10 @@ func (lds *LocalDataSource) DestroyAPBinding(id string) error {
 
 func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error) {
 	var trustZones []*trust_zone_proto.TrustZone
-	if filter != nil && filter.TrustZoneName != nil {
-		trustZone, ok := lds.config.GetTrustZoneByName(filter.GetTrustZoneName())
+	if filter != nil && filter.TrustZoneId != nil {
+		trustZone, ok := lds.config.GetTrustZoneByID(filter.GetTrustZoneId())
 		if !ok {
-			return nil, fmt.Errorf("failed to find trust zone %s in local config", filter.GetTrustZoneName())
+			return nil, fmt.Errorf("failed to find trust zone %s in local config", filter.GetTrustZoneId())
 		}
 		trustZones = []*trust_zone_proto.TrustZone{trustZone}
 	} else {
@@ -532,7 +542,7 @@ func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRe
 		// nolint:staticcheck
 		for _, binding := range trustZone.AttestationPolicies {
 			// nolint:staticcheck
-			if filter != nil && filter.PolicyName != nil && binding.GetPolicyId() != filter.GetPolicyName() {
+			if filter != nil && filter.GetPolicyId() != "" && binding.GetPolicyId() != filter.GetPolicyId() {
 				continue
 			}
 
@@ -609,17 +619,25 @@ func (lds *LocalDataSource) DestroyFederation(id string) error {
 	return fmt.Errorf("failed to find federation %s in local config", id)
 }
 
-func (lds *LocalDataSource) ListFederations() ([]*federation_proto.Federation, error) {
+func (lds *LocalDataSource) ListFederations(filter *datasourcepb.ListFederationsRequest_Filter) ([]*federation_proto.Federation, error) {
 	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
 	federations := []*federation_proto.Federation{}
 	for _, trustZone := range lds.config.TrustZones {
 		// nolint:staticcheck
 		for _, federation := range trustZone.Federations {
-			federation, err := proto.CloneFederation(federation)
-			if err != nil {
-				return nil, err
+			include := true
+			if filter != nil {
+				if filter.TrustZoneId != nil && federation.GetTrustZoneId() != filter.GetTrustZoneId() {
+					include = false
+				}
 			}
-			federations = append(federations, federation)
+			if include {
+				federation, err := proto.CloneFederation(federation)
+				if err != nil {
+					return nil, err
+				}
+				federations = append(federations, federation)
+			}
 		}
 	}
 	return federations, nil

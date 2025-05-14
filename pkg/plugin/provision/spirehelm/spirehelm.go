@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -90,7 +90,7 @@ func (h *SpireHelm) GetHelmValues(ctx context.Context, ds datasource.DataSource,
 }
 
 func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *provision.DeployOpts, statusCh chan<- *provisionpb.Status) error {
-	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZoneIDs)
 	if err != nil {
 		statusCh <- provision.StatusError("Deploying", "Failed listing trust zones", err)
 		return err
@@ -121,7 +121,7 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 }
 
 func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, opts *provision.TearDownOpts, statusCh chan<- *provisionpb.Status) error {
-	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZoneIDs)
 	if err != nil {
 		statusCh <- provision.StatusError("Uninstalling", "Failed listing trust zones", err)
 		return err

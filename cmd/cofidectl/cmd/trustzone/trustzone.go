@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
 	trustprovider "github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -256,7 +257,9 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 }
 
 func deleteTrustZone(ctx context.Context, id string, ds datasource.DataSource, checkDeployed bool, kubeConfig string) error {
-	clusters, err := ds.ListClusters(id)
+	clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
+		TrustZoneId: &id,
+	})
 	if err != nil {
 		return err
 	}

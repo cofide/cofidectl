@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofide-api-sdk/pkg/connect/client/test"
 	"github.com/cofide/cofidectl/internal/pkg/config"
@@ -108,7 +109,9 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				for _, trustZone := range trustZones {
 					if trustZone.Name == tt.trustZoneName {
 						found = true
-						clusters, err := ds.ListClusters(trustZone.GetId())
+						clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
+							TrustZoneId: trustZone.Id,
+						})
 						require.NoError(t, err)
 						require.Len(t, clusters, 1)
 						assert.Equal(t, "local3", clusters[0].GetName())

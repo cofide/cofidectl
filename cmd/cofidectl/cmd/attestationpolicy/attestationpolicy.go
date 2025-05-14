@@ -391,7 +391,7 @@ This command will delete an attestation policy from the Cofide configuration sta
 
 func (c *AttestationPolicyCommand) getDelCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "del [NAME]",
+		Use:   "del [ID]",
 		Short: "Delete an attestation policy",
 		Long:  attestationPolicyDelCmdDesc,
 		Args:  cobra.ExactArgs(1),
@@ -402,11 +402,11 @@ func (c *AttestationPolicyCommand) getDelCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, name string) error {
+func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, id string) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err
 	}
 
-	return ds.DestroyAttestationPolicy(name)
+	return ds.DestroyAttestationPolicy(id)
 }

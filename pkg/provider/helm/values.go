@@ -8,7 +8,7 @@ import (
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/attestationpolicy"
 	"github.com/cofide/cofidectl/internal/pkg/federation"
@@ -174,7 +174,8 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("failed to get clusterStaticEntries map from identities: %w", err)
 	}
 
-	filter := &datasourcepb.ListAPBindingsRequest_Filter{TrustZoneName: &g.trustZone.Name}
+	// Fix ListAPBindings filter: TrustZoneId expects *string, use g.trustZone.Id directly
+	filter := &datasourcepb.ListAPBindingsRequest_Filter{TrustZoneId: g.trustZone.Id}
 	bindings, err := g.source.ListAPBindings(filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list attestation policy bindings: %w", err)
@@ -221,7 +222,8 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		}
 	}
 
-	federations, err := g.source.ListFederationsByTrustZone(g.trustZone.GetId())
+	federationFilter := &datasourcepb.ListFederationsRequest_Filter{TrustZoneId: g.trustZone.Id}
+	federations, err := g.source.ListFederations(federationFilter)
 	if err != nil {
 		return nil, err
 	}

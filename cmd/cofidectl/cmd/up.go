@@ -64,8 +64,8 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				}
 			}
 			deployOpts := provisionplugin.DeployOpts{
-				KubeCfgFile: kubeCfgFile,
-				TrustZones:  trustZones,
+				KubeCfgFile:  kubeCfgFile,
+				TrustZoneIDs: trustZones,
 			}
 			statusCh, err := provision.Deploy(cmd.Context(), ds, &deployOpts)
 			if err != nil {

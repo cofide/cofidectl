@@ -9,7 +9,7 @@ import (
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
@@ -102,7 +102,7 @@ func TestSpireHelm_Deploy_specificTrustZone(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz2-id"}}
+	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZoneIDs: []string{"tz2-id"}}
 	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
@@ -149,7 +149,7 @@ func TestSpireHelm_TearDown_specificTrustZone(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz1-id"}}
+	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZoneIDs: []string{"tz1-id"}}
 	statusCh, err := spireHelm.TearDown(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 

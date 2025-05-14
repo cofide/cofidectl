@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/olekukonko/tablewriter"
@@ -71,7 +72,9 @@ func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 	table.SetBorder(false)
 
 	for _, zone := range zones {
-		clusters, err := ds.ListClusters(zone.GetName())
+		clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
+			TrustZoneId: zone.Id,
+		})
 		if err != nil {
 			return err
 		}

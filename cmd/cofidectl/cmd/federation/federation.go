@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 
+	datasource_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -81,7 +82,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				return err
 			}
 
-			federations, err := ds.ListFederations()
+			federations, err := ds.ListFederations(&datasource_proto.ListFederationsRequest_Filter{})
 			if err != nil {
 				return err
 			}
@@ -275,29 +276,30 @@ func (c *FederationCommand) getDelCommand() *cobra.Command {
 		Long:  federationDelCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.deleteFederation(cmd.Context(), opts.trustZone, opts.remoteTrustZone)
+			return c.deleteFederation(cmd.Context(), opts.trustZoneID, opts.remoteTrustZoneID)
 		},
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZone, "trust-zone", "", "Local trust zone")
-	f.StringVar(&opts.remoteTrustZone, "remote-trust-zone", "", "Remote trust zone to federate with")
+	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "Local trust zone")
+	f.StringVar(&opts.remoteTrustZoneID, "remote-trust-zone-id", "", "Remote trust zone to federate with")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
-	cobra.CheckErr(cmd.MarkFlagRequired("remote-trust-zone"))
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone-id"))
+	cobra.CheckErr(cmd.MarkFlagRequired("remote-trust-zone-id"))
 
 	return cmd
 }
 
-func (c *FederationCommand) deleteFederation(ctx context.Context, trustZone, remoteTrustZone string) error {
+func (c *FederationCommand) deleteFederation(ctx context.Context, trustZoneID, remoteTrustZone string) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err
 	}
 
-	// TODO: get by name/ID
 	// TODO: filter by remote trust zone
-	federations, err := ds.ListFederationsByTrustZone(trustZone)
+	federations, err := ds.ListFederations(&datasource_proto.ListFederationsRequest_Filter{
+		TrustZoneId: &trustZoneID,
+	})
 	if err != nil {
 		return err
 	}

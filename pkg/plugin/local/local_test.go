@@ -8,7 +8,7 @@ import (
 	"slices"
 	"testing"
 
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/google/go-cmp/cmp"
 	spiretypes "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
@@ -594,7 +594,9 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, _ := buildLocalDataSource(t, tt.config)
-			got, err := lds.ListClusters("tz1-id")
+			got, err := lds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+			})
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -1081,7 +1083,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "filter by trust zone tz1",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				TrustZoneName: fixtures.StringPtr("tz1"),
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
 			},
 			// nolint:staticcheck
 			want:    fixtures.TrustZone("tz1").AttestationPolicies,
@@ -1090,7 +1092,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "filter by trust zone tz3",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				TrustZoneName: fixtures.StringPtr("tz3"),
+				TrustZoneId: fixtures.StringPtr("tz3-id"),
 			},
 			want:    []*ap_binding_proto.APBinding{},
 			wantErr: false,
@@ -1098,7 +1100,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "filter by policy ap1",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				PolicyName: fixtures.StringPtr("ap1-id"),
+				PolicyId: fixtures.StringPtr("ap1-id"),
 			},
 			// nolint:staticcheck
 			want:    fixtures.TrustZone("tz1").AttestationPolicies[:1],
@@ -1107,8 +1109,8 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "filter by trust zone and policy",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				TrustZoneName: fixtures.StringPtr("tz1"),
-				PolicyName:    fixtures.StringPtr("ap1-id"),
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("ap1-id"),
 			},
 			// nolint:staticcheck
 			want:    fixtures.TrustZone("tz1").AttestationPolicies[:1],
@@ -1117,7 +1119,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "invalid trust zone",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				TrustZoneName: fixtures.StringPtr("invalid"),
+				TrustZoneId: fixtures.StringPtr("invalid"),
 			},
 			want:          []*ap_binding_proto.APBinding{},
 			wantErr:       true,
@@ -1126,7 +1128,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "invalid policy",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				PolicyName: fixtures.StringPtr("invalid"),
+				PolicyId: fixtures.StringPtr("invalid"),
 			},
 			want:    []*ap_binding_proto.APBinding{},
 			wantErr: false,
@@ -1320,7 +1322,7 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, _ := buildLocalDataSource(t, tt.config)
-			got, err := lds.ListFederations()
+			got, err := lds.ListFederations(&datasourcepb.ListFederationsRequest_Filter{})
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {

@@ -8,6 +8,7 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	datasource_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
@@ -50,7 +51,9 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 	case *attestation_policy_proto.AttestationPolicy_Static:
 		trustZoneID := binding.GetTrustZoneId()
 
-		clusters, err := source.ListClusters(trustZoneID)
+		clusters, err := source.ListClusters(&datasource_proto.ListClustersRequest_Filter{
+			TrustZoneId: &trustZoneID,
+		})
 		if err != nil {
 			return nil, err
 		}

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
@@ -53,8 +53,8 @@ This command will list attestation policy bindings in the Cofide configuration s
 `
 
 type ListOpts struct {
-	trustZone         string
-	attestationPolicy string
+	trustZoneID         string
+	attestationPolicyID string
 }
 
 func (c *APBindingCommand) GetListCommand() *cobra.Command {
@@ -80,19 +80,19 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZone, "trust-zone", "", "list the attestation policies bound to a specific trust zone")
-	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "list the bindings for a specific attestation policy")
+	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "list the attestation policies bound to a specific trust zone")
+	f.StringVar(&opts.attestationPolicyID, "attestation-policy-id", "", "list the bindings for a specific attestation policy")
 
 	return cmd
 }
 
 func (c *APBindingCommand) list(source datasource.DataSource, opts ListOpts) ([]*ap_binding_proto.APBinding, error) {
 	filter := &datasourcepb.ListAPBindingsRequest_Filter{}
-	if opts.trustZone != "" {
-		filter.TrustZoneName = &opts.trustZone
+	if opts.trustZoneID != "" {
+		filter.TrustZoneId = &opts.trustZoneID
 	}
-	if opts.attestationPolicy != "" {
-		filter.PolicyName = &opts.attestationPolicy
+	if opts.attestationPolicyID != "" {
+		filter.PolicyId = &opts.attestationPolicyID
 	}
 	return source.ListAPBindings(filter)
 }
@@ -261,21 +261,18 @@ func (c *APBindingCommand) GetDelCommand() *cobra.Command {
 				return err
 			}
 
-			/*
-				trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
-				if err != nil {
-					return err
-				}
-				policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
-				if err != nil {
-					return err
-				}
-			*/
+			trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
+			if err != nil {
+				return err
+			}
+			policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
+			if err != nil {
+				return err
+			}
 
 			bindings, err := ds.ListAPBindings(&datasourcepb.ListAPBindingsRequest_Filter{
-				// TODO: support filtering by ID.
-				// TrustZoneId:         &trustZone.Id,
-				// AttestationPolicyId: &policy.Id,
+				TrustZoneId: trustZone.Id,
+				PolicyId:    policy.Id,
 			})
 			if err != nil {
 				return err
