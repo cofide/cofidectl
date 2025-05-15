@@ -175,7 +175,7 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 	f.StringVar(&opts.podName, "pod-name", "", "Pod name for the workload")
 	f.StringVar(&opts.namespace, "namespace", "", "Namespace for the workload")
 	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone name for the workload")
-	f.StringVar(&opts.trustZone, "trust-zone-id", "", "Trust zone ID for the workload")
+	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "Trust zone ID for the workload")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("pod-name"))
 	cobra.CheckErr(cmd.MarkFlagRequired("namespace"))
