@@ -401,7 +401,6 @@ func (c *AttestationPolicyCommand) getDelCommand() *cobra.Command {
 		Use:   "del",
 		Short: "Delete an attestation policy",
 		Long:  attestationPolicyDelCmdDesc,
-		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return c.deletePolicy(cmd.Context(), opts)
 		},
