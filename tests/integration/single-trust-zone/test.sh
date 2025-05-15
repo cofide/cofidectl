@@ -156,7 +156,7 @@ function delete() {
   ./cofidectl attestation-policy del --name pod-label
   ./cofidectl attestation-policy del --name static-namespace
   ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone-name $TRUST_ZONE
-  ./cofidectl trust-zone del $TRUST_ZONE
+  ./cofidectl trust-zone del --name $TRUST_ZONE
 }
 
 function main() {

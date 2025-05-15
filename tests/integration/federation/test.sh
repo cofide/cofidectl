@@ -176,8 +176,8 @@ function delete() {
   ./cofidectl cluster del $K8S_CLUSTER_2_NAME --trust-zone-name $TRUST_ZONE_2
   ./cofidectl federation del --trust-zone-name $TRUST_ZONE_1 --remote-trust-zone $TRUST_ZONE_2
   # Don't delete federation for trust zone 2 - check that it gets deleted with the trust zone.
-  ./cofidectl trust-zone del $TRUST_ZONE_1
-  ./cofidectl trust-zone del $TRUST_ZONE_2
+  ./cofidectl trust-zone del --name $TRUST_ZONE_1
+  ./cofidectl trust-zone del --name $TRUST_ZONE_2
   ./cofidectl attestation-policy del --name namespace
   ./cofidectl attestation-policy del --name pod-label
 }
