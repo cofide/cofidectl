@@ -280,6 +280,14 @@ func (s *GRPCServer) GetTrustZone(_ context.Context, req *cofidectl_proto.GetTru
 	return &cofidectl_proto.GetTrustZoneResponse{TrustZone: trustZone}, nil
 }
 
+func (s *GRPCServer) GetTrustZoneByName(_ context.Context, req *cofidectl_proto.GetTrustZoneByNameRequest) (*cofidectl_proto.GetTrustZoneByNameResponse, error) {
+	trustZone, err := s.Impl.GetTrustZoneByName(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.GetTrustZoneByNameResponse{TrustZone: trustZone}, nil
+}
+
 func (s *GRPCServer) ListTrustZones(_ context.Context, req *cofidectl_proto.ListTrustZonesRequest) (*cofidectl_proto.ListTrustZonesResponse, error) {
 	trustZones, err := s.Impl.ListTrustZones()
 	if err != nil {
@@ -320,6 +328,14 @@ func (s *GRPCServer) GetCluster(_ context.Context, req *cofidectl_proto.GetClust
 	return &cofidectl_proto.GetClusterResponse{Cluster: cluster}, nil
 }
 
+func (s *GRPCServer) GetClusterByName(_ context.Context, req *cofidectl_proto.GetClusterByNameRequest) (*cofidectl_proto.GetClusterByNameResponse, error) {
+	cluster, err := s.Impl.GetClusterByName(req.GetName(), req.GetTrustZoneId())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.GetClusterByNameResponse{Cluster: cluster}, nil
+}
+
 func (s *GRPCServer) ListClusters(_ context.Context, req *cofidectl_proto.ListClustersRequest) (*cofidectl_proto.ListClustersResponse, error) {
 	clusters, err := s.Impl.ListClusters(req.GetFilter())
 	if err != nil {
@@ -358,6 +374,14 @@ func (s *GRPCServer) GetAttestationPolicy(_ context.Context, req *cofidectl_prot
 		return nil, err
 	}
 	return &cofidectl_proto.GetAttestationPolicyResponse{Policy: resp}, nil
+}
+
+func (s *GRPCServer) GetAttestationPolicyByName(_ context.Context, req *cofidectl_proto.GetAttestationPolicyByNameRequest) (*cofidectl_proto.GetAttestationPolicyByNameResponse, error) {
+	policy, err := s.Impl.GetAttestationPolicyByName(req.GetName())
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.GetAttestationPolicyByNameResponse{Policy: policy}, nil
 }
 
 func (s *GRPCServer) ListAttestationPolicies(_ context.Context, req *cofidectl_proto.ListAttestationPoliciesRequest) (*cofidectl_proto.ListAttestationPoliciesResponse, error) {
