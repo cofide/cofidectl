@@ -201,10 +201,12 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 		BundleEndpointProfile: &bundleEndpointProfile,
 	}
 
-	newTrustZone, err = ds.AddTrustZone(newTrustZone)
+	receivedTz, err := ds.AddTrustZone(newTrustZone)
 	if err != nil {
-		return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, err)
+		return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.GetName(), err)
 	}
+
+	newTrustZone = receivedTz
 
 	if !opts.noCluster {
 		newCluster := &clusterpb.Cluster{
