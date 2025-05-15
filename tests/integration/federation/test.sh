@@ -174,7 +174,7 @@ function delete() {
   # Don't delete attestation policy bindings for trust zone 2 - check that they get deleted with the trust zone.
   ./cofidectl cluster del $K8S_CLUSTER_1_NAME --trust-zone-name $TRUST_ZONE_1
   ./cofidectl cluster del $K8S_CLUSTER_2_NAME --trust-zone-name $TRUST_ZONE_2
-  ./cofidectl federation del --trust-zone-name $TRUST_ZONE_1 --remote-trust-zone $TRUST_ZONE_2
+  ./cofidectl federation del --trust-zone-name $TRUST_ZONE_1 --remote-trust-zone-name $TRUST_ZONE_2
   # Don't delete federation for trust zone 2 - check that it gets deleted with the trust zone.
   ./cofidectl trust-zone del --name $TRUST_ZONE_1
   ./cofidectl trust-zone del --name $TRUST_ZONE_2
