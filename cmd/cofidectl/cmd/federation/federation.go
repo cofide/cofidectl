@@ -189,10 +189,10 @@ This command will add a new federation to the Cofide configuration state.
 `
 
 type Opts struct {
-	trustZone         string
-	remoteTrustZone   string
-	trustZoneID       string
-	remoteTrustZoneID string
+	trustZoneName       string
+	remoteTrustZoneName string
+	trustZoneID         string
+	remoteTrustZoneID   string
 }
 
 func (c *FederationCommand) GetAddCommand() *cobra.Command {
@@ -209,33 +209,21 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 			}
 
 			trustZoneID := opts.trustZoneID
-			// TODO: get by name.
 			if trustZoneID == "" {
-				tzs, err := ds.ListTrustZones()
+				tz, err := ds.GetTrustZoneByName(opts.trustZoneName)
 				if err != nil {
-					return err
+					return errors.New("failed to get trust zone " + opts.trustZoneName + ": " + err.Error())
 				}
-				for _, tz := range tzs {
-					if tz.Name == opts.trustZone {
-						trustZoneID = tz.GetId()
-						break
-					}
-				}
+				trustZoneID = tz.GetId()
 			}
 
 			remoteTrustZoneID := opts.remoteTrustZoneID
-			// TODO: get by name.
 			if remoteTrustZoneID == "" {
-				tzs, err := ds.ListTrustZones()
+				tz, err := ds.GetTrustZoneByName(opts.remoteTrustZoneName)
 				if err != nil {
-					return err
+					return errors.New("failed to get remote trust zone " + opts.trustZoneName + ": " + err.Error())
 				}
-				for _, tz := range tzs {
-					if tz.Name == opts.remoteTrustZone {
-						remoteTrustZoneID = tz.GetId()
-						break
-					}
-				}
+				remoteTrustZoneID = tz.GetId()
 			}
 
 			newFederation := &federation_proto.Federation{
@@ -248,14 +236,14 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZone, "trust-zone", "", "Local trust zone")
-	f.StringVar(&opts.remoteTrustZone, "remote-trust-zone", "", "Remote trust zone to federate with")
+	f.StringVar(&opts.trustZoneName, "trust-zone-name", "", "Local trust zone")
+	f.StringVar(&opts.remoteTrustZoneName, "remote-trust-zone-name", "", "Remote trust zone to federate with")
 	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "Local trust zone ID")
 	f.StringVar(&opts.remoteTrustZoneID, "remote-trust-zone-id", "", "Remote trust zone ID to federate with")
 
 	// TODO: Remove from/to arguments after a suitable period.
-	f.StringVar(&opts.trustZone, "from", "", "Local trust zone")
-	f.StringVar(&opts.remoteTrustZone, "to", "", "Remote trust zone to federate with")
+	f.StringVar(&opts.trustZoneName, "from", "", "Local trust zone")
+	f.StringVar(&opts.remoteTrustZoneName, "to", "", "Remote trust zone to federate with")
 
 	cmd.MarkFlagsMutuallyExclusive("from", "trust-zone")
 	cmd.MarkFlagsMutuallyExclusive("to", "remote-trust-zone")
@@ -280,24 +268,45 @@ func (c *FederationCommand) getDelCommand() *cobra.Command {
 		Long:  federationDelCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.deleteFederation(cmd.Context(), opts.trustZoneID, opts.remoteTrustZoneID)
+			return c.deleteFederation(cmd.Context(), opts)
 		},
 	}
 
 	f := cmd.Flags()
 	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "Local trust zone")
 	f.StringVar(&opts.remoteTrustZoneID, "remote-trust-zone-id", "", "Remote trust zone to federate with")
+	f.StringVar(&opts.trustZoneName, "trust-zone-name", "", "Local trust zone")
+	f.StringVar(&opts.remoteTrustZoneName, "remote-trust-zone-name", "", "Remote trust zone to federate with")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone-id"))
-	cobra.CheckErr(cmd.MarkFlagRequired("remote-trust-zone-id"))
+	cmd.MarkFlagsMutuallyExclusive("trust-zone-name", "trust-zone-id")
+	cmd.MarkFlagsMutuallyExclusive("remote-trust-zone-name", "remote-trust-zone-id")
+	cmd.MarkFlagsOneRequired("trust-zone-name", "trust-zone-id")
 
 	return cmd
 }
 
-func (c *FederationCommand) deleteFederation(ctx context.Context, trustZoneID, remoteTrustZone string) error {
+func (c *FederationCommand) deleteFederation(ctx context.Context, opts Opts) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err
+	}
+
+	trustZoneID := opts.trustZoneID
+	if opts.trustZoneName != "" {
+		tz, err := ds.GetTrustZoneByName(opts.trustZoneName)
+		if err != nil {
+			return errors.New("failed to get trust zone " + opts.trustZoneName + ": " + err.Error())
+		}
+		trustZoneID = tz.GetId()
+	}
+
+	remoteTrustZoneID := opts.remoteTrustZoneID
+	if opts.remoteTrustZoneName != "" {
+		tz, err := ds.GetTrustZoneByName(opts.remoteTrustZoneName)
+		if err != nil {
+			return errors.New("failed to get remote trust zone " + opts.remoteTrustZoneName + ": " + err.Error())
+		}
+		remoteTrustZoneID = tz.GetId()
 	}
 
 	// TODO: filter by remote trust zone
@@ -311,7 +320,7 @@ func (c *FederationCommand) deleteFederation(ctx context.Context, trustZoneID, r
 		return errors.New("no federation found")
 	}
 	for _, federation := range federations {
-		if federation.GetRemoteTrustZoneId() == remoteTrustZone {
+		if federation.GetRemoteTrustZoneId() == remoteTrustZoneID {
 			return ds.DestroyFederation(federation.GetId())
 		}
 	}
