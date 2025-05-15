@@ -201,7 +201,7 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 		BundleEndpointProfile: &bundleEndpointProfile,
 	}
 
-	_, err = ds.AddTrustZone(newTrustZone)
+	newTrustZone, err = ds.AddTrustZone(newTrustZone)
 	if err != nil {
 		return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, err)
 	}
