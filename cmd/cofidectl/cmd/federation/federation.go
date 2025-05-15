@@ -245,13 +245,13 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.trustZoneName, "from", "", "Local trust zone")
 	f.StringVar(&opts.remoteTrustZoneName, "to", "", "Remote trust zone to federate with")
 
-	cmd.MarkFlagsMutuallyExclusive("from", "trust-zone")
-	cmd.MarkFlagsMutuallyExclusive("to", "remote-trust-zone")
+	cmd.MarkFlagsMutuallyExclusive("from", "trust-zone-id")
+	cmd.MarkFlagsMutuallyExclusive("to", "remote-trust-zone-id")
 
-	cmd.MarkFlagsMutuallyExclusive("trust-zone", "trust-zone-id")
-	cmd.MarkFlagsMutuallyExclusive("remote-trust-zone", "remote-trust-zone-id")
-	cmd.MarkFlagsOneRequired("from", "trust-zone", "trust-zone-id")
-	cmd.MarkFlagsOneRequired("to", "remote-trust-zone", "remote-trust-zone-id")
+	cmd.MarkFlagsMutuallyExclusive("trust-zone-name", "trust-zone-id")
+	cmd.MarkFlagsMutuallyExclusive("remote-trust-zone-id", "remote-trust-zone-id")
+	cmd.MarkFlagsOneRequired("from", "trust-zone-id", "trust-zone-id")
+	cmd.MarkFlagsOneRequired("to", "remote-trust-zone-id", "remote-trust-zone-id")
 
 	return cmd
 }
