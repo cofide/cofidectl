@@ -249,7 +249,7 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("to", "remote-trust-zone-id")
 
 	cmd.MarkFlagsMutuallyExclusive("trust-zone-name", "trust-zone-id")
-	cmd.MarkFlagsMutuallyExclusive("remote-trust-zone-id", "remote-trust-zone-id")
+	cmd.MarkFlagsMutuallyExclusive("remote-trust-zone-id", "remote-trust-zone-name")
 
 	cmd.MarkFlagsOneRequired("from", "trust-zone-id", "trust-zone-name")
 	cmd.MarkFlagsOneRequired("to", "remote-trust-zone-id", "remote-trust-zone-name")
