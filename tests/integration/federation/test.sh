@@ -178,8 +178,8 @@ function delete() {
   # Don't delete federation for trust zone 2 - check that it gets deleted with the trust zone.
   ./cofidectl trust-zone del $TRUST_ZONE_1
   ./cofidectl trust-zone del $TRUST_ZONE_2
-  ./cofidectl attestation-policy del namespace
-  ./cofidectl attestation-policy del pod-label
+  ./cofidectl attestation-policy del --name namespace
+  ./cofidectl attestation-policy del --name pod-label
 }
 
 function main() {

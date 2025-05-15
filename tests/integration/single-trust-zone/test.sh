@@ -152,9 +152,9 @@ function delete() {
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy namespace
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy pod-label
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy static-namespace
-  ./cofidectl attestation-policy del namespace
-  ./cofidectl attestation-policy del pod-label
-  ./cofidectl attestation-policy del static-namespace
+  ./cofidectl attestation-policy del --name namespace
+  ./cofidectl attestation-policy del --name pod-label
+  ./cofidectl attestation-policy del --name static-namespace
   ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE
   ./cofidectl trust-zone del $TRUST_ZONE
 }
