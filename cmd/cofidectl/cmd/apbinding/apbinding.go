@@ -101,10 +101,8 @@ func renderList(bindings []*ap_binding_proto.APBinding) {
 	data := make([][]string, len(bindings))
 	for i, binding := range bindings {
 		data[i] = []string{
-			// nolint:staticcheck
-			binding.TrustZone,
-			// nolint:staticcheck
-			binding.Policy,
+			binding.GetTrustZoneId(),
+			binding.GetPolicyId(),
 			// nolint:staticcheck
 			strings.Join(binding.FederatesWith, ", "),
 		}

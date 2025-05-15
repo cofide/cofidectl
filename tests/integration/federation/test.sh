@@ -82,8 +82,8 @@ function list_resources() {
 }
 
 function show_helm_values() {
-  ./cofidectl trust-zone helm values $TRUST_ZONE_1 --output-file -
-  ./cofidectl trust-zone helm values $TRUST_ZONE_2 --output-file -
+  ./cofidectl trust-zone helm values --trust-zone-name $TRUST_ZONE_1 --output-file -
+  ./cofidectl trust-zone helm values --trust-zone-name $TRUST_ZONE_2 --output-file -
 }
 
 function show_config() {
