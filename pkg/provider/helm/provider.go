@@ -4,7 +4,7 @@
 package helm
 
 import (
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 )
 
 // Provider is an interface that abstracts a Helm-based workload identity provider.

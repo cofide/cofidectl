@@ -6,7 +6,7 @@ package provision
 import (
 	"context"
 
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/validator"
 )
@@ -30,16 +30,15 @@ type Provision interface {
 }
 
 type DeployOpts struct {
-	KubeCfgFile string
-	TrustZones  []string
+	KubeCfgFile  string
+	TrustZoneIDs []string
 }
 
 type TearDownOpts struct {
-	KubeCfgFile string
-	TrustZones  []string
+	KubeCfgFile  string
+	TrustZoneIDs []string
 }
 
 type GetHelmValuesOpts struct {
-	TrustZoneName string
-	ClusterName   string
+	ClusterID string
 }
