@@ -276,7 +276,7 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 func deleteTrustZone(ctx context.Context, ds datasource.DataSource, kubeConfig string, opts *delOpts) error {
 	id := opts.id
 	if opts.name != "" {
-		tz, err := ds.GetTrustZone(opts.name)
+		tz, err := ds.GetTrustZoneByName(opts.name)
 		if err != nil {
 			return err
 		}
