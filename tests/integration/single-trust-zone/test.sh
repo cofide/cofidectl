@@ -55,7 +55,7 @@ EOF
     exit 1
   fi
   TZ_ID=$(echo $TZ_INFO | awk '{print $1}')
-  ./cofidectl trust-zone helm override $TZ_ID --input-file values.yaml
+  ./cofidectl trust-zone helm override --trust-zone-id $TZ_ID --input-file values.yaml
   rm -f values.yaml
 }
 
