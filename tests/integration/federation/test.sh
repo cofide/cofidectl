@@ -56,7 +56,7 @@ function configure_trust_zones() {
  }
 
 function configure_federations() {
-  ./cofidectl federation add --trust-zone $TRUST_ZONE_1 --remote-trust-zone $TRUST_ZONE_2
+  ./cofidectl federation add --from $TRUST_ZONE_1 --to $TRUST_ZONE_2
   ./cofidectl federation add --trust-zone $TRUST_ZONE_2 --remote-trust-zone $TRUST_ZONE_1
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
