@@ -587,7 +587,9 @@ func (lds *LocalDataSource) DestroyFederation(federation *federation_proto.Feder
 
 	// nolint:staticcheck
 	for i, fed := range trustZone.Federations {
-		if proto.FederationsEqual(fed, federation) {
+		// We cannot compare the protos directly here because the ones in the config have IDs.
+		// nolint:staticcheck
+		if fed.From == federation.From && fed.To == federation.To {
 			// nolint:staticcheck
 			trustZone.Federations = append(trustZone.Federations[:i], trustZone.Federations[i+1:]...)
 			if err := lds.updateDataFile(); err != nil {
