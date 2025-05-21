@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 )
@@ -19,7 +20,9 @@ var (
 // GetClusterFromTrustZone returns a cluster from a trust zone.
 // For now there should be exactly one cluster per trust zone.
 func GetClusterFromTrustZone(trustZone *trust_zone_proto.TrustZone, ds datasource.DataSource) (*clusterpb.Cluster, error) {
-	clusters, err := ds.ListClusters(trustZone.Name)
+	clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
+		TrustZoneId: trustZone.Id,
+	})
 	if err != nil {
 		return nil, err
 	}

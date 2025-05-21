@@ -87,19 +87,37 @@ func (c *Config) GetTrustZoneByName(name string) (*trust_zone_proto.TrustZone, b
 	return nil, false
 }
 
-func (c *Config) GetClusterByName(name, trustZone string) (*clusterpb.Cluster, bool) {
+func (c *Config) GetTrustZoneByID(id string) (*trust_zone_proto.TrustZone, bool) {
+	for _, tz := range c.TrustZones {
+		if tz.GetId() == id {
+			return tz, true
+		}
+	}
+	return nil, false
+}
+
+func (c *Config) GetClusterByName(name, trustZoneID string) (*clusterpb.Cluster, bool) {
 	for _, cluster := range c.Clusters {
-		if cluster.GetName() == name && cluster.GetTrustZone() == trustZone {
+		if cluster.GetName() == name && cluster.GetTrustZoneId() == trustZoneID {
 			return cluster, true
 		}
 	}
 	return nil, false
 }
 
-func (c *Config) GetClustersByTrustZone(trustZone string) []*clusterpb.Cluster {
+func (c *Config) GetClusterByID(id string) (*clusterpb.Cluster, bool) {
+	for _, cluster := range c.Clusters {
+		if cluster.GetId() == id {
+			return cluster, true
+		}
+	}
+	return nil, false
+}
+
+func (c *Config) GetClustersByTrustZone(trustZoneID string) []*clusterpb.Cluster {
 	clusters := []*clusterpb.Cluster{}
 	for _, cluster := range c.Clusters {
-		if cluster.GetTrustZone() == trustZone {
+		if cluster.GetTrustZoneId() == trustZoneID {
 			clusters = append(clusters, cluster)
 		}
 	}
@@ -109,6 +127,15 @@ func (c *Config) GetClustersByTrustZone(trustZone string) []*clusterpb.Cluster {
 func (c *Config) GetAttestationPolicyByName(name string) (*attestation_policy_proto.AttestationPolicy, bool) {
 	for _, ap := range c.AttestationPolicies {
 		if ap.Name == name {
+			return ap, true
+		}
+	}
+	return nil, false
+}
+
+func (c *Config) GetAttestationPolicyByID(id string) (*attestation_policy_proto.AttestationPolicy, bool) {
+	for _, ap := range c.AttestationPolicies {
+		if ap.GetId() == id {
 			return ap, true
 		}
 	}

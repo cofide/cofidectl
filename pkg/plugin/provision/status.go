@@ -6,7 +6,7 @@ package provision
 import (
 	"fmt"
 
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 )
 
 // StatusBuilder makes it easier to construct Status messages with context about the trust zone

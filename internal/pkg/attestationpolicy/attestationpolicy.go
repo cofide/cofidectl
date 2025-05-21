@@ -8,6 +8,7 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	datasource_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
@@ -48,10 +49,11 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 			}
 		}
 	case *attestation_policy_proto.AttestationPolicy_Static:
-		// nolint:staticcheck
-		trustZoneName := binding.GetTrustZone()
+		trustZoneID := binding.GetTrustZoneId()
 
-		clusters, err := source.ListClusters(trustZoneName)
+		clusters, err := source.ListClusters(&datasource_proto.ListClustersRequest_Filter{
+			TrustZoneId: &trustZoneID,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -64,7 +66,7 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 			return nil, trustzone.ErrOneClusterPerTrustZone
 		}
 
-		trustZone, err := source.GetTrustZone(trustZoneName)
+		trustZone, err := source.GetTrustZone(trustZoneID)
 		if err != nil {
 			return nil, err
 		}
@@ -86,13 +88,11 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 		return nil, fmt.Errorf("unexpected attestation policy kind: %T", policy)
 	}
 
-	// nolint:staticcheck
-	if len(binding.FederatesWith) > 0 {
+	if len(binding.Federations) > 0 {
 		// Convert from trust zones to trust domains.
 		federatesWith := []string{}
-		// nolint:staticcheck
-		for _, tzName := range binding.FederatesWith {
-			if trustZone, err := source.GetTrustZone(tzName); err != nil {
+		for _, fed := range binding.Federations {
+			if trustZone, err := source.GetTrustZone(fed.GetTrustZoneId()); err != nil {
 				return nil, err
 			} else {
 				federatesWith = append(federatesWith, trustZone.TrustDomain)

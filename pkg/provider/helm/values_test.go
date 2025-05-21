@@ -43,7 +43,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				return cluster
 			}(),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
 				require.True(t, ok)
 				// nolint:staticcheck
 				trustZone.AttestationPolicies = nil
@@ -193,7 +193,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"enabled": true,
 						"identities": Values{
 							"clusterFederatedTrustDomains": Values{
-								"tz2": Values{
+								"tz2-id": Values{
 									"bundleEndpointProfile": Values{
 										"type": "https_web",
 									},
@@ -202,7 +202,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 								},
 							},
 							"clusterSPIFFEIDs": Values{
-								"ap1": Values{
+								"ap1-id": Values{
 									"federatesWith": []string{
 										"td2",
 									},
@@ -302,7 +302,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"enabled": true,
 						"identities": Values{
 							"clusterFederatedTrustDomains": Values{
-								"tz1": Values{
+								"tz1-id": Values{
 									"bundleEndpointProfile": Values{
 										"endpointSPIFFEID": "spiffe://td1/spire/server",
 										"type":             "https_spiffe",
@@ -313,7 +313,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 								},
 							},
 							"clusterSPIFFEIDs": Values{
-								"ap2": Values{
+								"ap2-id": Values{
 									"federatesWith": []string{
 										"td1",
 									},
@@ -502,7 +502,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 								},
 							},
 							"clusterStaticEntries": Values{
-								"ap4": Values{
+								"ap4-id": Values{
 									"parentID":  "spiffe://td6/cluster/local6/spire/agents",
 									"spiffeID":  "spiffe://example.com/foo",
 									"selectors": []string{"k8s:ns:foo"},
@@ -564,7 +564,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				return cluster
 			}(),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
 				require.True(t, ok)
 				// nolint:staticcheck
 				trustZone.AttestationPolicies = nil
@@ -730,7 +730,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 				trustZone, ok := cfg.GetTrustZoneByName("tz1")
 				require.True(t, ok)
 				// nolint:staticcheck
-				trustZone.AttestationPolicies[0].Policy = "invalid-ap"
+				trustZone.AttestationPolicies[0].PolicyId = fixtures.StringPtr("invalid-ap")
 			},
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
@@ -739,10 +739,10 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			trustZone: fixtures.TrustZone("tz1"),
 			cluster:   fixtures.Cluster("local1"),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
 				require.True(t, ok)
 				// nolint:staticcheck
-				trustZone.Federations[0].To = "invalid-tz"
+				trustZone.Federations[0].RemoteTrustZoneId = fixtures.StringPtr("invalid-tz")
 			},
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
