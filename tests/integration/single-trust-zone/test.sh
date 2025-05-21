@@ -49,7 +49,13 @@ tornjak-frontend:
 upstream-spire-agent:
   upstream: false
 EOF
-  ./cofidectl trust-zone helm override $TRUST_ZONE --input-file values.yaml
+  TZ_INFO=$(./cofidectl trust-zone list | grep $TRUST_ZONE)
+  if [[ -z $TZ_INFO ]]; then
+    echo "Error: Trust zone $TRUST_ZONE not found"
+    exit 1
+  fi
+  TZ_ID=$(echo $TZ_INFO | awk '{print $1}')
+  ./cofidectl trust-zone helm override --trust-zone-id $TZ_ID --input-file values.yaml
   rm -f values.yaml
 }
 
@@ -77,7 +83,8 @@ function show_config() {
 function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
-  ./cofidectl trust-zone status $TRUST_ZONE
+  TZ_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE | awk '{print $1}')
+  ./cofidectl trust-zone status $TZ_ID
 }
 
 function run_tests() {
@@ -122,7 +129,8 @@ function show_workload_status() {
 
 function check_overridden_values() {
   echo "Generated Helm values:"
-  ./cofidectl trust-zone helm values $TRUST_ZONE --output-file -
+  TZ_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE | awk '{print $1}')
+  ./cofidectl trust-zone helm values --trust-zone-id $TZ_ID --output-file -
 
   check_overridden_value '."tornjak-frontend".enabled' "false"
   check_overridden_value '."upstream-spire-agent".upstream' "false"
@@ -144,11 +152,11 @@ function delete() {
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy namespace
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy pod-label
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy static-namespace
-  ./cofidectl attestation-policy del namespace
-  ./cofidectl attestation-policy del pod-label
-  ./cofidectl attestation-policy del static-namespace
-  ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE
-  ./cofidectl trust-zone del $TRUST_ZONE
+  ./cofidectl attestation-policy del --name namespace
+  ./cofidectl attestation-policy del --name pod-label
+  ./cofidectl attestation-policy del --name static-namespace
+  ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone-name $TRUST_ZONE
+  ./cofidectl trust-zone del --name $TRUST_ZONE
 }
 
 function main() {
