@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	k8sPsatSelectorType     = "k8s_psat"
+	k8sPSATSelectorType     = "k8s_psat"
 	agentPodNameSelector    = "agent_pod_name:"
 	k8sSelectorType         = "k8s"
 	k8sPodUIDSelectorPrefix = "pod-uid:"
@@ -94,7 +94,7 @@ func parseAgentList(output []byte) ([]Agent, error) {
 
 func getPodNameSelector(agent agentJson) string {
 	for _, selector := range agent.Selectors {
-		if selector.Type == k8sPsatSelectorType && strings.HasPrefix(selector.Value, agentPodNameSelector) {
+		if selector.Type == k8sPSATSelectorType && strings.HasPrefix(selector.Value, agentPodNameSelector) {
 			return strings.TrimPrefix(selector.Value, agentPodNameSelector)
 		}
 	}
