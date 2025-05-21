@@ -241,6 +241,11 @@ func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status
 	return nil
 }
 
+// CheckIfReachable returns no error if a Kubernetes cluster is reachable.
+func (h *HelmSPIREProvider) CheckIfReachable() error {
+	return h.cfg.KubeClient.IsReachable()
+}
+
 // CheckIfAlreadyInstalled returns true if the SPIRE chart has previously been installed.
 func (h *HelmSPIREProvider) CheckIfAlreadyInstalled() (bool, error) {
 	return checkIfAlreadyInstalled(h.cfg, SPIREChartName)
@@ -412,6 +417,15 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 		return false, err
 	}
 	return len(ledger) > 0, nil
+}
+
+// IsClusterDeployed returns whether a Kubernetes cluster is reachable.
+func IsClusterReachable(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) error {
+	prov, err := NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
+	if err != nil {
+		return err
+	}
+	return prov.CheckIfReachable()
 }
 
 // IsClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
