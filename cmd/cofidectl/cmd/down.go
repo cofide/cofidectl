@@ -24,8 +24,9 @@ This command uninstalls a Cofide configuration
 `
 
 type DownOpts struct {
-	quiet      bool
-	trustZones []string
+	quiet        bool
+	trustZones   []string
+	trustzoneIDs []string
 }
 
 func (d *DownCommand) DownCmd() *cobra.Command {
@@ -46,9 +47,25 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return err
 			}
 
+			trustZones := opts.trustzoneIDs
+			if len(opts.trustZones) > 0 {
+				tzs, err := ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
+				for _, tz := range tzs {
+					for _, tzName := range opts.trustZones {
+						if tz.Name == tzName {
+							trustZones = append(trustZones, tz.GetId())
+							break
+						}
+					}
+				}
+			}
+
 			tearDownOpts := provisionplugin.TearDownOpts{
-				KubeCfgFile: kubeCfgFile,
-				TrustZones:  opts.trustZones,
+				KubeCfgFile:  kubeCfgFile,
+				TrustZoneIDs: trustZones,
 			}
 			statusCh, err := provision.TearDown(cmd.Context(), ds, &tearDownOpts)
 			if err != nil {
@@ -61,6 +78,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from uninstallation")
 	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to uninstall, or all if none is specified")
+	f.StringSliceVar(&opts.trustzoneIDs, "trustzone-id", []string{}, "Trust zone IDs to uninstall, or all if none is specified")
 
 	return cmd
 }
