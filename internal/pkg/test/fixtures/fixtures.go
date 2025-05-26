@@ -22,6 +22,7 @@ import (
 
 var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust_zone_proto.TrustZone{
 	"tz1": {
+		Id:          StringPtr("tz1-id"),
 		Name:        "tz1",
 		TrustDomain: "td1",
 		Bundle: &spiretypes.Bundle{
@@ -46,35 +47,48 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		BundleEndpointUrl: StringPtr("127.0.0.1"),
 		Federations: []*federation_proto.Federation{
 			{
-				From: "tz1",
-				To:   "tz2",
+				Id:                StringPtr("fed1-id"),
+				TrustZoneId:       StringPtr("tz1-id"),
+				RemoteTrustZoneId: StringPtr("tz2-id"),
 			},
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
-				TrustZone:     "tz1",
-				Policy:        "ap1",
-				FederatesWith: []string{"tz2"},
+				Id:          StringPtr("apb1-id"),
+				TrustZoneId: StringPtr("tz1-id"),
+				PolicyId:    StringPtr("ap1-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{
+					{
+						TrustZoneId: StringPtr("tz2-id"),
+					},
+				},
 			},
 		},
 		JwtIssuer:             StringPtr("https://tz1.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
 	},
 	"tz2": {
+		Id:                StringPtr("tz2-id"),
 		Name:              "tz2",
 		TrustDomain:       "td2",
 		BundleEndpointUrl: StringPtr("127.0.0.2"),
 		Federations: []*federation_proto.Federation{
 			{
-				From: "tz2",
-				To:   "tz1",
+				Id:                StringPtr("fed2-id"),
+				TrustZoneId:       StringPtr("tz2-id"),
+				RemoteTrustZoneId: StringPtr("tz1-id"),
 			},
 		},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
-				TrustZone:     "tz2",
-				Policy:        "ap2",
-				FederatesWith: []string{"tz1"},
+				Id:          StringPtr("apb2-id"),
+				TrustZoneId: StringPtr("tz2-id"),
+				PolicyId:    StringPtr("ap2-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{
+					{
+						TrustZoneId: StringPtr("tz1-id"),
+					},
+				},
 			},
 		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
@@ -82,6 +96,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 	},
 	// tz3 has no federations or bound attestation policies.
 	"tz3": {
+		Id:                    StringPtr("tz3-id"),
 		Name:                  "tz3",
 		TrustDomain:           "td3",
 		BundleEndpointUrl:     StringPtr("127.0.0.3"),
@@ -91,6 +106,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 	},
 	// tz4 has no federations or bound attestation policies and uses the istio profile.
 	"tz4": {
+		Id:                  StringPtr("tz4-id"),
 		Name:                "tz4",
 		TrustDomain:         "td4",
 		BundleEndpointUrl:   StringPtr("127.0.0.4"),
@@ -99,6 +115,7 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 	},
 	// tz5 has no federations or bound attestation policies and has an external SPIRE server.
 	"tz5": {
+		Id:                  StringPtr("tz5-id"),
 		Name:                "tz5",
 		TrustDomain:         "td5",
 		BundleEndpointUrl:   StringPtr("127.0.0.5"),
@@ -106,15 +123,17 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
 	},
 	"tz6": {
+		Id:                StringPtr("tz6-id"),
 		Name:              "tz6",
 		TrustDomain:       "td6",
 		BundleEndpointUrl: StringPtr("127.0.0.5"),
 		Federations:       []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{
 			{
-				TrustZone:     "tz6",
-				Policy:        "ap4",
-				FederatesWith: []string{},
+				Id:          StringPtr("apb3-id"),
+				TrustZoneId: StringPtr("tz6-id"),
+				PolicyId:    StringPtr("ap4-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{},
 			},
 		},
 		JwtIssuer:             StringPtr("https://tz6.example.com"),
@@ -124,8 +143,9 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 
 var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluster{
 	"local1": {
+		Id:                StringPtr("local1-id"),
 		Name:              StringPtr("local1"),
-		TrustZone:         StringPtr("tz1"),
+		TrustZoneId:       StringPtr("tz1-id"),
 		KubernetesContext: StringPtr("kind-local1"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
@@ -158,8 +178,9 @@ var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluste
 		ExternalServer: BoolPtr(false),
 	},
 	"local2": {
+		Id:                StringPtr("local2-id"),
 		Name:              StringPtr("local2"),
-		TrustZone:         StringPtr("tz2"),
+		TrustZoneId:       StringPtr("tz2-id"),
 		KubernetesContext: StringPtr("kind-local2"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
@@ -168,8 +189,9 @@ var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluste
 		ExternalServer: BoolPtr(false),
 	},
 	"local3": {
+		Id:                StringPtr("local3-id"),
 		Name:              StringPtr("local3"),
-		TrustZone:         StringPtr("tz3"),
+		TrustZoneId:       StringPtr("tz3-id"),
 		KubernetesContext: StringPtr("kind-local3"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
@@ -177,8 +199,9 @@ var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluste
 		Profile: StringPtr("kubernetes"),
 	},
 	"local4": {
+		Id:                StringPtr("local4-id"),
 		Name:              StringPtr("local4"),
-		TrustZone:         StringPtr("tz4"),
+		TrustZoneId:       StringPtr("tz4-id"),
 		KubernetesContext: StringPtr("kind-local4"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
@@ -186,8 +209,9 @@ var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluste
 		Profile: StringPtr("istio"),
 	},
 	"local5": {
+		Id:                StringPtr("local5-id"),
 		Name:              StringPtr("local5"),
-		TrustZone:         StringPtr("tz5"),
+		TrustZoneId:       StringPtr("tz5-id"),
 		KubernetesContext: StringPtr("kind-local5"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
@@ -196,8 +220,9 @@ var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluste
 		ExternalServer: BoolPtr(true),
 	},
 	"local6": {
+		Id:                StringPtr("local6-id"),
 		Name:              StringPtr("local6"),
-		TrustZone:         StringPtr("tz6"),
+		TrustZoneId:       StringPtr("tz6-id"),
 		KubernetesContext: StringPtr("kind-local6"),
 		TrustProvider: &trust_provider_proto.TrustProvider{
 			Kind: StringPtr("kubernetes"),
@@ -209,6 +234,7 @@ var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluste
 
 var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPolicy = map[string]*attestation_policy_proto.AttestationPolicy{
 	"ap1": {
+		Id:   StringPtr("ap1-id"),
 		Name: "ap1",
 		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
 			Kubernetes: &attestation_policy_proto.APKubernetes{
@@ -219,6 +245,7 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 		},
 	},
 	"ap2": {
+		Id:   StringPtr("ap2-id"),
 		Name: "ap2",
 		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
 			Kubernetes: &attestation_policy_proto.APKubernetes{
@@ -235,6 +262,7 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 		},
 	},
 	"ap3": {
+		Id:   StringPtr("ap3-id"),
 		Name: "ap3",
 		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
 			Kubernetes: &attestation_policy_proto.APKubernetes{
@@ -268,6 +296,7 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 		},
 	},
 	"ap4": {
+		Id:   StringPtr("ap4-id"),
 		Name: "ap4",
 		Policy: &attestation_policy_proto.AttestationPolicy_Static{
 			Static: &attestation_policy_proto.APStatic{

@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
@@ -58,9 +58,9 @@ func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasourc
 	server, brokerID := c.startDataSourceServer(source)
 
 	req := provisionpb.DeployRequest{
-		DataSource:     &brokerID,
-		KubeCfgFile:    &opts.KubeCfgFile,
-		TrustZoneNames: opts.TrustZones,
+		DataSource:   &brokerID,
+		KubeCfgFile:  &opts.KubeCfgFile,
+		TrustZoneIds: opts.TrustZoneIDs,
 	}
 	stream, err := c.client.Deploy(ctx, &req)
 	if err != nil {
@@ -92,9 +92,9 @@ func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasou
 	server, brokerID := c.startDataSourceServer(source)
 
 	req := provisionpb.TearDownRequest{
-		DataSource:     &brokerID,
-		KubeCfgFile:    &opts.KubeCfgFile,
-		TrustZoneNames: opts.TrustZones,
+		DataSource:   &brokerID,
+		KubeCfgFile:  &opts.KubeCfgFile,
+		TrustZoneIds: opts.TrustZoneIDs,
 	}
 	stream, err := c.client.TearDown(ctx, &req)
 	if err != nil {
@@ -127,9 +127,8 @@ func (c *ProvisionPluginClientGRPC) GetHelmValues(ctx context.Context, source da
 	defer server.Stop()
 
 	req := provisionpb.GetHelmValuesRequest{
-		DataSource:    &brokerID,
-		TrustZoneName: &opts.TrustZoneName,
-		ClusterName:   &opts.ClusterName,
+		DataSource: &brokerID,
+		ClusterId:  &opts.ClusterID,
 	}
 	resp, err := c.client.GetHelmValues(ctx, &req)
 	if err != nil {
@@ -208,8 +207,8 @@ func (s *GRPCServer) Deploy(req *provisionpb.DeployRequest, stream grpc.ServerSt
 	defer conn.Close()
 
 	opts := DeployOpts{
-		KubeCfgFile: req.GetKubeCfgFile(),
-		TrustZones:  req.GetTrustZoneNames(),
+		KubeCfgFile:  req.GetKubeCfgFile(),
+		TrustZoneIDs: req.GetTrustZoneIds(),
 	}
 	statusCh, err := s.impl.Deploy(stream.Context(), client, &opts)
 	if err != nil {
@@ -234,8 +233,8 @@ func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.Serv
 	defer conn.Close()
 
 	opts := TearDownOpts{
-		KubeCfgFile: req.GetKubeCfgFile(),
-		TrustZones:  req.GetTrustZoneNames(),
+		KubeCfgFile:  req.GetKubeCfgFile(),
+		TrustZoneIDs: req.GetTrustZoneIds(),
 	}
 	statusCh, err := s.impl.TearDown(stream.Context(), client, &opts)
 	if err != nil {
@@ -260,8 +259,7 @@ func (s *GRPCServer) GetHelmValues(ctx context.Context, req *provisionpb.GetHelm
 	defer conn.Close()
 
 	opts := GetHelmValuesOpts{
-		TrustZoneName: req.GetTrustZoneName(),
-		ClusterName:   req.GetClusterName(),
+		ClusterID: req.GetClusterId(),
 	}
 	values, err := s.impl.GetHelmValues(ctx, client, &opts)
 	if err != nil {

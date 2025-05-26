@@ -17,9 +17,9 @@ Let's add an additional trust-zone (`cofide-b`) in a new `kind` cluster (in this
 We'll reuse the existing `namespace-demo` attestation policy for the `cofide-b` trust zone. We also need to rebind it to `cofide-a`, this time enabling federation with `cofide-b`.
 
 ```sh
-./cofidectl attestation-policy-binding del --attestation-policy namespace-demo --trust-zone cofide-a
-./cofidectl attestation-policy-binding add --attestation-policy namespace-demo --trust-zone cofide-a --federates-with cofide-b
-./cofidectl attestation-policy-binding add --attestation-policy namespace-demo --trust-zone cofide-b --federates-with cofide-a
+./cofidectl attestation-policy-binding del --attestation-policy namespace-demo --trust-zone-name cofide-a
+./cofidectl attestation-policy-binding add --attestation-policy namespace-demo --trust-zone-name cofide-a --federates-with cofide-b
+./cofidectl attestation-policy-binding add --attestation-policy namespace-demo --trust-zone-name cofide-b --federates-with cofide-a
 ```
 
 As before, we apply the configuration using the `up` command:

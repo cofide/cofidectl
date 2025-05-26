@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/olekukonko/tablewriter"
@@ -71,7 +72,9 @@ func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 	table.SetBorder(false)
 
 	for _, zone := range zones {
-		clusters, err := ds.ListClusters(zone.GetName())
+		clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
+			TrustZoneId: zone.Id,
+		})
 		if err != nil {
 			return err
 		}
@@ -96,8 +99,9 @@ This command will delete a cluster from the Cofide configuration state.
 `
 
 type delOpts struct {
-	trustZone string
-	force     bool
+	trustZoneName string
+	trustZoneID   string
+	force         bool
 }
 
 func (c *ClusterCommand) getDelCommand() *cobra.Command {
@@ -112,36 +116,47 @@ func (c *ClusterCommand) getDelCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return c.deleteCluster(cmd.Context(), args[0], opts.trustZone, kubeConfig, opts.force)
+			return c.deleteCluster(cmd.Context(), args[0], kubeConfig, opts)
 		},
 	}
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZone, "trust-zone", "", "Name of the cluster's trust zone")
+	f.StringVar(&opts.trustZoneName, "trust-zone-name", "", "Name of the cluster's trust zone")
+	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "ID of the cluster's trust zone")
 	f.BoolVar(&opts.force, "force", false, "Skip pre-delete checks")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+	cmd.MarkFlagsOneRequired("trust-zone-name", "trust-zone-id")
 	return cmd
 }
 
-func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName, kubeConfig string, force bool) error {
+func (c *ClusterCommand) deleteCluster(ctx context.Context, name, kubeConfig string, opts delOpts) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err
 	}
 
-	cluster, err := ds.GetCluster(name, trustZoneName)
+	tzId := opts.trustZoneID
+	if opts.trustZoneName != "" {
+		tz, err := ds.GetTrustZoneByName(opts.trustZoneName)
+		if err != nil {
+			return fmt.Errorf("failed to get trust zone %s: %v", opts.trustZoneName, err)
+		}
+		tzId = tz.GetId()
+	}
+
+	// TODO: Support delete by ID?
+	cluster, err := ds.GetClusterByName(name, tzId)
 	if err != nil {
 		return err
 	}
 
-	if !force {
+	if !opts.force {
 		// Fail if the cluster is reachable and SPIRE is deployed.
 		if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 			return err
 		} else if deployed {
-			return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", name, trustZoneName)
+			return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", name, tzId)
 		}
 	}
 
-	return ds.DestroyCluster(name, trustZoneName)
+	return ds.DestroyCluster(cluster.GetId())
 }
