@@ -18,7 +18,7 @@ require (
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.18.1
+	helm.sh/helm/v3 v3.18.2
 )
 
 require (
