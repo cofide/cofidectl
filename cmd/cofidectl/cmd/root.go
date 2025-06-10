@@ -23,14 +23,18 @@ import (
 )
 
 type RootCommand struct {
-	cmdCtx *cmdcontext.CommandContext
+	name    string
+	version string
+	cmdCtx  *cmdcontext.CommandContext
 }
 
 var kubeCfgFile string
 
-func NewRootCommand(cmdCtx *cmdcontext.CommandContext) *RootCommand {
+func NewRootCommand(name string, version string, cmdCtx *cmdcontext.CommandContext) *RootCommand {
 	return &RootCommand{
-		cmdCtx: cmdCtx,
+		name:    name,
+		version: version,
+		cmdCtx:  cmdCtx,
 	}
 }
 
@@ -66,6 +70,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	pf.StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 	pf.StringVar(&logLevel, "log-level", "ERROR", "log level")
 
+	versionCmd := NewVersionCommand(r.name, r.version, r.cmdCtx)
 	initCmd := NewInitCommand(r.cmdCtx)
 	upCmd := NewUpCommand(r.cmdCtx)
 	downCmd := NewDownCommand(r.cmdCtx)
@@ -77,6 +82,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	clusterCmd := cluster.NewClusterCommand(r.cmdCtx)
 
 	cmd.AddCommand(
+		versionCmd.VersionCmd(),
 		initCmd.GetRootCommand(),
 		tzCmd.GetRootCommand(),
 		apCmd.GetRootCommand(),

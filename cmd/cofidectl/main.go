@@ -20,6 +20,11 @@ const (
 	shutdownTimeoutSec    = 10
 )
 
+var (
+	name    = "cofidectl"
+	version = "unreleased"
+)
+
 func main() {
 	log.SetFlags(0)
 	if err := run(); err != nil {
@@ -34,7 +39,7 @@ func run() error {
 	defer cmdCtx.Shutdown()
 	go cmdCtx.HandleSignals()
 
-	rootCmd, err := cmd.NewRootCommand(cmdCtx).GetRootCommand()
+	rootCmd, err := cmd.NewRootCommand(name, version, cmdCtx).GetRootCommand()
 	if err != nil {
 		log.Println(err)
 		return err
