@@ -177,25 +177,13 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if tz == nil {
-				return errors.New("trust zone not found")
-			}
 			trustZoneID := tz.GetId()
 
-			policies, err := ds.ListAttestationPolicies()
+			policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
 			if err != nil {
 				return err
 			}
-			var policyID string
-			for _, policy := range policies {
-				if policy.Name == opts.attestationPolicy {
-					policyID = policy.GetId()
-					break
-				}
-			}
-			if policyID == "" {
-				return errors.New("attestation policy not found")
-			}
+			policyID := policy.GetId()
 
 			federations := []*ap_binding_proto.APBindingFederation{}
 			if len(opts.federatesWith) != 0 {
