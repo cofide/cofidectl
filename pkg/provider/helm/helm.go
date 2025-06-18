@@ -52,10 +52,11 @@ type HelmSPIREProvider struct {
 	SPIRECRDsVersion string
 	spireValues      map[string]any
 	spireCRDsValues  map[string]any
+	trustZoneName    string
 	cluster          *clusterpb.Cluster
 }
 
-func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, kubeConfig string) (*HelmSPIREProvider, error) {
+func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, kubeConfig string) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
 	settings.SetNamespace(SPIREManagementNamespace)
@@ -71,6 +72,7 @@ func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spire
 		SPIRECRDsVersion: SPIRECRDsChartVersion,
 		spireValues:      spireValues,
 		spireCRDsValues:  spireCRDsValues,
+		trustZoneName:    trustZoneName,
 		cluster:          cluster,
 	}
 
@@ -170,7 +172,7 @@ func lockPath(filePath string) string {
 // Execute installs the SPIRE Helm stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.cluster.GetTrustZoneId(), h.cluster.GetName())
+	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
 	statusCh <- sb.Ok("Installing", "Installing SPIRE CRDs")
 	_, err := h.installSPIRECRDs()
 	if err != nil {
@@ -192,7 +194,7 @@ func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) error {
 // ExecutePostInstallUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.cluster.GetTrustZoneId(), h.cluster.GetName())
+	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
 	statusCh <- sb.Ok("Configuring", "Applying post-installation configuration")
 	_, err := h.upgradeSPIRE()
 	if err != nil {
@@ -207,7 +209,7 @@ func (h *HelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provision
 // ExecuteUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.cluster.GetTrustZoneId(), h.cluster.GetName())
+	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
 	statusCh <- sb.Ok("Upgrading", "Upgrading SPIRE chart")
 	_, err := h.upgradeSPIRE()
 	if err != nil {
@@ -222,7 +224,7 @@ func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) 
 // ExecuteUninstall uninstalls the SPIRE stack from the selected Kubernetes context.
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.cluster.GetTrustZoneId(), h.cluster.GetName())
+	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
 	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE CRDs")
 	_, err := h.uninstallSPIRECRDs()
 	if err != nil {
@@ -421,7 +423,7 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 
 // IsClusterDeployed returns whether a Kubernetes cluster is reachable.
 func IsClusterReachable(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) error {
-	prov, err := NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
+	prov, err := NewHelmSPIREProvider(ctx, "", cluster, nil, nil, kubeConfig)
 	if err != nil {
 		return err
 	}
@@ -430,7 +432,7 @@ func IsClusterReachable(ctx context.Context, cluster *clusterpb.Cluster, kubeCon
 
 // IsClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
 func IsClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) (bool, error) {
-	prov, err := NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
+	prov, err := NewHelmSPIREProvider(ctx, "", cluster, nil, nil, kubeConfig)
 	if err != nil {
 		return false, err
 	}

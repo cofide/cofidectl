@@ -88,10 +88,10 @@ func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {
 		provision.StatusOk("Installing", "Installing SPIRE CRDs for local5 in tz5"),
 		provision.StatusOk("Installing", "Installing SPIRE chart for local5 in tz5"),
 		provision.StatusDone("Installed", "Installation completed for local5 in tz5"),
-		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5-id"),
+		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
 		provision.StatusOk("Configuring", "Applying post-installation configuration for local5 in tz5"),
 		provision.StatusDone("Configured", "Post-installation configuration completed for local5 in tz5"),
-		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5-id"),
+		provision.StatusDone("Ready", "Skipped waiting for external SPIRE server pod and service for local5 in tz5"),
 	}
 	assert.EqualExportedValues(t, want, statuses)
 }

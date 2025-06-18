@@ -19,7 +19,7 @@ func TestHelmSPIREProvider(t *testing.T) {
 	spireCRDsValues := map[string]any{}
 	kubeConfig := "fake-kube-config"
 
-	p, err := NewHelmSPIREProvider(context.Background(), cluster, spireValues, spireCRDsValues, kubeConfig)
+	p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, spireValues, spireCRDsValues, kubeConfig)
 	assert.Nil(t, err)
 	assert.Equal(t, p.SPIREVersion, "0.24.5")
 	assert.Equal(t, p.SPIRECRDsVersion, "0.5.0")

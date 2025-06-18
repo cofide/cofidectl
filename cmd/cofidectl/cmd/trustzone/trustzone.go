@@ -366,7 +366,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 		return err
 	}
 
-	prov, err := helmprovider.NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
+	prov, err := helmprovider.NewHelmSPIREProvider(ctx, trustZone.GetName(), cluster, nil, nil, kubeConfig)
 	if err != nil {
 		return err
 	}

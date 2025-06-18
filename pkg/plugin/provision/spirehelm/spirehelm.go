@@ -209,7 +209,7 @@ func (h *SpireHelm) WatchAndConfigure(ctx context.Context, ds datasource.DataSou
 		cluster := tzc.Cluster
 
 		if cluster.GetExternalServer() {
-			sb := provision.NewStatusBuilder(trustZone.GetId(), cluster.GetName())
+			sb := provision.NewStatusBuilder(trustZone.GetName(), cluster.GetName())
 			statusCh <- sb.Done("Ready", "Skipped waiting for external SPIRE server pod and service")
 			continue
 		}
