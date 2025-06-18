@@ -65,6 +65,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				if trustZoneID == "" {
 					return fmt.Errorf("trust zone '%s' not found", tzName)
 				}
+				trustZoneIDs = append(trustZoneIDs, trustZoneID)
 			}
 
 			tearDownOpts := provisionplugin.TearDownOpts{

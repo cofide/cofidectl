@@ -341,7 +341,7 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 }
 
 func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string) error {
-	trustZone, err := source.GetTrustZone(tzName)
+	trustZone, err := source.GetTrustZoneByName(tzName)
 	if err != nil {
 		return err
 	}

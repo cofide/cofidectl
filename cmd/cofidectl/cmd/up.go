@@ -66,6 +66,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				if trustZoneID == "" {
 					return fmt.Errorf("trust zone '%s' not found", tzName)
 				}
+				trustZoneIDs = append(trustZoneIDs, trustZoneID)
 			}
 
 			deployOpts := provisionplugin.DeployOpts{
