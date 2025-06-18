@@ -4,6 +4,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	provisionplugin "github.com/cofide/cofidectl/pkg/plugin/provision"
@@ -24,9 +26,8 @@ This command uninstalls a Cofide configuration
 `
 
 type DownOpts struct {
-	quiet          bool
-	trustZoneNames []string
-	trustzoneIDs   []string
+	quiet      bool
+	trustZones []string
 }
 
 func (d *DownCommand) DownCmd() *cobra.Command {
@@ -47,25 +48,28 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return err
 			}
 
-			trustZones := opts.trustzoneIDs
-			if len(opts.trustZoneNames) > 0 {
-				tzs, err := ds.ListTrustZones()
-				if err != nil {
-					return err
-				}
+			tzs, err := ds.ListTrustZones()
+			if err != nil {
+				return err
+			}
+
+			trustZoneIDs := []string{}
+			for _, tzName := range opts.trustZones {
+				var trustZoneID string
 				for _, tz := range tzs {
-					for _, tzName := range opts.trustZoneNames {
-						if tz.Name == tzName {
-							trustZones = append(trustZones, tz.GetId())
-							break
-						}
+					if tz.Name == tzName {
+						trustZoneID = tz.GetId()
+						break
 					}
+				}
+				if trustZoneID == "" {
+					return fmt.Errorf("trust zone '%s' not found", tzName)
 				}
 			}
 
 			tearDownOpts := provisionplugin.TearDownOpts{
 				KubeCfgFile:  kubeCfgFile,
-				TrustZoneIDs: trustZones,
+				TrustZoneIDs: trustZoneIDs,
 			}
 			statusCh, err := provision.TearDown(cmd.Context(), ds, &tearDownOpts)
 			if err != nil {
@@ -77,10 +81,7 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from uninstallation")
-	f.StringSliceVar(&opts.trustZoneNames, "trust-zone-name", []string{}, "Trust zones to uninstall, or all if none is specified")
-	f.StringSliceVar(&opts.trustzoneIDs, "trustzone-id", []string{}, "Trust zone IDs to uninstall, or all if none is specified")
-
-	cmd.MarkFlagsMutuallyExclusive("trust-zone-name", "trustzone-id")
+	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to uninstall, or all if none is specified")
 
 	return cmd
 }

@@ -57,17 +57,17 @@ function configure_trust_zones() {
 
 function configure_federations() {
   ./cofidectl federation add --from $TRUST_ZONE_1 --to $TRUST_ZONE_2
-  ./cofidectl federation add --trust-zone-name $TRUST_ZONE_2 --remote-trust-zone-name $TRUST_ZONE_1
+  ./cofidectl federation add --trust-zone $TRUST_ZONE_2 --remote-trust-zone $TRUST_ZONE_1
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
-  ./cofidectl attestation-policy-binding add --trust-zone-name $TRUST_ZONE_1 --attestation-policy namespace --federates-with $TRUST_ZONE_2
-  ./cofidectl attestation-policy-binding add --trust-zone-name $TRUST_ZONE_1 --attestation-policy pod-label --federates-with $TRUST_ZONE_2
-  ./cofidectl attestation-policy-binding add --trust-zone-name $TRUST_ZONE_2 --attestation-policy namespace --federates-with $TRUST_ZONE_1
-  ./cofidectl attestation-policy-binding add --trust-zone-name $TRUST_ZONE_2 --attestation-policy pod-label --federates-with $TRUST_ZONE_1
+  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE_1 --attestation-policy namespace --federates-with $TRUST_ZONE_2
+  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE_1 --attestation-policy pod-label --federates-with $TRUST_ZONE_2
+  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE_2 --attestation-policy namespace --federates-with $TRUST_ZONE_1
+  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE_2 --attestation-policy pod-label --federates-with $TRUST_ZONE_1
 }
 
 function up() {
-  ./cofidectl up --trust-zone-name $TRUST_ZONE_1 --trust-zone-name $TRUST_ZONE_2
+  ./cofidectl up --trust-zone $TRUST_ZONE_1 --trust-zone $TRUST_ZONE_2
 }
 
 function check_spire() {
@@ -85,8 +85,8 @@ function list_resources() {
 }
 
 function show_helm_values() {
-  ./cofidectl trust-zone helm values --trust-zone-name $TRUST_ZONE_1 --output-file -
-  ./cofidectl trust-zone helm values --trust-zone-name $TRUST_ZONE_2 --output-file -
+  ./cofidectl trust-zone helm values $TRUST_ZONE_1 --output-file -
+  ./cofidectl trust-zone helm values $TRUST_ZONE_2 --output-file -
 }
 
 function show_config() {
@@ -97,10 +97,8 @@ function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
   ./cofidectl cluster list
-  TZ1_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE_1 | awk '{print $1}')
-  TZ2_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE_2 | awk '{print $1}')
-  ./cofidectl trust-zone status $TZ1_ID
-  ./cofidectl trust-zone status $TZ2_ID
+  ./cofidectl trust-zone status $TRUST_ZONE_1
+  ./cofidectl trust-zone status $TRUST_ZONE_2
 }
 
 function run_tests() {
@@ -140,7 +138,7 @@ function show_workload_status() {
     --context $K8S_CLUSTER_1_CONTEXT)
   WORKLOAD_STATUS_RESPONSE=$(./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
     --pod-name $POD_NAME \
-    --trust-zone-name $TRUST_ZONE_1)
+    --trust-zone $TRUST_ZONE_1)
 
   if [[ $WORKLOAD_STATUS_RESPONSE != *"SVID verified against trust bundle"* ]]; then
     echo "cofidectl workload status unsuccessful"
@@ -151,16 +149,9 @@ function show_workload_status() {
 }
 
 function teardown_federation_and_verify() {
-  kubectl --context $K8S_CLUSTER_2_CONTEXT get clusterspiffeids.spire.spiffe.io 
-
-  for federation in $(kubectl --context kind-local2 get clusterspiffeids.spire.spiffe.io | tail -n +2 | grep -v test | grep -v oidc | awk '{print $1}'); do
-    kubectl --context $K8S_CLUSTER_2_CONTEXT delete clusterspiffeids.spire.spiffe.io $federation
-  done
-
-  kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server federation list
+  kubectl --context $K8S_CLUSTER_2_CONTEXT delete clusterspiffeids.spire.spiffe.io spire-mgmt-spire-namespace
   kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server federation delete -id td1
   kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server bundle delete -id td1
-  kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server bundle list
   federations=$(./cofidectl federation list)
   if ! echo "$federations" | grep "Unhealthy | No bundle found" >/dev/null; then
     return 1
@@ -168,21 +159,21 @@ function teardown_federation_and_verify() {
 }
 
 function down() {
-  ./cofidectl down --trust-zone-name $TRUST_ZONE_1 --trust-zone-name $TRUST_ZONE_2
+  ./cofidectl down --trust-zone $TRUST_ZONE_1 --trust-zone $TRUST_ZONE_2
 }
 
 function delete() {
-  ./cofidectl attestation-policy-binding del --trust-zone-name $TRUST_ZONE_1 --attestation-policy namespace
-  ./cofidectl attestation-policy-binding del --trust-zone-name $TRUST_ZONE_1 --attestation-policy pod-label
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE_1 --attestation-policy namespace
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE_1 --attestation-policy pod-label
   # Don't delete attestation policy bindings for trust zone 2 - check that they get deleted with the trust zone.
-  ./cofidectl cluster del $K8S_CLUSTER_1_NAME --trust-zone-name $TRUST_ZONE_1
-  ./cofidectl cluster del $K8S_CLUSTER_2_NAME --trust-zone-name $TRUST_ZONE_2
-  ./cofidectl federation del --trust-zone-name $TRUST_ZONE_1 --remote-trust-zone-name $TRUST_ZONE_2
+  ./cofidectl cluster del $K8S_CLUSTER_1_NAME --trust-zone $TRUST_ZONE_1
+  ./cofidectl cluster del $K8S_CLUSTER_2_NAME --trust-zone $TRUST_ZONE_2
+  ./cofidectl federation del --trust-zone $TRUST_ZONE_1 --remote-trust-zone $TRUST_ZONE_2
   # Don't delete federation for trust zone 2 - check that it gets deleted with the trust zone.
-  ./cofidectl trust-zone del --name $TRUST_ZONE_1
-  ./cofidectl trust-zone del --name $TRUST_ZONE_2
-  ./cofidectl attestation-policy del --name namespace
-  ./cofidectl attestation-policy del --name pod-label
+  ./cofidectl trust-zone del $TRUST_ZONE_1
+  ./cofidectl trust-zone del $TRUST_ZONE_2
+  ./cofidectl attestation-policy del namespace
+  ./cofidectl attestation-policy del pod-label
 }
 
 function main() {

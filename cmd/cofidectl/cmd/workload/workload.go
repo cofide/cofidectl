@@ -59,8 +59,7 @@ This command will list all of the registered workloads.
 `
 
 type ListOpts struct {
-	trustZoneName string
-	trustZoneID   string
+	trustZone string
 }
 
 func (w *WorkloadCommand) GetListCommand() *cobra.Command {
@@ -84,19 +83,15 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 				return err
 			}
 
-			if opts.trustZoneID != "" {
-				trustZone, err := ds.GetTrustZone(opts.trustZoneID)
-				if err != nil {
-					return err
-				}
-
-				trustZones = append(trustZones, trustZone)
-			} else if opts.trustZoneName != "" {
+			if opts.trustZone != "" {
 				for _, tz := range allTrustZones {
-					if tz.GetName() == opts.trustZoneName {
+					if tz.GetName() == opts.trustZone {
 						trustZones = append(trustZones, tz)
 						break
 					}
+				}
+				if len(trustZones) == 0 {
+					return fmt.Errorf("trust zone %s not found", opts.trustZone)
 				}
 			} else {
 				trustZones = allTrustZones
@@ -121,10 +116,7 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZoneName, "trust-zone-name", "", "list the registered workloads in a specific trust zone")
-	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "list the registered workloads in a specific trust zone ID")
-
-	cmd.MarkFlagsMutuallyExclusive("trust-zone-name", "trust-zone-id")
+	f.StringVar(&opts.trustZone, "trust-zone", "", "list the registered workloads in a specific trust zone")
 
 	return cmd
 }
@@ -134,10 +126,9 @@ This command will display the status of workloads in the Cofide configuration st
 `
 
 type StatusOpts struct {
-	podName       string
-	namespace     string
-	trustZoneName string
-	trustZoneID   string
+	podName   string
+	namespace string
+	trustZone string
 }
 
 func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
@@ -165,28 +156,17 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringVar(&opts.podName, "pod-name", "", "Pod name for the workload")
 	f.StringVar(&opts.namespace, "namespace", "", "Namespace for the workload")
-	f.StringVar(&opts.trustZoneName, "trust-zone-name", "", "Trust zone name for the workload")
-	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "Trust zone ID for the workload")
-
-	cmd.MarkFlagsOneRequired("trust-zone-name", "trust-zone-id")
-	cmd.MarkFlagsMutuallyExclusive("trust-zone-name", "trust-zone-id")
+	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone for the workload")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("pod-name"))
 	cobra.CheckErr(cmd.MarkFlagRequired("namespace"))
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
 
 	return cmd
 }
 
 func (w *WorkloadCommand) status(ctx context.Context, ds datasource.DataSource, kubeConfig string, opts StatusOpts) error {
-	tzID := opts.trustZoneID
-	if opts.trustZoneName != "" {
-		tz, err := ds.GetTrustZoneByName(opts.trustZoneName)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve trust zone by name %s: %w", opts.trustZoneName, err)
-		}
-		tzID = tz.GetId()
-	}
-	trustZone, err := ds.GetTrustZone(tzID)
+	trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
 	if err != nil {
 		return err
 	}
@@ -284,8 +264,7 @@ This command will discover all of the unregistered workloads.
 `
 
 type DiscoverOpts struct {
-	trustZoneName  string
-	trustZoneID    string
+	trustZone      string
 	includeSecrets bool
 }
 
@@ -310,19 +289,15 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 				return err
 			}
 
-			if opts.trustZoneID != "" {
-				trustZone, err := ds.GetTrustZone(opts.trustZoneID)
-				if err != nil {
-					return err
-				}
-
-				trustZones = append(trustZones, trustZone)
-			} else if opts.trustZoneName != "" {
+			if opts.trustZone != "" {
 				for _, tz := range allTrustZones {
-					if tz.GetName() == opts.trustZoneName {
+					if tz.GetName() == opts.trustZone {
 						trustZones = append(trustZones, tz)
 						break
 					}
+				}
+				if len(trustZones) == 0 {
+					return fmt.Errorf("trust zone %s not found", opts.trustZone)
 				}
 			} else {
 				trustZones = allTrustZones
@@ -347,8 +322,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZoneName, "trust-zone-name", "", "list the unregistered workloads in a specific trust zone")
-	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "list the unregistered workloads in a specific trust zone")
+	f.StringVar(&opts.trustZone, "trust-zone", "", "list the unregistered workloads in a specific trust zone")
 	f.BoolVar(&opts.includeSecrets, "include-secrets", false, "discover workload secrets and analyse for risk")
 
 	return cmd

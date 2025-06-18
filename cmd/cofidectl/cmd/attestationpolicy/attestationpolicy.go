@@ -385,53 +385,33 @@ func parseSelectors(selectorStrings []string) ([]*types.Selector, error) {
 	return selectors, nil
 }
 
-type DelStaticOpts struct {
-	name string
-	id   string
-}
-
 var attestationPolicyDelCmdDesc = `
 This command will delete an attestation policy from the Cofide configuration state.
 `
 
 func (c *AttestationPolicyCommand) getDelCommand() *cobra.Command {
-	opts := DelStaticOpts{}
-
 	cmd := &cobra.Command{
-		Use:   "del",
+		Use:   "del [NAME]",
 		Short: "Delete an attestation policy",
 		Long:  attestationPolicyDelCmdDesc,
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.deletePolicy(cmd.Context(), opts)
+			return c.deletePolicy(cmd.Context(), args[0])
 		},
 	}
-
-	f := cmd.Flags()
-	f.StringVar(&opts.name, "name", "", "Name of the attestation policy")
-	f.StringVar(&opts.id, "id", "", "ID of the attestation policy")
-
-	cmd.MarkFlagsOneRequired("name", "id")
-
 	return cmd
 }
 
-func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, opts DelStaticOpts) error {
+func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, name string) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err
 	}
 
-	id := opts.id
-	if opts.name != "" {
-		ap, err := ds.GetAttestationPolicyByName(opts.name)
-		if err != nil {
-			return err
-		}
-		if ap == nil {
-			return fmt.Errorf("attestation policy %q not found", opts.name)
-		}
-		id = ap.GetId()
+	ap, err := ds.GetAttestationPolicyByName(name)
+	if err != nil {
+		return err
 	}
 
-	return ds.DestroyAttestationPolicy(id)
+	return ds.DestroyAttestationPolicy(ap.GetId())
 }
