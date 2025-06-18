@@ -69,7 +69,7 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 			trustZoneName:  "tz3",
 			injectFailure:  true,
 			wantErr:        true,
-			wantErrMessage: "fake destroy failure",
+			wantErrMessage: "fake add failure",
 		},
 	}
 	for _, tt := range tests {
@@ -189,7 +189,7 @@ type failingDS struct {
 
 // AddTrustZone fails unconditionally.
 func (f *failingDS) AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
-	return nil, errors.New("fake destroy failure")
+	return nil, errors.New("fake add failure")
 }
 
 // AddCluster keeps track of the number of clusters added.

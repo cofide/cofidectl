@@ -219,7 +219,7 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 
 		_, err = ds.AddCluster(newCluster)
 		if err != nil {
-			if err := ds.DestroyTrustZone(opts.name); err != nil {
+			if err := ds.DestroyTrustZone(newTrustZone.GetId()); err != nil {
 				slog.Error("Failed to destroy trust zone during rollback", "error", err)
 			}
 			return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
