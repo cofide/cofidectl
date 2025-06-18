@@ -577,7 +577,7 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		return nil, fmt.Errorf("cannot federate trust zone %s with itself", federationProto.GetTrustZoneId())
 	}
 
-	federations, err := lds.ListFederationsByTrustZone(federationProto.GetTrustZoneId())
+	federations, err := lds.listFederationsByTrustZone(federationProto.GetTrustZoneId())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list federations for trust zone %s: %w", federationProto.GetTrustZoneId(), err)
 	}
@@ -642,7 +642,7 @@ func (lds *LocalDataSource) ListFederations(filter *datasourcepb.ListFederations
 	return federations, nil
 }
 
-func (lds *LocalDataSource) ListFederationsByTrustZone(tzID string) ([]*federation_proto.Federation, error) {
+func (lds *LocalDataSource) listFederationsByTrustZone(tzID string) ([]*federation_proto.Federation, error) {
 	trustZone, ok := lds.config.GetTrustZoneByID(tzID)
 	if !ok {
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", tzID)

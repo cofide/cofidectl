@@ -917,8 +917,8 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 		{
 			name: "success with federations",
 			binding: &ap_binding_proto.APBinding{
-				TrustZoneId:   fixtures.StringPtr("tz1-id"),
-				PolicyId:      fixtures.StringPtr("ap2-id"),
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("ap2-id"),
 				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("tz2-id")}},
 			},
 			wantErr: false,
@@ -1345,7 +1345,7 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 	}
 }
 
-func TestLocalDataSource_ListFederationsByTrustZone(t *testing.T) {
+func TestLocalDataSource_listFederationsByTrustZone(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
@@ -1380,7 +1380,7 @@ func TestLocalDataSource_ListFederationsByTrustZone(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
-			got, err := lds.ListFederationsByTrustZone(tt.trustZone)
+			got, err := lds.listFederationsByTrustZone(tt.trustZone)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
@@ -1390,7 +1390,7 @@ func TestLocalDataSource_ListFederationsByTrustZone(t *testing.T) {
 				require.True(t, ok)
 				// nolint:staticcheck
 				if diff := cmp.Diff(got, want.Federations, protocmp.Transform()); diff != "" {
-					t.Errorf("LocalDataSource.ListFederationsByTrustZone() mismatch (-want,+got):\n%s", diff)
+					t.Errorf("LocalDataSource.listFederationsByTrustZone() mismatch (-want,+got):\n%s", diff)
 				}
 				for _, gotFederation := range got {
 					// nolint:staticcheck
