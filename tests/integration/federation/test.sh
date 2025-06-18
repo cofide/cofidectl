@@ -50,11 +50,14 @@ function check_init() {
   fi
 }
 
-function configure() {
+function configure_trust_zones() {
   ./cofidectl trust-zone add $TRUST_ZONE_1 --trust-domain $TRUST_DOMAIN_1 --kubernetes-context $K8S_CLUSTER_1_CONTEXT --kubernetes-cluster $K8S_CLUSTER_1_NAME --profile kubernetes
   ./cofidectl trust-zone add $TRUST_ZONE_2 --trust-domain $TRUST_DOMAIN_2 --kubernetes-context $K8S_CLUSTER_2_CONTEXT --kubernetes-cluster $K8S_CLUSTER_2_NAME --profile kubernetes
+ }
+
+function configure_federations() {
   ./cofidectl federation add --from $TRUST_ZONE_1 --to $TRUST_ZONE_2
-  ./cofidectl federation add --from $TRUST_ZONE_2 --to $TRUST_ZONE_1
+  ./cofidectl federation add --trust-zone $TRUST_ZONE_2 --remote-trust-zone $TRUST_ZONE_1
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE_1 --attestation-policy namespace --federates-with $TRUST_ZONE_2
@@ -64,7 +67,7 @@ function configure() {
 }
 
 function up() {
-  ./cofidectl up
+  ./cofidectl up --trust-zone $TRUST_ZONE_1 --trust-zone $TRUST_ZONE_2
 }
 
 function check_spire() {
@@ -81,6 +84,11 @@ function list_resources() {
   ./cofidectl attestation-policy-binding list
 }
 
+function show_helm_values() {
+  ./cofidectl trust-zone helm values $TRUST_ZONE_1 --output-file -
+  ./cofidectl trust-zone helm values $TRUST_ZONE_2 --output-file -
+}
+
 function show_config() {
   cat cofide.yaml
 }
@@ -88,6 +96,7 @@ function show_config() {
 function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
+  ./cofidectl cluster list
   ./cofidectl trust-zone status $TRUST_ZONE_1
   ./cofidectl trust-zone status $TRUST_ZONE_2
 }
@@ -117,8 +126,8 @@ function wait_for_pong() {
 
 function post_deploy() {
   federations=$(./cofidectl federation list)
-  if echo "$federations" | grep Unhealthy >/dev/null; then 
-      return 1
+  if echo "$federations" | grep Unhealthy >/dev/null; then
+    return 1
   fi
 }
 
@@ -150,16 +159,33 @@ function teardown_federation_and_verify() {
 }
 
 function down() {
-  ./cofidectl down
+  ./cofidectl down --trust-zone $TRUST_ZONE_1 --trust-zone $TRUST_ZONE_2
+}
+
+function delete() {
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE_1 --attestation-policy namespace
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE_1 --attestation-policy pod-label
+  # Don't delete attestation policy bindings for trust zone 2 - check that they get deleted with the trust zone.
+  ./cofidectl cluster del $K8S_CLUSTER_1_NAME --trust-zone $TRUST_ZONE_1
+  ./cofidectl cluster del $K8S_CLUSTER_2_NAME --trust-zone $TRUST_ZONE_2
+  ./cofidectl federation del --trust-zone $TRUST_ZONE_1 --remote-trust-zone $TRUST_ZONE_2
+  # Don't delete federation for trust zone 2 - check that it gets deleted with the trust zone.
+  ./cofidectl trust-zone del $TRUST_ZONE_1
+  ./cofidectl trust-zone del $TRUST_ZONE_2
+  ./cofidectl attestation-policy del namespace
+  ./cofidectl attestation-policy del pod-label
 }
 
 function main() {
   init
   check_init
-  configure
+  configure_trust_zones
+  up
+  configure_federations
   up
   check_spire
   list_resources
+  show_helm_values
   show_config
   show_status
   run_tests
@@ -167,6 +193,8 @@ function main() {
   show_workload_status
   teardown_federation_and_verify
   down
+  delete
+  check_delete
   echo "Success!"
 }
 

@@ -5,6 +5,7 @@ package provision
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -14,6 +15,7 @@ import (
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // ProvisionPluginName is the name that should be used in the plugin map.
@@ -52,10 +54,14 @@ func (c *ProvisionPluginClientGRPC) Validate(ctx context.Context) error {
 	return wrapError(err)
 }
 
-func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasource.DataSource, opts *DeployOpts) (<-chan *provisionpb.Status, error) {
 	server, brokerID := c.startDataSourceServer(source)
 
-	req := provisionpb.DeployRequest{DataSource: &brokerID, KubeCfgFile: &kubeCfgFile}
+	req := provisionpb.DeployRequest{
+		DataSource:     &brokerID,
+		KubeCfgFile:    &opts.KubeCfgFile,
+		TrustZoneNames: opts.TrustZones,
+	}
 	stream, err := c.client.Deploy(ctx, &req)
 	if err != nil {
 		err := wrapError(err)
@@ -82,10 +88,14 @@ func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasourc
 	return statusCh, nil
 }
 
-func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource, opts *TearDownOpts) (<-chan *provisionpb.Status, error) {
 	server, brokerID := c.startDataSourceServer(source)
 
-	req := provisionpb.TearDownRequest{DataSource: &brokerID, KubeCfgFile: &kubeCfgFile}
+	req := provisionpb.TearDownRequest{
+		DataSource:     &brokerID,
+		KubeCfgFile:    &opts.KubeCfgFile,
+		TrustZoneNames: opts.TrustZones,
+	}
 	stream, err := c.client.TearDown(ctx, &req)
 	if err != nil {
 		err := wrapError(err)
@@ -110,6 +120,24 @@ func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasou
 	}()
 
 	return statusCh, nil
+}
+
+func (c *ProvisionPluginClientGRPC) GetHelmValues(ctx context.Context, source datasource.DataSource, opts *GetHelmValuesOpts) (map[string]any, error) {
+	server, brokerID := c.startDataSourceServer(source)
+	defer server.Stop()
+
+	req := provisionpb.GetHelmValuesRequest{
+		DataSource:    &brokerID,
+		TrustZoneName: &opts.TrustZoneName,
+		ClusterName:   &opts.ClusterName,
+	}
+	resp, err := c.client.GetHelmValues(ctx, &req)
+	if err != nil {
+		err := wrapError(err)
+		return nil, err
+	}
+
+	return resp.GetHelmValues().AsMap(), nil
 }
 
 // startDataSourceServer returns a grpc.Server and associated broker ID, allowing for bidirectional
@@ -179,7 +207,11 @@ func (s *GRPCServer) Deploy(req *provisionpb.DeployRequest, stream grpc.ServerSt
 	}
 	defer conn.Close()
 
-	statusCh, err := s.impl.Deploy(stream.Context(), client, req.GetKubeCfgFile())
+	opts := DeployOpts{
+		KubeCfgFile: req.GetKubeCfgFile(),
+		TrustZones:  req.GetTrustZoneNames(),
+	}
+	statusCh, err := s.impl.Deploy(stream.Context(), client, &opts)
 	if err != nil {
 		return err
 	}
@@ -201,7 +233,11 @@ func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.Serv
 	}
 	defer conn.Close()
 
-	statusCh, err := s.impl.TearDown(stream.Context(), client, req.GetKubeCfgFile())
+	opts := TearDownOpts{
+		KubeCfgFile: req.GetKubeCfgFile(),
+		TrustZones:  req.GetTrustZoneNames(),
+	}
+	statusCh, err := s.impl.TearDown(stream.Context(), client, &opts)
 	if err != nil {
 		return err
 	}
@@ -214,6 +250,48 @@ func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.Serv
 		}
 	}
 	return nil
+}
+
+func (s *GRPCServer) GetHelmValues(ctx context.Context, req *provisionpb.GetHelmValuesRequest) (*provisionpb.GetHelmValuesResponse, error) {
+	client, conn, err := s.getDataSourceClient(ctx, req.GetDataSource())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	opts := GetHelmValuesOpts{
+		TrustZoneName: req.GetTrustZoneName(),
+		ClusterName:   req.GetClusterName(),
+	}
+	values, err := s.impl.GetHelmValues(ctx, client, &opts)
+	if err != nil {
+		return nil, err
+	}
+
+	helmValues, err := valuesToStruct(values)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provisionpb.GetHelmValuesResponse{HelmValues: helmValues}, nil
+}
+
+// valuesToStruct creates a *Struct representing a set of Helm values from a map[string]any.
+// It performs a round trip JSON encode/decode, ensuring that the values are in a format compatible
+// with structpb.Struct. See https://github.com/golang/protobuf/issues/1302.
+func valuesToStruct(values map[string]any) (*structpb.Struct, error) {
+	valuesJSON, err := json.Marshal(values)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]any
+	err = json.Unmarshal(valuesJSON, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return structpb.NewStruct(result)
 }
 
 // getDataSourceClient returns a DataSource and associated gRPC connection, allowing for

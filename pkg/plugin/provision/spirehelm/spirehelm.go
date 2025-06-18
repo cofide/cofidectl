@@ -5,6 +5,7 @@ package spirehelm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
@@ -50,79 +51,105 @@ func (h *SpireHelm) Validate(_ context.Context) error {
 	return nil
 }
 
-func (h *SpireHelm) Deploy(ctx context.Context, ds datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (h *SpireHelm) Deploy(ctx context.Context, ds datasource.DataSource, opts *provision.DeployOpts) (<-chan *provisionpb.Status, error) {
 	statusCh := make(chan *provisionpb.Status)
 
 	go func() {
 		defer close(statusCh)
 		// Ignore returned errors - they should be sent via the Status channel.
-		_ = h.deploy(ctx, ds, kubeCfgFile, statusCh)
+		_ = h.deploy(ctx, ds, opts, statusCh)
 	}()
 
 	return statusCh, nil
 }
 
-func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, kubeCfgFile string) (<-chan *provisionpb.Status, error) {
+func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, opts *provision.TearDownOpts) (<-chan *provisionpb.Status, error) {
 	statusCh := make(chan *provisionpb.Status)
 
 	go func() {
 		defer close(statusCh)
 		// Ignore returned errors - they should be sent via the Status channel.
-		_ = h.tearDown(ctx, ds, statusCh)
+		_ = h.tearDown(ctx, ds, opts, statusCh)
 	}()
 
 	return statusCh, nil
 }
 
-func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, kubeCfgFile string, statusCh chan<- *provisionpb.Status) error {
-	trustZoneClusters, err := h.ListTrustZoneClusters(ds)
+func (h *SpireHelm) GetHelmValues(ctx context.Context, ds datasource.DataSource, opts *provision.GetHelmValuesOpts) (map[string]any, error) {
+	trustZone, err := ds.GetTrustZone(opts.TrustZoneName)
+	if err != nil {
+		return nil, err
+	}
+
+	cluster, err := ds.GetCluster(opts.ClusterName, opts.TrustZoneName)
+	if err != nil {
+		return nil, err
+	}
+
+	return h.providerFactory.GetHelmValues(ctx, ds, trustZone, cluster)
+}
+
+func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *provision.DeployOpts, statusCh chan<- *provisionpb.Status) error {
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
 	if err != nil {
 		statusCh <- provision.StatusError("Deploying", "Failed listing trust zones", err)
 		return err
 	}
 
-	if err := h.AddSPIRERepository(ctx, statusCh); err != nil {
+	if err := h.AddSPIRERepository(ctx, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
-	if err := h.InstallSPIREStack(ctx, ds, trustZoneClusters, statusCh); err != nil {
+	if err := h.InstallSPIREStack(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
-	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, kubeCfgFile, statusCh); err != nil {
+	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
-	if err := h.ApplyPostInstallHelmConfig(ctx, ds, trustZoneClusters, statusCh); err != nil {
+	if err := h.ApplyPostInstallHelmConfig(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
 	// Wait for spire-server to be ready again.
-	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, kubeCfgFile, statusCh); err != nil {
+	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, statusCh chan<- *provisionpb.Status) error {
-	trustZoneClusters, err := h.ListTrustZoneClusters(ds)
+func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, opts *provision.TearDownOpts, statusCh chan<- *provisionpb.Status) error {
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
 	if err != nil {
 		statusCh <- provision.StatusError("Uninstalling", "Failed listing trust zones", err)
 		return err
 	}
 
-	if err := h.UninstallSPIREStack(ctx, ds, trustZoneClusters, statusCh); err != nil {
+	if err := h.UninstallSPIREStack(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 	return nil
 }
 
 // ListTrustZoneClusters returns a slice of TrustZoneClusters. If no trust zones exist, it returns an error.
-func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource) ([]TrustZoneCluster, error) {
-	trustZones, err := ds.ListTrustZones()
-	if err != nil {
-		return nil, err
+func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource, trustZoneNames []string) ([]TrustZoneCluster, error) {
+	var trustZones []*trust_zone_proto.TrustZone
+	if len(trustZoneNames) == 0 {
+		var err error
+		trustZones, err = ds.ListTrustZones()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		for _, trustZoneName := range trustZoneNames {
+			trustZone, err := ds.GetTrustZone(trustZoneName)
+			if err != nil {
+				return nil, err
+			}
+			trustZones = append(trustZones, trustZone)
+		}
 	}
 
 	if len(trustZones) == 0 {
@@ -135,6 +162,9 @@ func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource) ([]TrustZone
 		// Sanity check that the trust zone has exactly one cluster.
 		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 		if err != nil {
+			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
+				continue
+			}
 			return nil, err
 		}
 		trustZoneCluster := TrustZoneCluster{TrustZone: trustZone, Cluster: cluster}
@@ -143,8 +173,8 @@ func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource) ([]TrustZone
 	return trustZoneClusters, nil
 }
 
-func (h *SpireHelm) AddSPIRERepository(ctx context.Context, statusCh chan<- *provisionpb.Status) error {
-	prov, err := h.providerFactory.Build(ctx, nil, nil, nil, false)
+func (h *SpireHelm) AddSPIRERepository(ctx context.Context, kubeConfig string, statusCh chan<- *provisionpb.Status) error {
+	prov, err := h.providerFactory.Build(ctx, nil, nil, nil, false, kubeConfig)
 	if err != nil {
 		statusCh <- provision.StatusError("Preparing", "Failed to create Helm SPIRE provider", err)
 		return err
@@ -153,12 +183,12 @@ func (h *SpireHelm) AddSPIRERepository(ctx context.Context, statusCh chan<- *pro
 	return prov.AddRepository(statusCh)
 }
 
-func (h *SpireHelm) InstallSPIREStack(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, statusCh chan<- *provisionpb.Status) error {
+func (h *SpireHelm) InstallSPIREStack(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, kubeConfig string, statusCh chan<- *provisionpb.Status) error {
 	for _, tzc := range trustZoneClusters {
 		trustZone := tzc.TrustZone
 		cluster := tzc.Cluster
 
-		prov, err := h.providerFactory.Build(ctx, ds, trustZone, cluster, true)
+		prov, err := h.providerFactory.Build(ctx, ds, trustZone, cluster, true, kubeConfig)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
 			statusCh <- sb.Error("Deploying", "Failed to create Helm SPIRE provider", err)
@@ -239,12 +269,12 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 	return nil
 }
 
-func (h *SpireHelm) ApplyPostInstallHelmConfig(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, statusCh chan<- *provisionpb.Status) error {
+func (h *SpireHelm) ApplyPostInstallHelmConfig(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, kubeConfig string, statusCh chan<- *provisionpb.Status) error {
 	for _, tzc := range trustZoneClusters {
 		trustZone := tzc.TrustZone
 		cluster := tzc.Cluster
 
-		prov, err := h.providerFactory.Build(ctx, ds, trustZone, cluster, true)
+		prov, err := h.providerFactory.Build(ctx, ds, trustZone, cluster, true, kubeConfig)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
 			statusCh <- sb.Error("Configuring", "Failed to create Helm SPIRE provider", err)
@@ -259,12 +289,12 @@ func (h *SpireHelm) ApplyPostInstallHelmConfig(ctx context.Context, ds datasourc
 	return nil
 }
 
-func (h *SpireHelm) UninstallSPIREStack(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, statusCh chan<- *provisionpb.Status) error {
+func (h *SpireHelm) UninstallSPIREStack(ctx context.Context, ds datasource.DataSource, trustZoneClusters []TrustZoneCluster, kubeConfig string, statusCh chan<- *provisionpb.Status) error {
 	for _, tzc := range trustZoneClusters {
 		trustZone := tzc.TrustZone
 		cluster := tzc.Cluster
 
-		prov, err := h.providerFactory.Build(ctx, nil, trustZone, cluster, false)
+		prov, err := h.providerFactory.Build(ctx, nil, trustZone, cluster, false, kubeConfig)
 		if err != nil {
 			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
 			statusCh <- sb.Error("Uninstalling", "Failed to create Helm SPIRE provider", err)

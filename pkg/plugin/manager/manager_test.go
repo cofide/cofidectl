@@ -22,6 +22,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+var _ datasource.DataSource = (*fakeGRPCDataSource)(nil)
+
 type fakeGRPCDataSource struct {
 	local.LocalDataSource
 }

@@ -6,6 +6,7 @@ package cmd
 import (
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
+	provisionplugin "github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +25,8 @@ This command installs a Cofide configuration
 `
 
 type UpOpts struct {
-	quiet bool
+	quiet      bool
+	trustZones []string
 }
 
 func (u *UpCommand) UpCmd() *cobra.Command {
@@ -45,7 +47,11 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			statusCh, err := provision.Deploy(cmd.Context(), ds, kubeCfgFile)
+			deployOpts := provisionplugin.DeployOpts{
+				KubeCfgFile: kubeCfgFile,
+				TrustZones:  opts.trustZones,
+			}
+			statusCh, err := provision.Deploy(cmd.Context(), ds, &deployOpts)
 			if err != nil {
 				return err
 			}
@@ -60,6 +66,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from installation")
+	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to install, or all if none is specified")
 
 	return cmd
 }

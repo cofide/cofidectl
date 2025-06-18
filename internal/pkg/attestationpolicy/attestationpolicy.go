@@ -8,7 +8,9 @@ import (
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 )
 
 type AttestationPolicy struct {
@@ -45,13 +47,50 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 				clusterSPIFFEID["podSelector"] = selector
 			}
 		}
+	case *attestation_policy_proto.AttestationPolicy_Static:
+		// nolint:staticcheck
+		trustZoneName := binding.GetTrustZone()
+
+		clusters, err := source.ListClusters(trustZoneName)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(clusters) < 1 {
+			return nil, trustzone.ErrNoClustersInTrustZone
+		}
+
+		if len(clusters) > 1 {
+			return nil, trustzone.ErrOneClusterPerTrustZone
+		}
+
+		trustZone, err := source.GetTrustZone(trustZoneName)
+		if err != nil {
+			return nil, err
+		}
+
+		static := policy.Static
+		selectors, err := formatSelectors(static.Selectors)
+		if err != nil {
+			return nil, err
+		}
+
+		clusterStaticEntry := map[string]any{
+			"parentID":  fmt.Sprintf("spiffe://%s/cluster/%s/spire/agents", trustZone.GetTrustDomain(), clusters[0].GetName()),
+			"spiffeID":  static.GetSpiffeId(),
+			"selectors": selectors,
+		}
+
+		return clusterStaticEntry, nil
 	default:
 		return nil, fmt.Errorf("unexpected attestation policy kind: %T", policy)
 	}
 
+	// nolint:staticcheck
 	if len(binding.FederatesWith) > 0 {
 		// Convert from trust zones to trust domains.
 		federatesWith := []string{}
+		// nolint:staticcheck
 		for _, tzName := range binding.FederatesWith {
 			if trustZone, err := source.GetTrustZone(tzName); err != nil {
 				return nil, err
@@ -88,4 +127,18 @@ func getAPLabelSelectorHelmConfig(selector *attestation_policy_proto.APLabelSele
 		"matchLabels":      matchLabels,
 		"matchExpressions": matchExpressions,
 	}
+}
+
+func formatSelectors(selectors []*types.Selector) ([]string, error) {
+	result := make([]string, 0, len(selectors))
+
+	for _, selector := range selectors {
+		if selector.Type == "" || selector.Value == "" {
+			return nil, fmt.Errorf("invalid selector type=%q, value=%q", selector.Type, selector.Value)
+		}
+
+		result = append(result, fmt.Sprintf("%s:%s", selector.Type, selector.Value))
+	}
+
+	return result, nil
 }

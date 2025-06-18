@@ -35,13 +35,15 @@ function configure() {
   ./cofidectl trust-zone add $TRUST_ZONE --trust-domain $TRUST_DOMAIN --kubernetes-context $K8S_CLUSTER_CONTEXT --kubernetes-cluster $K8S_CLUSTER_NAME --profile kubernetes
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
+  ./cofidectl attestation-policy add static --name static-namespace --spiffeid spiffe://$TRUST_DOMAIN/ns/$NAMESPACE_POLICY_NAMESPACE/sa/ping-pong-client --selectors k8s:ns:$NAMESPACE_POLICY_NAMESPACE --yes
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy namespace
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy pod-label
+  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy static-namespace
   override_helm_values
 }
 
 function override_helm_values() {
-  cat << EOF > values.yaml
+  cat <<EOF >values.yaml
 tornjak-frontend:
   enabled: false
 upstream-spire-agent:
@@ -63,6 +65,7 @@ function check_spire() {
 
 function list_resources() {
   ./cofidectl trust-zone list
+  ./cofidectl cluster list
   ./cofidectl attestation-policy list
   ./cofidectl attestation-policy-binding list
 }
@@ -126,7 +129,7 @@ function check_overridden_values() {
 }
 
 function check_overridden_value() {
-  value=$(helm --kube-context $K8S_CLUSTER_CONTEXT get values spire | yq $1)
+  value=$(helm --kube-context $K8S_CLUSTER_CONTEXT get values spire --namespace spire-mgmt | yq $1)
   if [[ $value != $2 ]]; then
     echo "Error: Did not find expected overridden Helm value $1: expected $2, actual $value"
     return 1
@@ -135,6 +138,17 @@ function check_overridden_value() {
 
 function down() {
   ./cofidectl down
+}
+
+function delete() {
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy namespace
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy pod-label
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy static-namespace
+  ./cofidectl attestation-policy del namespace
+  ./cofidectl attestation-policy del pod-label
+  ./cofidectl attestation-policy del static-namespace
+  ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE
+  ./cofidectl trust-zone del $TRUST_ZONE
 }
 
 function main() {
@@ -149,6 +163,8 @@ function main() {
   show_workload_status
   check_overridden_values
   down
+  delete
+  check_delete
   echo "Success!"
 }
 

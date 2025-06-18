@@ -4,13 +4,16 @@
 package attestationpolicy
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,14 +33,17 @@ This command consists of multiple sub-commands to administer Cofide attestation 
 
 func (c *AttestationPolicyCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attestation-policy add|list [ARGS]",
-		Short: "Add, list attestation policies",
+		Use:   "attestation-policy add|del|list [ARGS]",
+		Short: "Manage attestation policies",
 		Long:  attestationPolicyRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
-	cmd.AddCommand(c.GetListCommand())
-	cmd.AddCommand(c.GetAddCommand())
+	cmd.AddCommand(
+		c.GetListCommand(),
+		c.GetAddCommand(),
+		c.getDelCommand(),
+	)
 
 	return cmd
 }
@@ -84,6 +90,25 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				"kubernetes",
 				namespaceSelector,
 				podSelector,
+				"",
+				"",
+			}
+		case *attestation_policy_proto.AttestationPolicy_Static:
+			static := p.Static
+
+			spiffeID := static.GetSpiffeId()
+			selectors, err := formatSelectors(static.GetSelectors())
+			if err != nil {
+				return err
+			}
+
+			data[i] = []string{
+				policy.Name,
+				"static",
+				"",
+				"",
+				spiffeID,
+				selectors,
 			}
 		default:
 			return fmt.Errorf("unexpected attestation policy type %T", policy)
@@ -91,7 +116,7 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Kind", "Namespace Labels", "Pod Labels"})
+	table.SetHeader([]string{"Name", "Kind", "Namespace Labels", "Pod Labels", "SPIFFE ID", "Selectors"})
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
@@ -128,6 +153,24 @@ func apLabelSelectorToK8sLS(selector *attestation_policy_proto.APLabelSelector) 
 	return k8sSelector
 }
 
+// formatSelectors formats SPIRE selectors into a comma-separated string.
+func formatSelectors(selectors []*types.Selector) (string, error) {
+	if len(selectors) == 0 {
+		return "", fmt.Errorf("no selectors provided")
+	}
+
+	selectorStrs := make([]string, len(selectors))
+	for i, s := range selectors {
+		if s.Type == "" || s.Value == "" {
+			return "", fmt.Errorf("invalid selector type=%q, value=%q", s.Type, s.Value)
+		}
+
+		selectorStrs[i] = s.Type + ":" + s.Value
+	}
+
+	return strings.Join(selectorStrs, ","), nil
+}
+
 var attestationPolicyAddCmdDesc = `
 This command consists of multiple sub-commands to add new attestation policies to the Cofide configuration state.
 `
@@ -140,7 +183,10 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 
-	cmd.AddCommand(c.GetAddK8sCommand())
+	cmd.AddCommand(
+		c.GetAddK8sCommand(),
+		c.GetAddStaticCommand(),
+	)
 	return cmd
 }
 
@@ -207,6 +253,77 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 	return cmd
 }
 
+var attestationPolicyAddStaticCmdDesc = `
+This command will add a new static attestation policy to the Cofide configuration state.
+`
+
+type AddStaticOpts struct {
+	name      string
+	spiffeID  string
+	selectors []string
+	yes       bool
+}
+
+func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
+	opts := AddStaticOpts{}
+	cmd := &cobra.Command{
+		Use:   "static [ARGS]",
+		Short: "Add a new static attestation policy",
+		Long:  attestationPolicyAddStaticCmdDesc,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if !opts.yes {
+				fmt.Fprintf(os.Stderr, "Warning: Creating a static attestation policy necessitates the creation of an additional alias registration entry for SPIRE agent(s).\n")
+				fmt.Fprintf(os.Stderr, "This means that each SPIRE agent will receive the same SPIFFE ID.\n")
+				fmt.Fprintf(os.Stderr, "Do you want to continue? [y/N]: ")
+
+				var response string
+				_, err := fmt.Scanln(&response)
+				if err != nil || (strings.ToLower(response) != "y" && strings.ToLower(response) != "yes") {
+					return fmt.Errorf("operation cancelled")
+				}
+			}
+
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			selectors, err := parseSelectors(opts.selectors)
+			if err != nil {
+				return err
+			}
+
+			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
+				Name: opts.name,
+				Policy: &attestation_policy_proto.AttestationPolicy_Static{
+					Static: &attestation_policy_proto.APStatic{
+						SpiffeId:  &opts.spiffeID,
+						Selectors: selectors,
+					},
+				},
+			}
+			_, err = ds.AddAttestationPolicy(newAttestationPolicy)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.name, "name", "", "Name to use for the attestation policy")
+	f.StringVar(&opts.spiffeID, "spiffeid", "", "SPIFFE ID to use for the attestation policy")
+	f.StringSliceVar(&opts.selectors, "selectors", []string{}, "Workload selectors to use for the attestation policy")
+	f.BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("name"))
+	cobra.CheckErr(cmd.MarkFlagRequired("spiffeid"))
+	cobra.CheckErr(cmd.MarkFlagRequired("selectors"))
+
+	return cmd
+}
+
 // parseLabelSelector parses a Kubernetes label selector from a string.
 // See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors.
 func parseLabelSelector(selector string) (*attestation_policy_proto.APLabelSelector, error) {
@@ -233,4 +350,63 @@ func apLabelSelectorFromK8sLS(k8sSelector *metav1.LabelSelector) *attestation_po
 		selector.MatchExpressions = append(selector.MatchExpressions, expression)
 	}
 	return selector
+}
+
+// parseSelectors parses a list of selectors from a string.
+func parseSelectors(selectorStrings []string) ([]*types.Selector, error) {
+	selectors := make([]*types.Selector, len(selectorStrings))
+
+	for i, s := range selectorStrings {
+		if strings.Count(s, ":") > 2 {
+			return nil, fmt.Errorf("invalid selector format %q, too many ':' characters, expected 'type:key:value'", s)
+		}
+
+		selectorParts := strings.SplitN(s, ":", 3)
+		if len(selectorParts) != 3 {
+			return nil, fmt.Errorf("invalid selector format %q, expected 'type:key:value'", s)
+		}
+
+		selectorType, selectorKey, selectorVal := selectorParts[0], selectorParts[1], selectorParts[2]
+		switch {
+		case selectorType == "":
+			return nil, fmt.Errorf("invalid selector format, type is empty: %q", s)
+		case selectorKey == "":
+			return nil, fmt.Errorf("invalid selector format, key is empty: %q", s)
+		case selectorVal == "":
+			return nil, fmt.Errorf("invalid selector format, value is empty: %q", s)
+		}
+
+		selectors[i] = &types.Selector{
+			Type:  selectorType,
+			Value: fmt.Sprintf("%s:%s", selectorKey, selectorVal),
+		}
+	}
+
+	return selectors, nil
+}
+
+var attestationPolicyDelCmdDesc = `
+This command will delete an attestation policy from the Cofide configuration state.
+`
+
+func (c *AttestationPolicyCommand) getDelCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "del [NAME]",
+		Short: "Delete an attestation policy",
+		Long:  attestationPolicyDelCmdDesc,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return c.deletePolicy(cmd.Context(), args[0])
+		},
+	}
+	return cmd
+}
+
+func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, name string) error {
+	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
+	if err != nil {
+		return err
+	}
+
+	return ds.DestroyAttestationPolicy(name)
 }

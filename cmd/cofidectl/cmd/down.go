@@ -6,6 +6,7 @@ package cmd
 import (
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
+	provisionplugin "github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +23,13 @@ var downCmdDesc = `
 This command uninstalls a Cofide configuration
 `
 
+type DownOpts struct {
+	quiet      bool
+	trustZones []string
+}
+
 func (d *DownCommand) DownCmd() *cobra.Command {
+	opts := &DownOpts{}
 	cmd := &cobra.Command{
 		Use:   "down [ARGS]",
 		Short: "Uninstalls a Cofide configuration",
@@ -39,12 +46,21 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return err
 			}
 
-			statusCh, err := provision.TearDown(cmd.Context(), ds, kubeCfgFile)
+			tearDownOpts := provisionplugin.TearDownOpts{
+				KubeCfgFile: kubeCfgFile,
+				TrustZones:  opts.trustZones,
+			}
+			statusCh, err := provision.TearDown(cmd.Context(), ds, &tearDownOpts)
 			if err != nil {
 				return err
 			}
-			return statusspinner.WatchProvisionStatus(cmd.Context(), statusCh, false)
+			return statusspinner.WatchProvisionStatus(cmd.Context(), statusCh, opts.quiet)
 		},
 	}
+
+	f := cmd.Flags()
+	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from uninstallation")
+	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to uninstall, or all if none is specified")
+
 	return cmd
 }

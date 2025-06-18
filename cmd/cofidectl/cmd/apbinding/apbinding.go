@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
@@ -32,8 +32,8 @@ This command consists of multiple sub-commands to administer Cofide attestation 
 
 func (c *APBindingCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attestation-policy-binding add|list [ARGS]",
-		Short: "Add or list attestation policy bindings",
+		Use:   "attestation-policy-binding add|del|list [ARGS]",
+		Short: "Manage attestation policy bindings",
 		Long:  apBindingRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
@@ -86,41 +86,25 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 }
 
 func (c *APBindingCommand) list(source datasource.DataSource, opts ListOpts) ([]*ap_binding_proto.APBinding, error) {
-	var err error
-	var trustZones []*trust_zone_proto.TrustZone
-
+	filter := &datasourcepb.ListAPBindingsRequest_Filter{}
 	if opts.trustZone != "" {
-		trustZone, err := source.GetTrustZone(opts.trustZone)
-		if err != nil {
-			return nil, err
-		}
-
-		trustZones = append(trustZones, trustZone)
-	} else {
-		trustZones, err = source.ListTrustZones()
-		if err != nil {
-			return nil, err
-		}
+		filter.TrustZoneName = &opts.trustZone
 	}
-
-	var bindings []*ap_binding_proto.APBinding
-	for _, trustZone := range trustZones {
-		for _, binding := range trustZone.AttestationPolicies {
-			if opts.attestationPolicy == "" || binding.Policy == opts.attestationPolicy {
-				bindings = append(bindings, binding)
-			}
-		}
+	if opts.attestationPolicy != "" {
+		filter.PolicyName = &opts.attestationPolicy
 	}
-
-	return bindings, nil
+	return source.ListAPBindings(filter)
 }
 
 func renderList(bindings []*ap_binding_proto.APBinding) {
 	data := make([][]string, len(bindings))
 	for i, binding := range bindings {
 		data[i] = []string{
+			// nolint:staticcheck
 			binding.TrustZone,
+			// nolint:staticcheck
 			binding.Policy,
+			// nolint:staticcheck
 			strings.Join(binding.FederatesWith, ", "),
 		}
 	}

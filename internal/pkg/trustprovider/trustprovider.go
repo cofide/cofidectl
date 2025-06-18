@@ -12,7 +12,7 @@ import (
 
 const (
 	KubernetesTrustProvider string = "k8s"
-	kubernetesPsat          string = "k8sPsat"
+	kubernetesPSAT          string = "k8sPSAT"
 )
 
 type TrustProvider struct {
@@ -44,10 +44,10 @@ func (tp *TrustProvider) getValues() error {
 				"enabled":                   true,
 				"disableContainerSelectors": true,
 			},
-			NodeAttestor: kubernetesPsat,
+			NodeAttestor: kubernetesPSAT,
 		}
 		tp.ServerConfig = TrustProviderServerConfig{
-			NodeAttestor: kubernetesPsat,
+			NodeAttestor: kubernetesPSAT,
 			NodeAttestorConfig: map[string]any{
 				"enabled":  true,
 				"audience": []string{"spire-server"},

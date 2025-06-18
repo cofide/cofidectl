@@ -5,9 +5,10 @@ package federation
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 
-	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -45,14 +46,17 @@ This command consists of multiple sub-commands to administer Cofide trust zone f
 
 func (c *FederationCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "federation add|list [ARGS]",
-		Short: "Add, list federations",
+		Use:   "federation add|del|list [ARGS]",
+		Short: "Manage federations",
 		Long:  federationRootCmdDesc,
 		Args:  cobra.NoArgs,
 	}
 
-	cmd.AddCommand(c.GetListCommand())
-	cmd.AddCommand(c.GetAddCommand())
+	cmd.AddCommand(
+		c.GetListCommand(),
+		c.GetAddCommand(),
+		c.getDelCommand(),
+	)
 
 	return cmd
 }
@@ -85,11 +89,13 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 
 			data := make([][]string, len(federations))
 			for i, federation := range federations {
+				// nolint:staticcheck
 				from, err := ds.GetTrustZone(federation.From)
 				if err != nil {
 					return err
 				}
 
+				// nolint:staticcheck
 				to, err := ds.GetTrustZone(federation.To)
 				if err != nil {
 					return err
@@ -101,7 +107,9 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				}
 
 				data[i] = []string{
+					// nolint:staticcheck
 					federation.From,
+					// nolint:staticcheck
 					federation.To,
 					status,
 					reason,
@@ -133,10 +141,17 @@ func checkFederationStatus(ctx context.Context, ds datasource.DataSource, kubeCo
 	for _, tz := range []*trust_zone_proto.TrustZone{from, to} {
 		cluster, err := trustzone.GetClusterFromTrustZone(tz, ds)
 		if err != nil {
+			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
+				return "No cluster", "N/A", nil
+			}
 			return "", "", err
 		}
 
-		if deployed, err := isClusterDeployed(ctx, cluster); err != nil {
+		if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
+			return "Unknown", err.Error(), nil
+		}
+
+		if deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 			return "", "", err
 		} else if !deployed {
 			return "Inactive", "", nil
@@ -172,22 +187,13 @@ func checkFederationStatus(ctx context.Context, ds datasource.DataSource, kubeCo
 	return FederationStatusHealthy, "", nil
 }
 
-// isClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
-func isClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster) (bool, error) {
-	prov, err := helm.NewHelmSPIREProvider(ctx, cluster, nil, nil)
-	if err != nil {
-		return false, err
-	}
-	return prov.CheckIfAlreadyInstalled()
-}
-
 var federationAddCmdDesc = `
 This command will add a new federation to the Cofide configuration state.
 `
 
 type Opts struct {
-	from string
-	to   string
+	trustZone       string
+	remoteTrustZone string
 }
 
 func (c *FederationCommand) GetAddCommand() *cobra.Command {
@@ -198,14 +204,22 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 		Long:  federationAddCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// TODO: Remove these checks when from/to have been deprecated.
+			if opts.trustZone == "" {
+				return fmt.Errorf(`Error: required flag(s) "trust-zone" not set`)
+			}
+			if opts.remoteTrustZone == "" {
+				return fmt.Errorf(`Error: required flag(s) "remote-trust-zone" not set`)
+			}
+
 			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
 
 			newFederation := &federation_proto.Federation{
-				From: opts.from,
-				To:   opts.to,
+				From: opts.trustZone,
+				To:   opts.remoteTrustZone,
 			}
 			_, err = ds.AddFederation(newFederation)
 			return err
@@ -213,11 +227,58 @@ func (c *FederationCommand) GetAddCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.from, "from", "", "Trust zone to federate from")
-	f.StringVar(&opts.to, "to", "", "Trust zone to federate to")
+	f.StringVar(&opts.trustZone, "trust-zone", "", "Local trust zone")
+	f.StringVar(&opts.remoteTrustZone, "remote-trust-zone", "", "Remote trust zone to federate with")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("from"))
-	cobra.CheckErr(cmd.MarkFlagRequired("to"))
+	// TODO: Remove the following arguments after a suitable period.
+	f.StringVar(&opts.trustZone, "from", "", "Local trust zone")
+	f.StringVar(&opts.remoteTrustZone, "to", "", "Remote trust zone to federate with")
+
+	// TODO: Uncomment this when from/to have been deprecated.
+	// cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+	// cobra.CheckErr(cmd.MarkFlagRequired("remote-trust-zone"))
+
+	cmd.MarkFlagsMutuallyExclusive("from", "trust-zone")
+	cmd.MarkFlagsMutuallyExclusive("to", "remote-trust-zone")
 
 	return cmd
+}
+
+var federationDelCmdDesc = `
+This command will delete a federation from the Cofide configuration state.
+`
+
+func (c *FederationCommand) getDelCommand() *cobra.Command {
+	opts := Opts{}
+	cmd := &cobra.Command{
+		Use:   "del",
+		Short: "Delete a federation",
+		Long:  federationDelCmdDesc,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return c.deleteFederation(cmd.Context(), opts.trustZone, opts.remoteTrustZone)
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.trustZone, "trust-zone", "", "Local trust zone")
+	f.StringVar(&opts.remoteTrustZone, "remote-trust-zone", "", "Remote trust zone to federate with")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+	cobra.CheckErr(cmd.MarkFlagRequired("remote-trust-zone"))
+
+	return cmd
+}
+
+func (c *FederationCommand) deleteFederation(ctx context.Context, trustZone, remoteTrustZone string) error {
+	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
+	if err != nil {
+		return err
+	}
+
+	federation := &federation_proto.Federation{
+		From: trustZone,
+		To:   remoteTrustZone,
+	}
+	return ds.DestroyFederation(federation)
 }

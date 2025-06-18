@@ -30,9 +30,9 @@ const (
 	SPIRERepositoryUrl  = "https://spiffe.github.io/helm-charts-hardened/"
 
 	SPIREChartName        = "spire"
-	SPIREChartVersion     = "0.21.0"
+	SPIREChartVersion     = "0.24.5"
 	SPIRECRDsChartName    = "spire-crds"
-	SPIRECRDsChartVersion = "0.4.0"
+	SPIRECRDsChartVersion = "0.5.0"
 
 	// Kubernetes namespace in which Helm charts and CRDs will be installed.
 	SPIREManagementNamespace = "spire-mgmt"
@@ -55,9 +55,14 @@ type HelmSPIREProvider struct {
 	cluster          *clusterpb.Cluster
 }
 
-func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any) (*HelmSPIREProvider, error) {
+func NewHelmSPIREProvider(ctx context.Context, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, kubeConfig string) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
+	settings.SetNamespace(SPIREManagementNamespace)
+
+	if kubeConfig != "" {
+		settings.KubeConfig = kubeConfig
+	}
 
 	prov := &HelmSPIREProvider{
 		ctx:              ctx,
@@ -236,6 +241,11 @@ func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status
 	return nil
 }
 
+// CheckIfReachable returns no error if a Kubernetes cluster is reachable.
+func (h *HelmSPIREProvider) CheckIfReachable() error {
+	return h.cfg.KubeClient.IsReachable()
+}
+
 // CheckIfAlreadyInstalled returns true if the SPIRE chart has previously been installed.
 func (h *HelmSPIREProvider) CheckIfAlreadyInstalled() (bool, error) {
 	return checkIfAlreadyInstalled(h.cfg, SPIREChartName)
@@ -407,4 +417,22 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 		return false, err
 	}
 	return len(ledger) > 0, nil
+}
+
+// IsClusterDeployed returns whether a Kubernetes cluster is reachable.
+func IsClusterReachable(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) error {
+	prov, err := NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
+	if err != nil {
+		return err
+	}
+	return prov.CheckIfReachable()
+}
+
+// IsClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
+func IsClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) (bool, error) {
+	prov, err := NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
+	if err != nil {
+		return false, err
+	}
+	return prov.CheckIfAlreadyInstalled()
 }

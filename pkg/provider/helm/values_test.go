@@ -22,19 +22,18 @@ type Values = map[string]any
 
 func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 	tests := []struct {
-		name      string
-		trustZone *trust_zone_proto.TrustZone
-		cluster   *clusterpb.Cluster
-		want      Values
+		name       string
+		trustZone  *trust_zone_proto.TrustZone
+		cluster    *clusterpb.Cluster
+		configFunc func(*config.Config)
+		want       Values
 	}{
 		{
 			name: "tz1 no binding or federation",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.AttestationPolicies = nil
 				tz.Bundle = nil
 				tz.BundleEndpointUrl = nil
-				tz.Federations = nil
 				tz.JwtIssuer = nil
 				return tz
 			}(),
@@ -43,6 +42,14 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				cluster.ExtraHelmValues = nil
 				return cluster
 			}(),
+			configFunc: func(cfg *config.Config) {
+				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				require.True(t, ok)
+				// nolint:staticcheck
+				trustZone.AttestationPolicies = nil
+				// nolint:staticcheck
+				trustZone.Federations = nil
+			},
 			want: Values{
 				"global": Values{
 					"deleteHooks": Values{
@@ -77,13 +84,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -105,13 +112,14 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled":          true,
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -161,13 +169,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -209,6 +217,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled": true,
@@ -219,7 +228,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"logLevel":         "INFO",
 					"nameOverride":     "custom-server-name",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -269,13 +278,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -323,6 +332,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled": true,
@@ -332,7 +342,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -381,13 +391,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "null",
 						"defaultAllBundlesName": "ROOTCA",
 					},
@@ -409,13 +419,14 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled":          true,
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -426,10 +437,99 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "tz6",
+			trustZone: fixtures.TrustZone("tz6"),
+			cluster:   fixtures.Cluster("local6"),
+			want: Values{
+				"global": Values{
+					"deleteHooks": Values{
+						"enabled": false,
+					},
+					"installAndUpgradeHooks": Values{
+						"enabled": false,
+					},
+					"spire": Values{
+						"caSubject": Values{
+							"commonName":   "cofide.io",
+							"country":      "UK",
+							"organization": "Cofide",
+						},
+						"clusterName": "local6",
+						"jwtIssuer":   "https://tz6.example.com",
+						"namespaces": Values{
+							"create": true,
+						},
+						"recommendations": Values{
+							"enabled": true,
+						},
+						"trustDomain": "td6",
+					},
+				},
+				"spiffe-csi-driver": Values{
+					"fullnameOverride": "spiffe-csi-driver",
+				},
+				"spiffe-oidc-discovery-provider": Values{
+					"enabled": false,
+				},
+				"spire-agent": Values{
+					"fullnameOverride": "spire-agent",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPSAT": Values{
+							"enabled": true,
+						},
+					},
+					"sds": map[string]any{
+						"enabled":               true,
+						"defaultSVIDName":       "default",
+						"defaultBundleName":     "ROOTCA",
+						"defaultAllBundlesName": "ALL",
+					},
+					"workloadAttestors": Values{
+						"k8s": Values{
+							"disableContainerSelectors": true,
+							"enabled":                   true,
+						},
+					},
+				},
+				"spire-server": Values{
+					"controllerManager": Values{
+						"identities": Values{
+							"clusterSPIFFEIDs": Values{
+								"default": Values{
+									"enabled": false,
+								},
+							},
+							"clusterStaticEntries": Values{
+								"ap4": Values{
+									"parentID":  "spiffe://td6/cluster/local6/spire/agents",
+									"spiffeID":  "spiffe://example.com/foo",
+									"selectors": []string{"k8s:ns:foo"},
+								},
+								"spire-agents": Values{
+									"parentID": "spiffe://td6/spire/server",
+									"selectors": []string{
+										"k8s_psat:agent_ns:spire-system",
+										"k8s_psat:agent_sa:spire-agent",
+										"k8s_psat:cluster:local6",
+									},
+									"spiffeID": "spiffe://td6/cluster/local6/spire/agents",
+								},
+							},
+						},
+					},
+					"enabled": false,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
+			if tt.configFunc != nil {
+				tt.configFunc(cfg)
+			}
 			source := newFakeDataSource(t, cfg)
 			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, nil)
 
@@ -442,20 +542,19 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 
 func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 	tests := []struct {
-		name      string
-		trustZone *trust_zone_proto.TrustZone
-		cluster   *clusterpb.Cluster
-		values    Values
-		want      Values
+		name       string
+		trustZone  *trust_zone_proto.TrustZone
+		cluster    *clusterpb.Cluster
+		configFunc func(*config.Config)
+		values     Values
+		want       Values
 	}{
 		{
 			name: "tz1 no binding or federation",
 			trustZone: func() *trust_zone_proto.TrustZone {
 				tz := fixtures.TrustZone("tz1")
-				tz.AttestationPolicies = nil
 				tz.Bundle = nil
 				tz.BundleEndpointUrl = nil
-				tz.Federations = nil
 				tz.JwtIssuer = nil
 				return tz
 			}(),
@@ -464,6 +563,14 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				cluster.ExtraHelmValues = nil
 				return cluster
 			}(),
+			configFunc: func(cfg *config.Config) {
+				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				require.True(t, ok)
+				// nolint:staticcheck
+				trustZone.AttestationPolicies = nil
+				// nolint:staticcheck
+				trustZone.Federations = nil
+			},
 			values: Values{
 				"spire-server": Values{
 					"controllerManager": Values{
@@ -515,13 +622,13 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -543,6 +650,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 									"enabled": false,
 								},
 							},
+							"clusterStaticEntries": Values{},
 							"clusterFederatedTrustDomains": Values{
 								"cofide": Values{
 									"bundleEndpointProfile": Values{
@@ -558,7 +666,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -573,6 +681,9 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
+			if tt.configFunc != nil {
+				tt.configFunc(cfg)
+			}
 			source := newFakeDataSource(t, cfg)
 			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, tt.values)
 
@@ -588,6 +699,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 		name          string
 		trustZone     *trust_zone_proto.TrustZone
 		cluster       *clusterpb.Cluster
+		configFunc    func(*config.Config)
 		wantErrString string
 	}{
 		{
@@ -611,30 +723,38 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			wantErrString: "an unknown trust provider kind was specified: invalid-tp",
 		},
 		{
-			name: "unknown attestation policy",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.AttestationPolicies[0].Policy = "invalid-ap"
-				return tz
-			}(),
-			cluster:       fixtures.Cluster("local1"),
+			name:      "unknown attestation policy",
+			trustZone: fixtures.TrustZone("tz1"),
+			cluster:   fixtures.Cluster("local1"),
+			configFunc: func(cfg *config.Config) {
+				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				require.True(t, ok)
+				// nolint:staticcheck
+				trustZone.AttestationPolicies[0].Policy = "invalid-ap"
+			},
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
 		{
-			name: "unknown federated trust zone",
-			trustZone: func() *trust_zone_proto.TrustZone {
-				tz := fixtures.TrustZone("tz1")
-				tz.Federations[0].To = "invalid-tz"
-				return tz
-			}(),
-			cluster:       fixtures.Cluster("local1"),
+			name:      "unknown federated trust zone",
+			trustZone: fixtures.TrustZone("tz1"),
+			cluster:   fixtures.Cluster("local1"),
+			configFunc: func(cfg *config.Config) {
+				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				require.True(t, ok)
+				// nolint:staticcheck
+				trustZone.Federations[0].To = "invalid-tz"
+			},
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := defaultConfig()
+			if tt.configFunc != nil {
+				tt.configFunc(cfg)
+			}
 			source := newFakeDataSource(t, cfg)
+
 			g := NewHelmValuesGenerator(tt.trustZone, tt.cluster, source, nil)
 
 			_, err := g.GenerateValues()
@@ -937,6 +1057,7 @@ func TestMergeMaps(t *testing.T) {
 									"enabled": true,
 								},
 							},
+							"clusterStaticEntries": Values{},
 						},
 					},
 					"enabled": true,
@@ -953,6 +1074,7 @@ func TestMergeMaps(t *testing.T) {
 									"enabled": true,
 								},
 							},
+							"clusterStaticEntries": Values{},
 							"clusterFederatedTrustDomains": map[string]any{
 								"cofide": map[string]any{
 									"bundleEndpointProfile": map[string]any{
@@ -1203,11 +1325,11 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSvidName":       "default",
+					"defaultSVIDName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1217,13 +1339,13 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": map[string]any{
-						"k8sPsat": map[string]any{
+						"k8sPSAT": map[string]any{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -1247,11 +1369,11 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSvidName":       "default",
+					"defaultSVIDName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1268,11 +1390,11 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				agentConfig: trustprovider.TrustProviderAgentConfig{
 					WorkloadAttestor:       "k8s",
 					WorkloadAttestorConfig: map[string]any{},
-					NodeAttestor:           "k8sPsat",
+					NodeAttestor:           "k8sPSAT",
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSvidName":       "default",
+					"defaultSVIDName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1292,11 +1414,11 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSvidName":       "default",
+					"defaultSVIDName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1316,7 +1438,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: map[string]any{},
 			},
@@ -1335,7 +1457,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: nil,
 			},
@@ -1376,7 +1498,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 					NodeAttestorConfig: map[string]any{
 						"enabled":  true,
 						"audience": []string{"spire-server"},
@@ -1395,7 +1517,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -1429,7 +1551,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 					//NodeAttestorEnabled: true,
 					NodeAttestorConfig: map[string]any{
 						"enabled":  true,
@@ -1452,7 +1574,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 					//NodeAttestorEnabled: true,
 					NodeAttestorConfig: map[string]any{},
 				},
@@ -1556,7 +1678,7 @@ func TestGetSDSConfig(t *testing.T) {
 			profile: "kubernetes",
 			want: map[string]any{
 				"enabled":               true,
-				"defaultSvidName":       "default",
+				"defaultSVIDName":       "default",
 				"defaultBundleName":     "ROOTCA",
 				"defaultAllBundlesName": "ALL",
 			},
@@ -1567,7 +1689,7 @@ func TestGetSDSConfig(t *testing.T) {
 			profile: "istio",
 			want: map[string]any{
 				"enabled":               true,
-				"defaultSvidName":       "default",
+				"defaultSVIDName":       "default",
 				"defaultBundleName":     "null",
 				"defaultAllBundlesName": "ROOTCA",
 			},
@@ -1607,15 +1729,19 @@ func defaultConfig() *config.Config {
 		TrustZones: []*trust_zone_proto.TrustZone{
 			fixtures.TrustZone("tz1"),
 			fixtures.TrustZone("tz2"),
+			fixtures.TrustZone("tz4"),
+			fixtures.TrustZone("tz6"),
 		},
 		Clusters: []*clusterpb.Cluster{
 			fixtures.Cluster("local1"),
 			fixtures.Cluster("local2"),
 			fixtures.Cluster("local4"),
+			fixtures.Cluster("local6"),
 		},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 			fixtures.AttestationPolicy("ap1"),
 			fixtures.AttestationPolicy("ap2"),
+			fixtures.AttestationPolicy("ap4"),
 		},
 		Plugins: fixtures.Plugins("plugins1"),
 	}

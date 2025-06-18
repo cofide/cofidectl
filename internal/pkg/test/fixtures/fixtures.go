@@ -105,6 +105,21 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		Federations:         []*federation_proto.Federation{},
 		AttestationPolicies: []*ap_binding_proto.APBinding{},
 	},
+	"tz6": {
+		Name:              "tz6",
+		TrustDomain:       "td6",
+		BundleEndpointUrl: StringPtr("127.0.0.5"),
+		Federations:       []*federation_proto.Federation{},
+		AttestationPolicies: []*ap_binding_proto.APBinding{
+			{
+				TrustZone:     "tz6",
+				Policy:        "ap4",
+				FederatesWith: []string{},
+			},
+		},
+		JwtIssuer:             StringPtr("https://tz6.example.com"),
+		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
+	},
 }
 
 var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluster{
@@ -180,6 +195,16 @@ var clusterFixtures map[string]*clusterpb.Cluster = map[string]*clusterpb.Cluste
 		Profile:        StringPtr("kubernetes"),
 		ExternalServer: BoolPtr(true),
 	},
+	"local6": {
+		Name:              StringPtr("local6"),
+		TrustZone:         StringPtr("tz6"),
+		KubernetesContext: StringPtr("kind-local6"),
+		TrustProvider: &trust_provider_proto.TrustProvider{
+			Kind: StringPtr("kubernetes"),
+		},
+		Profile:        StringPtr("kubernetes"),
+		ExternalServer: BoolPtr(true),
+	},
 }
 
 var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPolicy = map[string]*attestation_policy_proto.AttestationPolicy{
@@ -237,6 +262,20 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 							Key:      "baz",
 							Operator: string(metav1.LabelSelectorOpDoesNotExist),
 						},
+					},
+				},
+			},
+		},
+	},
+	"ap4": {
+		Name: "ap4",
+		Policy: &attestation_policy_proto.AttestationPolicy_Static{
+			Static: &attestation_policy_proto.APStatic{
+				SpiffeId: StringPtr("spiffe://example.com/foo"),
+				Selectors: []*spiretypes.Selector{
+					{
+						Type:  "k8s",
+						Value: "ns:foo",
 					},
 				},
 			},

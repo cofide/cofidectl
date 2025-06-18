@@ -17,12 +17,14 @@ func TestHelmSPIREProvider(t *testing.T) {
 	cluster := &clusterpb.Cluster{Name: fixtures.StringPtr("fake-cluster")}
 	spireValues := map[string]any{}
 	spireCRDsValues := map[string]any{}
+	kubeConfig := "fake-kube-config"
 
-	p, err := NewHelmSPIREProvider(context.Background(), cluster, spireValues, spireCRDsValues)
+	p, err := NewHelmSPIREProvider(context.Background(), cluster, spireValues, spireCRDsValues, kubeConfig)
 	assert.Nil(t, err)
-	assert.Equal(t, p.SPIREVersion, "0.21.0")
-	assert.Equal(t, p.SPIRECRDsVersion, "0.4.0")
+	assert.Equal(t, p.SPIREVersion, "0.24.5")
+	assert.Equal(t, p.SPIRECRDsVersion, "0.5.0")
 	assert.Equal(t, cluster.GetName(), p.cluster.GetName())
+	assert.Equal(t, kubeConfig, p.settings.KubeConfig)
 }
 
 func TestGetChartRef(t *testing.T) {
