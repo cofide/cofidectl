@@ -30,9 +30,9 @@ const (
 	SPIRERepositoryUrl  = "https://spiffe.github.io/helm-charts-hardened/"
 
 	SPIREChartName        = "spire"
-	SPIREChartVersion     = "0.21.0"
+	SPIREChartVersion     = "0.24.5"
 	SPIRECRDsChartName    = "spire-crds"
-	SPIRECRDsChartVersion = "0.4.0"
+	SPIRECRDsChartVersion = "0.5.0"
 
 	// Kubernetes namespace in which Helm charts and CRDs will be installed.
 	SPIREManagementNamespace = "spire-mgmt"

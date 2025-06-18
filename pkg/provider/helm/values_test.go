@@ -84,13 +84,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -119,7 +119,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -169,13 +169,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -228,7 +228,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"logLevel":         "INFO",
 					"nameOverride":     "custom-server-name",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -278,13 +278,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -342,7 +342,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -391,13 +391,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "null",
 						"defaultAllBundlesName": "ROOTCA",
 					},
@@ -426,7 +426,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -476,13 +476,13 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -622,13 +622,13 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -666,7 +666,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -1325,11 +1325,11 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSvidName":       "default",
+					"defaultSVIDName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1339,13 +1339,13 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 					"fullnameOverride": "spire-agent",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": map[string]any{
-						"k8sPsat": map[string]any{
+						"k8sPSAT": map[string]any{
 							"enabled": true,
 						},
 					},
 					"sds": map[string]any{
 						"enabled":               true,
-						"defaultSvidName":       "default",
+						"defaultSVIDName":       "default",
 						"defaultBundleName":     "ROOTCA",
 						"defaultAllBundlesName": "ALL",
 					},
@@ -1369,11 +1369,11 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSvidName":       "default",
+					"defaultSVIDName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1390,11 +1390,11 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 				agentConfig: trustprovider.TrustProviderAgentConfig{
 					WorkloadAttestor:       "k8s",
 					WorkloadAttestorConfig: map[string]any{},
-					NodeAttestor:           "k8sPsat",
+					NodeAttestor:           "k8sPSAT",
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSvidName":       "default",
+					"defaultSVIDName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1414,11 +1414,11 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: map[string]any{
 					"enabled":               true,
-					"defaultSvidName":       "default",
+					"defaultSVIDName":       "default",
 					"defaultBundleName":     "ROOTCA",
 					"defaultAllBundlesName": "ALL",
 				},
@@ -1438,7 +1438,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: map[string]any{},
 			},
@@ -1457,7 +1457,7 @@ func TestSpireAgentValues_GenerateValues(t *testing.T) {
 						"enabled":                   true,
 						"disableContainerSelectors": true,
 					},
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 				},
 				sdsConfig: nil,
 			},
@@ -1498,7 +1498,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 					NodeAttestorConfig: map[string]any{
 						"enabled":  true,
 						"audience": []string{"spire-server"},
@@ -1517,7 +1517,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 					"fullnameOverride": "spire-server",
 					"logLevel":         "DEBUG",
 					"nodeAttestor": Values{
-						"k8sPsat": Values{
+						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
 							"enabled":  true,
 						},
@@ -1551,7 +1551,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 					//NodeAttestorEnabled: true,
 					NodeAttestorConfig: map[string]any{
 						"enabled":  true,
@@ -1574,7 +1574,7 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 				fullnameOverride:         "spire-server",
 				logLevel:                 "DEBUG",
 				serverConfig: trustprovider.TrustProviderServerConfig{
-					NodeAttestor: "k8sPsat",
+					NodeAttestor: "k8sPSAT",
 					//NodeAttestorEnabled: true,
 					NodeAttestorConfig: map[string]any{},
 				},
@@ -1678,7 +1678,7 @@ func TestGetSDSConfig(t *testing.T) {
 			profile: "kubernetes",
 			want: map[string]any{
 				"enabled":               true,
-				"defaultSvidName":       "default",
+				"defaultSVIDName":       "default",
 				"defaultBundleName":     "ROOTCA",
 				"defaultAllBundlesName": "ALL",
 			},
@@ -1689,7 +1689,7 @@ func TestGetSDSConfig(t *testing.T) {
 			profile: "istio",
 			want: map[string]any{
 				"enabled":               true,
-				"defaultSvidName":       "default",
+				"defaultSVIDName":       "default",
 				"defaultBundleName":     "null",
 				"defaultAllBundlesName": "ROOTCA",
 			},

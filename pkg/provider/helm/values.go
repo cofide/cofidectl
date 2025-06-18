@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	k8sPsatSelectorType                = "k8s_psat"
-	k8sPsatSPIREAgentNamespaceSelector = "agent_ns"
-	k8sPsatSPIREAgentSASelector        = "agent_sa"
-	k8sPsatClusterSelector             = "cluster"
+	k8sPSATSelectorType                = "k8s_psat"
+	k8sPSATSPIREAgentNamespaceSelector = "agent_ns"
+	k8sPSATSPIREAgentSASelector        = "agent_sa"
+	k8sPSATClusterSelector             = "cluster"
 	serverIdPath                       = "/spire/server"
 	spireAgentNamespace                = "spire-system"
 	spireAgentSA                       = "spire-agent"
@@ -215,9 +215,9 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 			"parentID": fmt.Sprintf("spiffe://%s%s", g.trustZone.GetTrustDomain(), serverIdPath),
 			"spiffeID": fmt.Sprintf("spiffe://%s/cluster/%s/spire/agents", g.trustZone.GetTrustDomain(), g.cluster.GetName()),
 			"selectors": []string{
-				fmt.Sprintf("%s:%s:%s", k8sPsatSelectorType, k8sPsatSPIREAgentNamespaceSelector, spireAgentNamespace),
-				fmt.Sprintf("%s:%s:%s", k8sPsatSelectorType, k8sPsatSPIREAgentSASelector, spireAgentSA),
-				fmt.Sprintf("%s:%s:%s", k8sPsatSelectorType, k8sPsatClusterSelector, g.cluster.GetName()),
+				fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATSPIREAgentNamespaceSelector, spireAgentNamespace),
+				fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATSPIREAgentSASelector, spireAgentSA),
+				fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATClusterSelector, g.cluster.GetName()),
 			},
 		}
 	}
@@ -573,7 +573,7 @@ func getSDSConfig(profile string) (map[string]any, error) {
 		// https://istio.io/latest/docs/ops/integrations/spire/#spiffe-federation
 		return map[string]any{
 			"enabled":               true,
-			"defaultSvidName":       "default",
+			"defaultSVIDName":       "default",
 			"defaultBundleName":     "null",
 			"defaultAllBundlesName": "ROOTCA",
 		}, nil
@@ -581,7 +581,7 @@ func getSDSConfig(profile string) (map[string]any, error) {
 		// https://github.com/spiffe/spire/blob/main/doc/spire_agent.md#sds-configuration
 		return map[string]any{
 			"enabled":               true,
-			"defaultSvidName":       "default",
+			"defaultSVIDName":       "default",
 			"defaultBundleName":     "ROOTCA",
 			"defaultAllBundlesName": "ALL",
 		}, nil
