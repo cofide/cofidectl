@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	buf.build/go/protoyaml v0.6.0
 	cuelang.org/go v0.10.1
-	github.com/cofide/cofide-api-sdk v0.22.0
+	github.com/cofide/cofide-api-sdk v0.24.0
 	github.com/cofide/cofide-sdk-go v0.1.0
 	github.com/fatih/color v1.18.0
 	github.com/go-jose/go-jose/v4 v4.1.0
