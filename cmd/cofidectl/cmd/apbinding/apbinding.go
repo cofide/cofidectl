@@ -76,8 +76,7 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			renderList(bindings)
-			return nil
+			return renderList(ds, bindings)
 		},
 	}
 
@@ -107,24 +106,40 @@ func (c *APBindingCommand) list(source datasource.DataSource, opts ListOpts) ([]
 	return source.ListAPBindings(filter)
 }
 
-func renderFederations(bindings []*ap_binding_proto.APBindingFederation) string {
+func renderFederations(bindings []*ap_binding_proto.APBindingFederation, tzMap map[string]string) string {
 	federations := []string{}
 	for _, binding := range bindings {
-		// FIXME: show name
-		federations = append(federations, binding.GetTrustZoneId())
+		federations = append(federations, tzMap[binding.GetTrustZoneId()])
 	}
 
 	return strings.Join(federations, ", ")
 }
 
-func renderList(bindings []*ap_binding_proto.APBinding) {
+func renderList(source datasource.DataSource, bindings []*ap_binding_proto.APBinding) error {
+	tzs, err := source.ListTrustZones()
+	if err != nil {
+		return err
+	}
+	tzMap := make(map[string]string)
+	for _, tz := range tzs {
+		tzMap[tz.GetId()] = tz.GetName()
+	}
+
+	policies, err := source.ListAttestationPolicies()
+	if err != nil {
+		return err
+	}
+	policyMap := make(map[string]string)
+	for _, policy := range policies {
+		policyMap[policy.GetId()] = policy.GetName()
+	}
+
 	data := make([][]string, len(bindings))
 	for i, binding := range bindings {
 		data[i] = []string{
-			// FIXME: show names
-			binding.GetTrustZoneId(),
-			binding.GetPolicyId(),
-			renderFederations(binding.GetFederations()),
+			tzMap[binding.GetTrustZoneId()],
+			policyMap[binding.GetPolicyId()],
+			renderFederations(binding.GetFederations(), tzMap),
 		}
 	}
 
@@ -133,6 +148,7 @@ func renderList(bindings []*ap_binding_proto.APBinding) {
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
+	return nil
 }
 
 var apBindingAddCmdDesc = `
