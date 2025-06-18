@@ -295,8 +295,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				tz := fixtures.TrustZone("tz1")
 				// nolint:staticcheck
 				tz.AttestationPolicies = []*ap_binding_proto.APBinding{
-					// nolint:staticcheck
-					{TrustZone: "tz1", Policy: "ap2"},
+					{TrustZoneId: fixtures.StringPtr("tz1-id"), PolicyId: fixtures.StringPtr("ap2-id")},
 				}
 				return tz
 			}(),
@@ -309,7 +308,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				tz := fixtures.TrustZone("tz1")
 				// nolint:staticcheck
 				tz.Federations = []*federation_proto.Federation{
-					{From: "tz1", To: "tz3"},
+					{TrustZoneId: fixtures.StringPtr("tz1-id"), RemoteTrustZoneId: fixtures.StringPtr("tz3-id")},
 				}
 				return tz
 			}(),
@@ -916,11 +915,11 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "federates with",
+			name: "success with federations",
 			binding: &ap_binding_proto.APBinding{
 				TrustZoneId:   fixtures.StringPtr("tz1-id"),
 				PolicyId:      fixtures.StringPtr("ap2-id"),
-				FederatesWith: []string{"tz2-id"},
+				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("tz2-id")}},
 			},
 			wantErr: false,
 		},

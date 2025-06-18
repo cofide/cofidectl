@@ -403,7 +403,6 @@ func (lds *LocalDataSource) DestroyAttestationPolicy(id string) error {
 	for _, trustZone := range lds.config.TrustZones {
 		// nolint:staticcheck
 		for _, binding := range trustZone.AttestationPolicies {
-			// nolint:staticcheck
 			if binding.GetPolicyId() == id {
 				return fmt.Errorf("attestation policy %s is bound to trust zone %s in local config", id, trustZone.Name)
 			}
