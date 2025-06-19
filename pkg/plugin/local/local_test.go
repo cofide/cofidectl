@@ -127,8 +127,10 @@ func TestLocalDataSource_AddTrustZone(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
+				tt.trustZone.Id = got.Id
 				assert.EqualExportedValues(t, tt.trustZone, got)
 				assert.False(t, slices.Contains(lds.config.TrustZones, tt.trustZone), "Pointer to trust zone stored in config")
+				assert.False(t, slices.Contains(lds.config.TrustZones, got), "Pointer to trust zone in config returned")
 				// Check that the trust zone was persisted.
 				gotConfig := readConfig(t, loader)
 				gotTrustZone, ok := gotConfig.GetTrustZoneByName(tt.trustZone.Name)
@@ -338,6 +340,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				assert.EqualExportedValues(t, tt.trustZone, trustZone)
 				assert.EqualExportedValues(t, tt.trustZone, lds.config.TrustZones[0])
 				assert.False(t, slices.Contains(lds.config.TrustZones, tt.trustZone), "Pointer to trust zone stored in config")
+				assert.False(t, slices.Contains(lds.config.TrustZones, trustZone), "Pointer to trust zone in config returned")
 				// Check that the trust zone was persisted.
 				gotConfig := readConfig(t, loader)
 				gotTrustZone, ok := gotConfig.GetTrustZoneByName(tt.trustZone.Name)
@@ -435,8 +438,10 @@ func TestLocalDataSource_AddCluster(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
+				tt.cluster.Id = got.Id
 				assert.EqualExportedValues(t, tt.cluster, got)
 				assert.False(t, slices.Contains(lds.config.Clusters, tt.cluster), "Pointer to cluster stored in config")
+				assert.False(t, slices.Contains(lds.config.Clusters, got), "Pointer to cluster in config returned")
 				// Check that the trust zone was persisted.
 				gotConfig := readConfig(t, loader)
 				gotCluster, ok := gotConfig.GetClusterByID(tt.cluster.GetId())
@@ -703,6 +708,7 @@ func TestLocalDataSource_UpdateCluster(t *testing.T) {
 				assert.EqualExportedValues(t, tt.cluster, cluster)
 				assert.EqualExportedValues(t, tt.cluster, lds.config.Clusters[0])
 				assert.False(t, slices.Contains(lds.config.Clusters, tt.cluster), "Pointer to cluster stored in config")
+				assert.False(t, slices.Contains(lds.config.Clusters, cluster), "Pointer to cluster in config returned")
 				// Check that the cluster was persisted.
 				gotConfig := readConfig(t, loader)
 				gotCluster, ok := gotConfig.GetClusterByID(tt.cluster.GetId())
@@ -739,8 +745,10 @@ func TestLocalDataSource_AddAttestationPolicy(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
+				tt.policy.Id = got.Id
 				assert.EqualExportedValues(t, tt.policy, got)
-				assert.False(t, slices.Contains(lds.config.AttestationPolicies, tt.policy), "Pointer to trust zone stored in config")
+				assert.False(t, slices.Contains(lds.config.AttestationPolicies, tt.policy), "Pointer to attestation policy stored in config")
+				assert.False(t, slices.Contains(lds.config.AttestationPolicies, got), "Pointer to attestation policy in config returned")
 				// Check that the policy was persisted.
 				gotConfig := readConfig(t, loader)
 				gotPolicy, ok := gotConfig.GetAttestationPolicyByName(tt.policy.Name)
@@ -844,7 +852,7 @@ func TestLocalDataSource_GetAttestationPolicy(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 				assert.EqualExportedValues(t, cfg.AttestationPolicies[0], got)
-				assert.False(t, slices.Contains(lds.config.AttestationPolicies, got), "Pointer to trust zone in config returned")
+				assert.False(t, slices.Contains(lds.config.AttestationPolicies, got), "Pointer to attestation policy in config returned")
 			}
 		})
 	}
@@ -995,9 +1003,12 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				assert.EqualError(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
+				tt.binding.Id = got.Id
 				assert.EqualExportedValues(t, tt.binding, got)
 				// nolint:staticcheck
 				assert.False(t, slices.Contains(lds.config.TrustZones[0].AttestationPolicies, tt.binding), "Pointer to attestation policy binding stored in config")
+				// nolint:staticcheck
+				assert.False(t, slices.Contains(lds.config.TrustZones[0].AttestationPolicies, got), "Pointer to attestation policy binding in config returned")
 				// Check that the binding was persisted.
 				gotConfig := readConfig(t, loader)
 				// nolint:staticcheck
@@ -1229,9 +1240,12 @@ func TestLocalDataSource_AddFederation(t *testing.T) {
 				assert.EqualError(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
+				tt.federation.Id = got.Id
 				assert.EqualExportedValues(t, tt.federation, got)
 				// nolint:staticcheck
 				assert.False(t, slices.Contains(lds.config.TrustZones[0].Federations, tt.federation), "Pointer to federation stored in config")
+				// nolint:staticcheck
+				assert.False(t, slices.Contains(lds.config.TrustZones[0].Federations, got), "Pointer to federation in config returned")
 				// Check that the federation was persisted.
 				gotConfig := readConfig(t, loader)
 				// nolint:staticcheck
@@ -1394,7 +1408,7 @@ func TestLocalDataSource_listFederationsByTrustZone(t *testing.T) {
 				}
 				for _, gotFederation := range got {
 					// nolint:staticcheck
-					assert.False(t, slices.Contains(want.Federations, gotFederation), "Pointer to attestation policy binding in config returned")
+					assert.False(t, slices.Contains(want.Federations, gotFederation), "Pointer to federation in config returned")
 				}
 			}
 		})
