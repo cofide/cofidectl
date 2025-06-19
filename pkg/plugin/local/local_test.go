@@ -1486,62 +1486,6 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 	}
 }
 
-func TestLocalDataSource_listFederationsByTrustZone(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name          string
-		trustZone     string
-		wantErr       bool
-		wantErrString string
-	}{
-		{
-			name:      "none",
-			trustZone: "tz3-id",
-			wantErr:   false,
-		},
-		{
-			name:      "two",
-			trustZone: "tz1-id",
-			wantErr:   false,
-		},
-		{
-			name:          "invalid trust zone",
-			trustZone:     "invalid",
-			wantErr:       true,
-			wantErrString: "failed to find trust zone invalid in local config",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &config.Config{
-				TrustZones: []*trust_zone_proto.TrustZone{
-					fixtures.TrustZone("tz1"),
-					fixtures.TrustZone("tz3"),
-				},
-				Plugins: fixtures.Plugins("plugins1"),
-			}
-			lds, _ := buildLocalDataSource(t, cfg)
-			got, err := lds.listFederationsByTrustZone(tt.trustZone)
-			if tt.wantErr {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.wantErrString)
-			} else {
-				require.Nil(t, err)
-				want, ok := cfg.GetTrustZoneByID(tt.trustZone)
-				require.True(t, ok)
-				// nolint:staticcheck
-				if diff := cmp.Diff(got, want.Federations, protocmp.Transform()); diff != "" {
-					t.Errorf("LocalDataSource.listFederationsByTrustZone() mismatch (-want,+got):\n%s", diff)
-				}
-				for _, gotFederation := range got {
-					// nolint:staticcheck
-					assert.False(t, slices.Contains(want.Federations, gotFederation), "Pointer to federation in config returned")
-				}
-			}
-		})
-	}
-}
-
 func buildLocalDataSource(t *testing.T, cfg *config.Config) (*LocalDataSource, *config.MemoryLoader) {
 	loader, err := config.NewMemoryLoader(cfg)
 	require.Nil(t, err)

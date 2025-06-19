@@ -17,6 +17,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
+	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
 	"github.com/google/uuid"
@@ -591,7 +592,11 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		return nil, fmt.Errorf("cannot federate trust zone %s with itself", federationProto.GetTrustZoneId())
 	}
 
-	federations, err := lds.listFederationsByTrustZone(federationProto.GetTrustZoneId())
+	federations, err := lds.ListFederations(
+		&datasourcepb.ListFederationsRequest_Filter{
+			TrustZoneId: fixtures.StringPtr(federationProto.GetTrustZoneId()),
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list federations for trust zone %s: %w", federationProto.GetTrustZoneId(), err)
 	}
@@ -647,24 +652,6 @@ func (lds *LocalDataSource) ListFederations(filter *datasourcepb.ListFederations
 				federations = append(federations, federation)
 			}
 		}
-	}
-	return federations, nil
-}
-
-func (lds *LocalDataSource) listFederationsByTrustZone(tzID string) ([]*federation_proto.Federation, error) {
-	trustZone, ok := lds.config.GetTrustZoneByID(tzID)
-	if !ok {
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", tzID)
-	}
-
-	var federations []*federation_proto.Federation
-	// nolint:staticcheck
-	for _, federation := range trustZone.Federations {
-		federation, err := proto.CloneFederation(federation)
-		if err != nil {
-			return nil, err
-		}
-		federations = append(federations, federation)
 	}
 	return federations, nil
 }
