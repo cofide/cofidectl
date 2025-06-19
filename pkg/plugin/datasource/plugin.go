@@ -369,11 +369,11 @@ func (s *GRPCServer) DestroyAttestationPolicy(_ context.Context, req *cofidectl_
 }
 
 func (s *GRPCServer) GetAttestationPolicy(_ context.Context, req *cofidectl_proto.GetAttestationPolicyRequest) (*cofidectl_proto.GetAttestationPolicyResponse, error) {
-	resp, err := s.Impl.GetAttestationPolicy(req.GetId())
+	policy, err := s.Impl.GetAttestationPolicy(req.GetId())
 	if err != nil {
 		return nil, err
 	}
-	return &cofidectl_proto.GetAttestationPolicyResponse{Policy: resp}, nil
+	return &cofidectl_proto.GetAttestationPolicyResponse{Policy: policy}, nil
 }
 
 func (s *GRPCServer) GetAttestationPolicyByName(_ context.Context, req *cofidectl_proto.GetAttestationPolicyByNameRequest) (*cofidectl_proto.GetAttestationPolicyByNameResponse, error) {

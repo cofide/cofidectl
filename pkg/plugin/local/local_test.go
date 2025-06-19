@@ -144,24 +144,24 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		trustZone     string
+		trustZoneID   string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:      "success",
-			trustZone: "tz1-id",
-			wantErr:   false,
+			name:        "success",
+			trustZoneID: "tz1-id",
+			wantErr:     false,
 		},
 		{
 			name:          "invalid trust zone",
-			trustZone:     "invalid-tz",
+			trustZoneID:   "invalid-tz",
 			wantErr:       true,
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
 		{
 			name:          "cluster exists in trust zone",
-			trustZone:     "tz2-id",
+			trustZoneID:   "tz2-id",
 			wantErr:       true,
 			wantErrString: "one or more clusters exist in trust zone tz2-id in local config",
 		},
@@ -183,7 +183,7 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
-			err := lds.DestroyTrustZone(tt.trustZone)
+			err := lds.DestroyTrustZone(tt.trustZoneID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
@@ -207,18 +207,18 @@ func TestLocalDataSource_GetTrustZone(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		trustZone     string
+		trustZoneID   string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:      "success",
-			trustZone: "tz1-id",
-			wantErr:   false,
+			name:        "success",
+			trustZoneID: "tz1-id",
+			wantErr:     false,
 		},
 		{
 			name:          "non-existent",
-			trustZone:     "tz2-id",
+			trustZoneID:   "tz2-id",
 			wantErr:       true,
 			wantErrString: "failed to find trust zone tz2-id in local config",
 		},
@@ -233,7 +233,7 @@ func TestLocalDataSource_GetTrustZone(t *testing.T) {
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 
-			got, err := lds.GetTrustZone(tt.trustZone)
+			got, err := lds.GetTrustZone(tt.trustZoneID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
@@ -503,20 +503,20 @@ func TestLocalDataSource_GetCluster(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		cluster       string
+		clusterID     string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:    "success",
-			cluster: "local1-id",
-			wantErr: false,
+			name:      "success",
+			clusterID: "local1-id",
+			wantErr:   false,
 		},
 		{
 			name:          "non-existent",
-			cluster:       "local2",
+			clusterID:     "local2-id",
 			wantErr:       true,
-			wantErrString: "failed to find cluster local2 in local config",
+			wantErrString: "failed to find cluster local2-id in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -529,7 +529,7 @@ func TestLocalDataSource_GetCluster(t *testing.T) {
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 
-			got, err := lds.GetCluster(tt.cluster)
+			got, err := lds.GetCluster(tt.clusterID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
@@ -756,24 +756,24 @@ func TestLocalDataSource_DestroyAttestationPolicy(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		policy        string
+		policyID      string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:    "success",
-			policy:  "ap1-id",
-			wantErr: false,
+			name:     "success",
+			policyID: "ap1-id",
+			wantErr:  false,
 		},
 		{
 			name:          "invalid policy",
-			policy:        "invalid-ap",
+			policyID:      "invalid-ap",
 			wantErr:       true,
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
 		{
 			name:          "bound to trust zone",
-			policy:        "ap2-id",
+			policyID:      "ap2-id",
 			wantErr:       true,
 			wantErrString: "attestation policy ap2-id is bound to trust zone tz2 in local config",
 		},
@@ -791,7 +791,7 @@ func TestLocalDataSource_DestroyAttestationPolicy(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
-			err := lds.DestroyAttestationPolicy(tt.policy)
+			err := lds.DestroyAttestationPolicy(tt.policyID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
@@ -811,18 +811,18 @@ func TestLocalDataSource_GetAttestationPolicy(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		policy        string
+		policyID      string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:    "success",
-			policy:  "ap1-id",
-			wantErr: false,
+			name:     "success",
+			policyID: "ap1-id",
+			wantErr:  false,
 		},
 		{
 			name:          "non-existent",
-			policy:        "ap2-id",
+			policyID:      "ap2-id",
 			wantErr:       true,
 			wantErrString: "failed to find attestation policy ap2-id in local config",
 		},
@@ -837,7 +837,7 @@ func TestLocalDataSource_GetAttestationPolicy(t *testing.T) {
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 
-			got, err := lds.GetAttestationPolicy(tt.policy)
+			got, err := lds.GetAttestationPolicy(tt.policyID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
