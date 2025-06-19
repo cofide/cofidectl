@@ -5,15 +5,16 @@ package apbinding
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
-	trustzonepb "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+
+	"slices"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -55,8 +56,8 @@ This command will list attestation policy bindings in the Cofide configuration s
 `
 
 type ListOpts struct {
-	trustZone         string
-	attestationPolicy string
+	trustZoneID         string
+	attestationPolicyID string
 }
 
 func (c *APBindingCommand) GetListCommand() *cobra.Command {
@@ -81,27 +82,19 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZone, "trust-zone", "", "list the attestation policies bound to a specific trust zone")
-	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "list the bindings for a specific attestation policy")
+	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "list the attestation policies bound to a specific trust zone")
+	f.StringVar(&opts.attestationPolicyID, "attestation-policy-id", "", "list the bindings for a specific attestation policy")
 
 	return cmd
 }
 
 func (c *APBindingCommand) list(source datasource.DataSource, opts ListOpts) ([]*ap_binding_proto.APBinding, error) {
 	filter := &datasourcepb.ListAPBindingsRequest_Filter{}
-	if opts.trustZone != "" {
-		trustZone, err := source.GetTrustZoneByName(opts.trustZone)
-		if err != nil {
-			return nil, err
-		}
-		filter.TrustZoneId = trustZone.Id
+	if opts.trustZoneID != "" {
+		filter.TrustZoneId = &opts.trustZoneID
 	}
-	if opts.attestationPolicy != "" {
-		policy, err := source.GetAttestationPolicyByName(opts.attestationPolicy)
-		if err != nil {
-			return nil, err
-		}
-		filter.PolicyId = policy.Id
+	if opts.attestationPolicyID != "" {
+		filter.PolicyId = &opts.attestationPolicyID
 	}
 	return source.ListAPBindings(filter)
 }
@@ -155,9 +148,12 @@ var apBindingAddCmdDesc = `
 This command will bind an attestation policy to a trust zone.`
 
 type AddOpts struct {
-	trustZone         string
-	attestationPolicy string
-	federatesWith     []string
+	trustZonename       string
+	trustZoneID         string
+	attestationPolicy   string
+	attestationPolicyID string
+	federatesWith       []string
+	federatesWithIDs    []string
 }
 
 func (c *APBindingCommand) GetAddCommand() *cobra.Command {
@@ -173,40 +169,50 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
-			tz, err := ds.GetTrustZoneByName(opts.trustZone)
-			if err != nil {
-				return err
+			trustZoneID := opts.trustZoneID
+			if trustZoneID == "" {
+				tz, err := ds.GetTrustZoneByName(opts.trustZonename)
+				if err != nil {
+					return err
+				}
+				trustZoneID = tz.GetId()
 			}
-			trustZoneID := tz.GetId()
 
-			policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
-			if err != nil {
-				return err
+			policyID := opts.attestationPolicyID
+			if policyID == "" {
+				policies, err := ds.ListAttestationPolicies()
+				if err != nil {
+					return err
+				}
+				for _, policy := range policies {
+					if policy.Name == opts.attestationPolicy {
+						policyID = policy.GetId()
+						break
+					}
+				}
 			}
-			policyID := policy.GetId()
+			if policyID == "" {
+				return errors.New("attestation policy not found")
+			}
 
-			federations := []*ap_binding_proto.APBindingFederation{}
-			if len(opts.federatesWith) != 0 {
+			federatesWith := opts.federatesWithIDs
+			if len(opts.federatesWith) > 0 {
+				federatesWith = []string{}
 				tzs, err := ds.ListTrustZones()
 				if err != nil {
 					return err
 				}
-
-				for _, federation := range opts.federatesWith {
-					var trustZone *trustzonepb.TrustZone
-					for _, tz := range tzs {
-						if tz.Name == federation {
-							trustZone = tz
-							break
-						}
+				for _, tz := range tzs {
+					if slices.Contains(opts.federatesWith, tz.Name) {
+						federatesWith = append(federatesWith, tz.GetId())
 					}
-					if trustZone == nil {
-						return fmt.Errorf("federated trust zone not found: %s", federation)
-					}
-					federations = append(federations, &ap_binding_proto.APBindingFederation{
-						TrustZoneId: trustZone.Id,
-					})
 				}
+			}
+			federations := []*ap_binding_proto.APBindingFederation{}
+			for _, federate := range federatesWith {
+				federations = append(federations, &ap_binding_proto.APBindingFederation{
+					TrustZoneId: &federate,
+				})
 			}
 
 			binding := &ap_binding_proto.APBinding{
@@ -220,13 +226,18 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone name")
+	f.StringVar(&opts.trustZonename, "trust-zone-name", "", "Trust zone name")
+	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "Trust zone ID")
 	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "Attestation policy name")
+	f.StringVar(&opts.attestationPolicy, "attestation-policy-id", "", "Attestation policy ID")
 	f.StringSliceVar(&opts.federatesWith, "federates-with", nil, "Defines a trust zone to federate identity with. May be specified multiple times")
+	f.StringSliceVar(&opts.federatesWithIDs, "federates-with-id", nil, "Defines a trust zone to federate identity with. May be specified multiple times")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
-	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))
-
+	cmd.MarkFlagsOneRequired("trust-zone-name", "trust-zone-id")
+	cmd.MarkFlagsOneRequired("attestation-policy", "attestation-policy-id")
+	cmd.MarkFlagsMutuallyExclusive("trust-zone-name", "trust-zone-id")
+	cmd.MarkFlagsMutuallyExclusive("attestation-policy", "attestation-policy-id")
+	cmd.MarkFlagsMutuallyExclusive("federates-with", "federates-with-id")
 	return cmd
 }
 
@@ -234,7 +245,9 @@ var apBindingDelCmdDesc = `
 This command will unbind an attestation policy from a trust zone.`
 
 type DelOpts struct {
-	trustZone         string
+	id                string
+	trustZoneName     string
+	trustZoneID       string
 	attestationPolicy string
 }
 
@@ -251,11 +264,23 @@ func (c *APBindingCommand) GetDelCommand() *cobra.Command {
 				return err
 			}
 
-			trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
-			if err != nil {
-				return err
+			if opts.id != "" {
+				return ds.DestroyAPBinding(opts.id)
 			}
 
+			var trustZone *trust_zone_proto.TrustZone
+			if opts.trustZoneName != "" {
+				trustZone, err = ds.GetTrustZoneByName(opts.trustZoneName)
+				if err != nil {
+					return err
+				}
+			}
+			if opts.trustZoneID != "" {
+				trustZone, err = ds.GetTrustZone(opts.trustZoneID)
+				if err != nil {
+					return err
+				}
+			}
 			policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
 			if err != nil {
 				return err
@@ -280,11 +305,16 @@ func (c *APBindingCommand) GetDelCommand() *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone name")
+	f.StringVar(&opts.trustZoneName, "trust-zone-name", "", "Trust zone name")
+	f.StringVar(&opts.trustZoneID, "trust-zone-id", "", "Trust zone ID")
 	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "Attestation policy name")
+	f.StringVar(&opts.id, "id", "", "Binding ID")
 
-	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
-	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))
+	cmd.MarkFlagsOneRequired("trust-zone-id", "trust-zone-name", "id")
+	cmd.MarkFlagsOneRequired("attestation-policy", "id")
+	cmd.MarkFlagsMutuallyExclusive("trust-zone-name", "id")
+	cmd.MarkFlagsMutuallyExclusive("trust-zone-id", "id")
+	cmd.MarkFlagsMutuallyExclusive("attestation-policy", "id")
 
 	return cmd
 }

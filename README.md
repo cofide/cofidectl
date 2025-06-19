@@ -44,7 +44,7 @@ Next up is to add an 'attestation policy' - these are `cofidectl` rules which ar
 
 ```sh
 ./cofidectl attestation-policy add kubernetes --name namespace-demo --namespace demo
-./cofidectl attestation-policy-binding add --trust-zone cofide-a --attestation-policy namespace-demo
+./cofidectl attestation-policy-binding add --trust-zone-name cofide-a --attestation-policy namespace-demo
 ```
 
 Finally, deploy the changes to the cluster:

@@ -27,8 +27,9 @@ This command installs a Cofide configuration
 `
 
 type UpOpts struct {
-	quiet      bool
-	trustZones []string
+	quiet          bool
+	trustZoneNames []string
+	trustzoneIDs   []string
 }
 
 func (u *UpCommand) UpCmd() *cobra.Command {
@@ -49,26 +50,26 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			tzs, err := ds.ListTrustZones()
-			if err != nil {
-				return err
-			}
-
-			trustZoneIDs := []string{}
-			for _, tzName := range opts.trustZones {
-				var trustZoneID string
-				for _, tz := range tzs {
-					if tz.Name == tzName {
-						trustZoneID = tz.GetId()
-						break
+			trustZoneIDs := opts.trustzoneIDs
+			if len(opts.trustZoneNames) > 0 {
+				tzs, err := ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
+				for _, tzName := range opts.trustZoneNames {
+					var trustZoneID string
+					for _, tz := range tzs {
+						if tz.Name == tzName {
+							trustZoneID = tz.GetId()
+							break
+						}
 					}
+					if trustZoneID == "" {
+						return fmt.Errorf("trust zone '%s' not found", tzName)
+					}
+					trustZoneIDs = append(trustZoneIDs, trustZoneID)
 				}
-				if trustZoneID == "" {
-					return fmt.Errorf("trust zone '%s' not found", tzName)
-				}
-				trustZoneIDs = append(trustZoneIDs, trustZoneID)
 			}
-
 			deployOpts := provisionplugin.DeployOpts{
 				KubeCfgFile:  kubeCfgFile,
 				TrustZoneIDs: trustZoneIDs,
@@ -88,7 +89,8 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from installation")
-	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to install, or all if none is specified")
+	f.StringSliceVar(&opts.trustZoneNames, "trust-zone-name", []string{}, "Trust zones to install, or all if none is specified")
+	f.StringSliceVar(&opts.trustzoneIDs, "trust-zone-id", []string{}, "Trust zone IDs to install, or all if none is specified")
 
 	return cmd
 }
