@@ -77,28 +77,21 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 			}
 
 			var trustZones []*trust_zone_proto.TrustZone
-
-			allTrustZones, err := ds.ListTrustZones()
-			if err != nil {
-				return err
-			}
-
 			if opts.trustZone != "" {
-				for _, tz := range allTrustZones {
-					if tz.GetName() == opts.trustZone {
-						trustZones = append(trustZones, tz)
-						break
-					}
-				}
-				if len(trustZones) == 0 {
+				trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
+				if err != nil {
 					return fmt.Errorf("trust zone %s not found", opts.trustZone)
 				}
+				trustZones = []*trust_zone_proto.TrustZone{trustZone}
 			} else {
-				trustZones = allTrustZones
-			}
+				trustZones, err = ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
 
-			if len(trustZones) == 0 {
-				return fmt.Errorf("no trust zones have been configured")
+				if len(trustZones) == 0 {
+					return fmt.Errorf("no trust zones have been configured")
+				}
 			}
 
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
@@ -283,28 +276,21 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 			}
 
 			var trustZones []*trust_zone_proto.TrustZone
-
-			allTrustZones, err := ds.ListTrustZones()
-			if err != nil {
-				return err
-			}
-
 			if opts.trustZone != "" {
-				for _, tz := range allTrustZones {
-					if tz.GetName() == opts.trustZone {
-						trustZones = append(trustZones, tz)
-						break
-					}
-				}
-				if len(trustZones) == 0 {
+				trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
+				if err != nil {
 					return fmt.Errorf("trust zone %s not found", opts.trustZone)
 				}
+				trustZones = []*trust_zone_proto.TrustZone{trustZone}
 			} else {
-				trustZones = allTrustZones
-			}
+				trustZones, err = ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
 
-			if len(trustZones) == 0 {
-				return fmt.Errorf("no trust zones have been configured")
+				if len(trustZones) == 0 {
+					return fmt.Errorf("no trust zones have been configured")
+				}
 			}
 
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
