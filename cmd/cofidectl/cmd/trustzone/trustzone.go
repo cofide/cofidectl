@@ -100,7 +100,6 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 				}
 
 				data[i] = []string{
-					trustZone.GetId(),
 					trustZone.Name,
 					trustZone.TrustDomain,
 					clusterName,
@@ -108,7 +107,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 			}
 
 			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"ID", "Name", "Trust Domain", "Cluster"})
+			table.SetHeader([]string{"Name", "Trust Domain", "Cluster"})
 			table.SetBorder(false)
 			table.AppendBulk(data)
 			table.Render()
@@ -220,7 +219,7 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 
 		_, err = ds.AddCluster(newCluster)
 		if err != nil {
-			if err := ds.DestroyTrustZone(opts.name); err != nil {
+			if err := ds.DestroyTrustZone(newTrustZone.GetId()); err != nil {
 				slog.Error("Failed to destroy trust zone during rollback", "error", err)
 			}
 			return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
@@ -236,9 +235,6 @@ This command will delete a trust zone from the Cofide configuration state.
 
 type delOpts struct {
 	force bool
-
-	name string
-	id   string
 }
 
 func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
@@ -247,6 +243,7 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 		Use:   "del [NAME]",
 		Short: "Delete a trust zone",
 		Long:  trustZoneDelCmdDesc,
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
@@ -258,30 +255,23 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 				return err
 			}
 
-			return deleteTrustZone(cmd.Context(), ds, kubeConfig, opts)
+			return deleteTrustZone(cmd.Context(), args[0], ds, kubeConfig, opts.force)
 		},
 	}
 
 	f := cmd.Flags()
 	f.BoolVar(&opts.force, "force", false, "Skip pre-delete checks")
-	f.StringVar(&opts.name, "name", "", "Name of the trust zone to delete")
-	f.StringVar(&opts.id, "id", "", "ID of the trust zone to delete")
-
-	cmd.MarkFlagsOneRequired("name", "id")
-	cmd.MarkFlagsMutuallyExclusive("name", "id")
 
 	return cmd
 }
 
-func deleteTrustZone(ctx context.Context, ds datasource.DataSource, kubeConfig string, opts *delOpts) error {
-	id := opts.id
-	if opts.name != "" {
-		tz, err := ds.GetTrustZoneByName(opts.name)
-		if err != nil {
-			return err
-		}
-		id = tz.GetId()
+func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, kubeConfig string, force bool) error {
+	tz, err := ds.GetTrustZoneByName(name)
+	if err != nil {
+		return err
 	}
+	id := tz.GetId()
+
 	clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
 		TrustZoneId: &id,
 	})
@@ -290,13 +280,13 @@ func deleteTrustZone(ctx context.Context, ds datasource.DataSource, kubeConfig s
 	}
 
 	// TODO: Add IsClusterDeployed to ProvisionPlugin interface and mock in tests.
-	if !opts.force {
+	if !force {
 		// Fail if any clusters in the trust zone are reachable and SPIRE is deployed.
 		for _, cluster := range clusters {
 			if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 				return err
 			} else if deployed {
-				return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", cluster.GetName(), id)
+				return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", cluster.GetName(), name)
 			}
 		}
 	}
@@ -315,7 +305,7 @@ func deleteTrustZone(ctx context.Context, ds datasource.DataSource, kubeConfig s
 
 	err = ds.DestroyTrustZone(id)
 	if err != nil {
-		return fmt.Errorf("failed to destroy trust zone %s: %w", id, err)
+		return fmt.Errorf("failed to destroy trust zone %s: %w", name, err)
 	}
 
 	return nil
@@ -350,8 +340,8 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzID string) error {
-	trustZone, err := source.GetTrustZone(tzID)
+func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string) error {
+	trustZone, err := source.GetTrustZoneByName(tzName)
 	if err != nil {
 		return err
 	}

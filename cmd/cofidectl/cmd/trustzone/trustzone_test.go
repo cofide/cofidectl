@@ -69,7 +69,7 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 			trustZoneName:  "tz3",
 			injectFailure:  true,
 			wantErr:        true,
-			wantErrMessage: "fake destroy failure",
+			wantErrMessage: "fake add failure",
 		},
 	}
 	for _, tt := range tests {
@@ -120,24 +120,24 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 	tests := []struct {
 		name           string
-		trustZoneID    string
+		trustZoneName  string
 		injectFailure  bool
 		wantErr        bool
 		wantErrMessage string
 	}{
 		{
-			name:        "exists",
-			trustZoneID: "tz1-id",
+			name:          "exists",
+			trustZoneName: "tz1",
 		},
 		{
 			name:           "doesn't exist",
-			trustZoneID:    "invalid tz",
+			trustZoneName:  "invalid tz",
 			wantErr:        true,
 			wantErrMessage: "failed to find trust zone invalid tz in local config",
 		},
 		{
 			name:           "cluster delete rollback",
-			trustZoneID:    "tz1-id",
+			trustZoneName:  "tz1",
 			injectFailure:  true,
 			wantErr:        true,
 			wantErrMessage: "fake destroy failure",
@@ -149,10 +149,7 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 			if tt.injectFailure {
 				ds = &failingDS{LocalDataSource: ds.(*local.LocalDataSource)}
 			}
-			err := deleteTrustZone(context.Background(), ds, "", &delOpts{
-				id:    tt.trustZoneID,
-				force: true,
-			})
+			err := deleteTrustZone(context.Background(), tt.trustZoneName, ds, "", true)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrMessage)
@@ -173,7 +170,7 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 				require.NoError(t, err)
 
 				// Check that trust zone and clusters were deleted.
-				_, err := ds.GetTrustZone(tt.trustZoneID)
+				_, err := ds.GetTrustZoneByName(tt.trustZoneName)
 				require.Error(t, err)
 				for _, cluster := range defaultConfig().Clusters {
 					_, err := ds.GetCluster(cluster.GetId())
@@ -192,7 +189,7 @@ type failingDS struct {
 
 // AddTrustZone fails unconditionally.
 func (f *failingDS) AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
-	return nil, errors.New("fake destroy failure")
+	return nil, errors.New("fake add failure")
 }
 
 // AddCluster keeps track of the number of clusters added.

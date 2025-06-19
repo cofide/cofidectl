@@ -174,7 +174,6 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("failed to get clusterStaticEntries map from identities: %w", err)
 	}
 
-	// Fix ListAPBindings filter: TrustZoneId expects *string, use g.trustZone.Id directly
 	filter := &datasourcepb.ListAPBindingsRequest_Filter{TrustZoneId: g.trustZone.Id}
 	bindings, err := g.source.ListAPBindings(filter)
 	if err != nil {
@@ -196,7 +195,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 				return nil, err
 			}
 
-			csids[policy.GetId()] = clusterSPIFFEID
+			csids[policy.GetName()] = clusterSPIFFEID
 		} else if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Static); ok {
 			clusterStaticEntry, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
 			if err != nil {
@@ -205,7 +204,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 
 			needSPIREAgentsStaticEntry = true
 
-			cses[policy.GetId()] = clusterStaticEntry
+			cses[policy.GetName()] = clusterStaticEntry
 		}
 	}
 
@@ -248,7 +247,7 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 					return nil, fmt.Errorf("failed to get clusterFederatedTrustDomains map from identities: %w", err)
 				}
 
-				cftd[fed.GetRemoteTrustZoneId()], err = federation.NewFederation(tz).GetHelmConfig()
+				cftd[tz.GetName()], err = federation.NewFederation(tz).GetHelmConfig()
 				if err != nil {
 					return nil, err
 				}

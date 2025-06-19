@@ -193,7 +193,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"enabled": true,
 						"identities": Values{
 							"clusterFederatedTrustDomains": Values{
-								"tz2-id": Values{
+								"tz2": Values{
 									"bundleEndpointProfile": Values{
 										"type": "https_web",
 									},
@@ -202,7 +202,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 								},
 							},
 							"clusterSPIFFEIDs": Values{
-								"ap1-id": Values{
+								"ap1": Values{
 									"federatesWith": []string{
 										"td2",
 									},
@@ -302,7 +302,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 						"enabled": true,
 						"identities": Values{
 							"clusterFederatedTrustDomains": Values{
-								"tz1-id": Values{
+								"tz1": Values{
 									"bundleEndpointProfile": Values{
 										"endpointSPIFFEID": "spiffe://td1/spire/server",
 										"type":             "https_spiffe",
@@ -313,7 +313,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 								},
 							},
 							"clusterSPIFFEIDs": Values{
-								"ap2-id": Values{
+								"ap2": Values{
 									"federatesWith": []string{
 										"td1",
 									},
@@ -502,7 +502,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 								},
 							},
 							"clusterStaticEntries": Values{
-								"ap4-id": Values{
+								"ap4": Values{
 									"parentID":  "spiffe://td6/cluster/local6/spire/agents",
 									"spiffeID":  "spiffe://example.com/foo",
 									"selectors": []string{"k8s:ns:foo"},

@@ -36,9 +36,9 @@ function configure() {
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
   ./cofidectl attestation-policy add static --name static-namespace --spiffeid spiffe://$TRUST_DOMAIN/ns/$NAMESPACE_POLICY_NAMESPACE/sa/ping-pong-client --selectors k8s:ns:$NAMESPACE_POLICY_NAMESPACE --yes
-  ./cofidectl attestation-policy-binding add --trust-zone-name $TRUST_ZONE --attestation-policy namespace
-  ./cofidectl attestation-policy-binding add --trust-zone-name $TRUST_ZONE --attestation-policy pod-label
-  ./cofidectl attestation-policy-binding add --trust-zone-name $TRUST_ZONE --attestation-policy static-namespace
+  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy namespace
+  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy pod-label
+  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy static-namespace
   override_helm_values
 }
 
@@ -49,13 +49,7 @@ tornjak-frontend:
 upstream-spire-agent:
   upstream: false
 EOF
-  TZ_INFO=$(./cofidectl trust-zone list | grep $TRUST_ZONE)
-  if [[ -z $TZ_INFO ]]; then
-    echo "Error: Trust zone $TRUST_ZONE not found"
-    exit 1
-  fi
-  TZ_ID=$(echo $TZ_INFO | awk '{print $1}')
-  ./cofidectl trust-zone helm override --trust-zone-id $TZ_ID --input-file values.yaml
+  ./cofidectl trust-zone helm override $TRUST_ZONE --input-file values.yaml
   rm -f values.yaml
 }
 
@@ -83,8 +77,7 @@ function show_config() {
 function show_status() {
   ./cofidectl workload discover
   ./cofidectl workload list
-  TZ_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE | awk '{print $1}')
-  ./cofidectl trust-zone status $TZ_ID
+  ./cofidectl trust-zone status $TRUST_ZONE
 }
 
 function run_tests() {
@@ -117,7 +110,7 @@ function show_workload_status() {
     --context $K8S_CLUSTER_CONTEXT)
   WORKLOAD_STATUS_RESPONSE=$(./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
     --pod-name $POD_NAME \
-    --trust-zone-name $TRUST_ZONE)
+    --trust-zone $TRUST_ZONE)
 
   if [[ $WORKLOAD_STATUS_RESPONSE != *"SVID verified against trust bundle"* ]]; then
     echo "cofidectl workload status unsuccessful"
@@ -129,8 +122,7 @@ function show_workload_status() {
 
 function check_overridden_values() {
   echo "Generated Helm values:"
-  TZ_ID=$(./cofidectl trust-zone list | grep $TRUST_ZONE | awk '{print $1}')
-  ./cofidectl trust-zone helm values --trust-zone-id $TZ_ID --output-file -
+  ./cofidectl trust-zone helm values $TRUST_ZONE --output-file -
 
   check_overridden_value '."tornjak-frontend".enabled' "false"
   check_overridden_value '."upstream-spire-agent".upstream' "false"
@@ -149,14 +141,14 @@ function down() {
 }
 
 function delete() {
-  ./cofidectl attestation-policy-binding del --trust-zone-name $TRUST_ZONE --attestation-policy namespace
-  ./cofidectl attestation-policy-binding del --trust-zone-name $TRUST_ZONE --attestation-policy pod-label
-  ./cofidectl attestation-policy-binding del --trust-zone-name $TRUST_ZONE --attestation-policy static-namespace
-  ./cofidectl attestation-policy del --name namespace
-  ./cofidectl attestation-policy del --name pod-label
-  ./cofidectl attestation-policy del --name static-namespace
-  ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone-name $TRUST_ZONE
-  ./cofidectl trust-zone del --name $TRUST_ZONE
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy namespace
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy pod-label
+  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy static-namespace
+  ./cofidectl attestation-policy del namespace
+  ./cofidectl attestation-policy del pod-label
+  ./cofidectl attestation-policy del static-namespace
+  ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE
+  ./cofidectl trust-zone del $TRUST_ZONE
 }
 
 function main() {

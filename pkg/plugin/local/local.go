@@ -17,6 +17,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
+	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
 	"github.com/google/uuid"
@@ -85,6 +86,11 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 		return nil, fmt.Errorf("trust zone %s should not have an ID set, this will be auto generated", trustZone.GetId())
 	}
 
+	trustZone, err := proto.CloneTrustZone(trustZone)
+	if err != nil {
+		return nil, err
+	}
+
 	id, err := generateId()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate UUID for trust zone: %w", err)
@@ -94,16 +100,13 @@ func (lds *LocalDataSource) AddTrustZone(trustZone *trust_zone_proto.TrustZone) 
 	if _, ok := lds.config.GetTrustZoneByName(trustZone.Name); ok {
 		return nil, fmt.Errorf("trust zone %s already exists in local config", trustZone.Name)
 	}
-	trustZone, err = proto.CloneTrustZone(trustZone)
-	if err != nil {
-		return nil, err
-	}
 
 	lds.config.TrustZones = append(lds.config.TrustZones, trustZone)
 	if err := lds.updateDataFile(); err != nil {
 		return nil, fmt.Errorf("failed to add trust zone %s to local config: %s", trustZone.Name, err)
 	}
-	return trustZone, nil
+
+	return proto.CloneTrustZone(trustZone)
 }
 
 func (lds *LocalDataSource) DestroyTrustZone(id string) error {
@@ -222,6 +225,12 @@ func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.C
 	if cluster.GetId() != "" {
 		return nil, fmt.Errorf("cluster %s should not have an ID set, this will be auto generated", cluster.GetId())
 	}
+
+	cluster, err := proto.CloneCluster(cluster)
+	if err != nil {
+		return nil, err
+	}
+
 	id, err := generateId()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate UUID for cluster: %w", err)
@@ -236,16 +245,11 @@ func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.C
 		return nil, fmt.Errorf("trust zone %s already has a cluster", trustZoneID)
 	}
 
-	cluster, err = proto.CloneCluster(cluster)
-	if err != nil {
-		return nil, err
-	}
-
 	lds.config.Clusters = append(lds.config.Clusters, cluster)
 	if err := lds.updateDataFile(); err != nil {
 		return nil, fmt.Errorf("failed to add cluster %s in trust zone %s to local config: %s", name, trustZoneID, err)
 	}
-	return cluster, nil
+	return proto.CloneCluster(cluster)
 }
 
 func (lds *LocalDataSource) DestroyCluster(id string) error {
@@ -374,6 +378,11 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 		return nil, fmt.Errorf("attestation policy %s should not have an ID set, this will be auto generated", *policy.Id)
 	}
 
+	policy, err := proto.CloneAttestationPolicy(policy)
+	if err != nil {
+		return nil, err
+	}
+
 	id, err := generateId()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate UUID for attestation policy: %w", err)
@@ -387,10 +396,7 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 	if _, ok := lds.config.GetAttestationPolicyByName(policy.Name); ok {
 		return nil, fmt.Errorf("attestation policy %s already exists in local config", policy.Name)
 	}
-	policy, err = proto.CloneAttestationPolicy(policy)
-	if err != nil {
-		return nil, err
-	}
+
 	lds.config.AttestationPolicies = append(lds.config.AttestationPolicies, policy)
 	if err := lds.updateDataFile(); err != nil {
 		return nil, fmt.Errorf("failed to add attestation policy to local config: %s", err)
@@ -453,6 +459,11 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 		return nil, fmt.Errorf("attestation policy binding %s should not have an ID set, this will be auto generated", *binding.Id)
 	}
 
+	binding, err := proto.CloneAPBinding(binding)
+	if err != nil {
+		return nil, err
+	}
+
 	id, err := generateId()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate UUID for attestation policy binding: %w", err)
@@ -496,10 +507,6 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 		}
 	}
 
-	binding, err = proto.CloneAPBinding(binding)
-	if err != nil {
-		return nil, err
-	}
 	// nolint:staticcheck
 	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, binding)
 	if err := lds.updateDataFile(); err != nil {
@@ -556,13 +563,21 @@ func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRe
 }
 
 func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) (*federation_proto.Federation, error) {
-	if federationProto.GetId() == "" {
-		id, err := generateId()
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate UUID for federation: %w", err)
-		}
-		federationProto.Id = id
+	if federationProto.GetId() != "" {
+		return nil, fmt.Errorf("federation %s should not have an ID set, this will be auto generated", federationProto.GetId())
 	}
+
+	federationProto, err := proto.CloneFederation(federationProto)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := generateId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate UUID for federation: %w", err)
+	}
+	federationProto.Id = id
+
 	fromTrustZone, ok := lds.config.GetTrustZoneByID(federationProto.GetTrustZoneId())
 	if !ok {
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.GetTrustZoneId())
@@ -577,7 +592,11 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		return nil, fmt.Errorf("cannot federate trust zone %s with itself", federationProto.GetTrustZoneId())
 	}
 
-	federations, err := lds.ListFederationsByTrustZone(federationProto.GetTrustZoneId())
+	federations, err := lds.ListFederations(
+		&datasourcepb.ListFederationsRequest_Filter{
+			TrustZoneId: fixtures.StringPtr(federationProto.GetTrustZoneId()),
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list federations for trust zone %s: %w", federationProto.GetTrustZoneId(), err)
 	}
@@ -585,11 +604,6 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		if federation.GetTrustZoneId() == federationProto.GetTrustZoneId() && federation.GetRemoteTrustZoneId() == federationProto.GetRemoteTrustZoneId() {
 			return nil, fmt.Errorf("federation already exists between %s and %s", federationProto.GetTrustZoneId(), federationProto.GetRemoteTrustZoneId())
 		}
-	}
-
-	federationProto, err = proto.CloneFederation(federationProto)
-	if err != nil {
-		return nil, err
 	}
 
 	// nolint:staticcheck
@@ -638,24 +652,6 @@ func (lds *LocalDataSource) ListFederations(filter *datasourcepb.ListFederations
 				federations = append(federations, federation)
 			}
 		}
-	}
-	return federations, nil
-}
-
-func (lds *LocalDataSource) ListFederationsByTrustZone(tzID string) ([]*federation_proto.Federation, error) {
-	trustZone, ok := lds.config.GetTrustZoneByID(tzID)
-	if !ok {
-		return nil, fmt.Errorf("failed to find trust zone %s in local config", tzID)
-	}
-
-	var federations []*federation_proto.Federation
-	// nolint:staticcheck
-	for _, federation := range trustZone.Federations {
-		federation, err := proto.CloneFederation(federation)
-		if err != nil {
-			return nil, err
-		}
-		federations = append(federations, federation)
 	}
 	return federations, nil
 }

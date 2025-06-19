@@ -58,9 +58,6 @@ This command will override Helm values for a trust zone in the Cofide configurat
 
 type overrideOpts struct {
 	inputPath string
-
-	tzName string
-	tzID   string
 }
 
 func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
@@ -69,6 +66,7 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 		Use:   "override [ARGS]",
 		Short: "Override Helm values for a trust zone",
 		Long:  helmOverrideCmdDesc,
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
@@ -91,39 +89,24 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 				return err
 			}
 
-			return c.overrideValues(cmd.Context(), ds, opts, values)
+			return c.overrideValues(cmd.Context(), ds, args[0], values)
 		},
 	}
 
 	f := cmd.Flags()
 	f.StringVar(&opts.inputPath, "input-file", "values.yaml", "Path of a file to read YAML values from, or - for stdin")
-	f.StringVar(&opts.tzName, "trust-zone-name", "", "name of the trust zone to override")
-	f.StringVar(&opts.tzID, "trust-zone-id", "", "ID of the trust zone to override")
-	cmd.MarkFlagsOneRequired("trust-zone-name", "trust-zone-id")
 
 	return cmd
 }
 
 // overrideValues overrides Helm values for a trust zone.
-func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSource, opts overrideOpts, values map[string]any) error {
+func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSource, tzName string, values map[string]any) error {
 	provisionPlugin, err := c.cmdCtx.PluginManager.GetProvision(ctx)
 	if err != nil {
 		return err
 	}
 
-	tzID := opts.tzID
-	if opts.tzName != "" {
-		tz, err := ds.GetTrustZoneByName(opts.tzName)
-		if err != nil {
-			return err
-		}
-		if tz == nil {
-			return fmt.Errorf("trust zone %s not found", opts.tzName)
-		}
-		tzID = tz.GetId()
-	}
-
-	trustZone, err := ds.GetTrustZone(tzID)
+	trustZone, err := ds.GetTrustZoneByName(tzName)
 	if err != nil {
 		return err
 	}
@@ -176,9 +159,6 @@ This command will generate Helm values for a trust zone in the Cofide configurat
 
 type valuesOpts struct {
 	outputPath string
-
-	tzName string
-	tzID   string
 }
 
 func (c *HelmCommand) GetValuesCommand() *cobra.Command {
@@ -187,13 +167,14 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 		Use:   "values [ARGS]",
 		Short: "Generate Helm values for a trust zone",
 		Long:  helmValuesCmdDesc,
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
 			}
 
-			values, err := c.getValues(cmd.Context(), ds, opts)
+			values, err := c.getValues(cmd.Context(), ds, args[0])
 			if err != nil {
 				return err
 			}
@@ -221,27 +202,13 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.outputPath, "output-file", "values.yaml", "Path of a file to write YAML values to, or - for stdout")
-	f.StringVar(&opts.tzName, "trust-zone-name", "", "name of the trust zone to generate values for")
-	f.StringVar(&opts.tzID, "trust-zone-id", "", "ID of the trust zone to generate values for")
-	cmd.MarkFlagsOneRequired("trust-zone-name", "trust-zone-id")
 
 	return cmd
 }
 
 // getValues returns the Helm values for a trust zone.
-func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, opts valuesOpts) (map[string]any, error) {
-	tzID := opts.tzID
-	if opts.tzName != "" {
-		tz, err := ds.GetTrustZoneByName(opts.tzName)
-		if err != nil {
-			return nil, err
-		}
-		if tz == nil {
-			return nil, fmt.Errorf("trust zone %s not found", opts.tzName)
-		}
-		tzID = tz.GetId()
-	}
-	trustZone, err := ds.GetTrustZone(tzID)
+func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, tzName string) (map[string]any, error) {
+	trustZone, err := ds.GetTrustZoneByName(tzName)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	provisionplugin "github.com/cofide/cofidectl/pkg/plugin/provision"
@@ -25,9 +27,8 @@ This command installs a Cofide configuration
 `
 
 type UpOpts struct {
-	quiet          bool
-	trustZoneNames []string
-	trustzoneIDs   []string
+	quiet      bool
+	trustZones []string
 }
 
 func (u *UpCommand) UpCmd() *cobra.Command {
@@ -48,24 +49,29 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
-			trustZones := opts.trustzoneIDs
-			if len(opts.trustZoneNames) > 0 {
-				tzs, err := ds.ListTrustZones()
-				if err != nil {
-					return err
-				}
+			tzs, err := ds.ListTrustZones()
+			if err != nil {
+				return err
+			}
+
+			trustZoneIDs := []string{}
+			for _, tzName := range opts.trustZones {
+				var trustZoneID string
 				for _, tz := range tzs {
-					for _, tzName := range opts.trustZoneNames {
-						if tz.Name == tzName {
-							trustZones = append(trustZones, tz.GetId())
-							break
-						}
+					if tz.Name == tzName {
+						trustZoneID = tz.GetId()
+						break
 					}
 				}
+				if trustZoneID == "" {
+					return fmt.Errorf("trust zone '%s' not found", tzName)
+				}
+				trustZoneIDs = append(trustZoneIDs, trustZoneID)
 			}
+
 			deployOpts := provisionplugin.DeployOpts{
 				KubeCfgFile:  kubeCfgFile,
-				TrustZoneIDs: trustZones,
+				TrustZoneIDs: trustZoneIDs,
 			}
 			statusCh, err := provision.Deploy(cmd.Context(), ds, &deployOpts)
 			if err != nil {
@@ -82,8 +88,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from installation")
-	f.StringSliceVar(&opts.trustZoneNames, "trust-zone-name", []string{}, "Trust zones to install, or all if none is specified")
-	f.StringSliceVar(&opts.trustzoneIDs, "trust-zone-id", []string{}, "Trust zone IDs to install, or all if none is specified")
+	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to install, or all if none is specified")
 
 	return cmd
 }
