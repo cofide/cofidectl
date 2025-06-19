@@ -644,6 +644,7 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 	tests := []struct {
 		name         string
 		config       *config.Config
+		filter       *datasourcepb.ListClustersRequest_Filter
 		wantClusters []*clusterpb.Cluster
 		wantErr      bool
 	}{
@@ -658,13 +659,13 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 			config: &config.Config{
 				Clusters: []*clusterpb.Cluster{
 					fixtures.Cluster("local1"),
-					fixtures.Cluster("local1"),
+					fixtures.Cluster("local2"),
 				},
 				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantClusters: []*clusterpb.Cluster{
 				fixtures.Cluster("local1"),
-				fixtures.Cluster("local1"),
+				fixtures.Cluster("local2"),
 			},
 			wantErr: false,
 		},
@@ -677,6 +678,9 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 				},
 				Plugins: fixtures.Plugins("plugins1"),
 			},
+			filter: &datasourcepb.ListClustersRequest_Filter{
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+			},
 			wantClusters: []*clusterpb.Cluster{
 				fixtures.Cluster("local1"),
 			},
@@ -686,9 +690,7 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, _ := buildLocalDataSource(t, tt.config)
-			got, err := lds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
-				TrustZoneId: fixtures.StringPtr("tz1-id"),
-			})
+			got, err := lds.ListClusters(tt.filter)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -1440,12 +1442,15 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  *config.Config
+		filter  *datasourcepb.ListFederationsRequest_Filter
 		wantErr bool
+		want    []*federation_proto.Federation
 	}{
 		{
 			name:    "none",
 			config:  config.NewConfig(),
 			wantErr: false,
+			want:    []*federation_proto.Federation{},
 		},
 		{
 			name: "two",
@@ -1457,22 +1462,35 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantErr: false,
+			// nolint:staticcheck
+			want: append(fixtures.TrustZone("tz1").Federations, fixtures.TrustZone("tz2").Federations...),
+		},
+		{
+			name: "with trust zone filter",
+			config: &config.Config{
+				TrustZones: []*trust_zone_proto.TrustZone{
+					fixtures.TrustZone("tz1"),
+					fixtures.TrustZone("tz2"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			},
+			filter: &datasourcepb.ListFederationsRequest_Filter{
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+			},
+			wantErr: false,
+			// nolint:staticcheck
+			want: fixtures.TrustZone("tz1").Federations,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, _ := buildLocalDataSource(t, tt.config)
-			got, err := lds.ListFederations(&datasourcepb.ListFederationsRequest_Filter{})
+			got, err := lds.ListFederations(tt.filter)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.Nil(t, err)
-				want := []*federation_proto.Federation{}
-				for _, tz := range tt.config.TrustZones {
-					// nolint:staticcheck
-					want = append(want, tz.Federations...)
-				}
-				if diff := cmp.Diff(got, want, protocmp.Transform()); diff != "" {
+				if diff := cmp.Diff(got, tt.want, protocmp.Transform()); diff != "" {
 					t.Errorf("LocalDataSource.ListFederations() mismatch (-want,+got):\n%s", diff)
 				}
 				for _, gotFederation := range got {
