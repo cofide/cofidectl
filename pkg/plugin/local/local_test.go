@@ -249,7 +249,46 @@ func TestLocalDataSource_GetTrustZone(t *testing.T) {
 }
 
 func TestLocalDataSource_GetTrustZoneByName(t *testing.T) {
-	// TODO: reinstate old test
+	t.Parallel()
+	tests := []struct {
+		name          string
+		trustZone     string
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:      "success",
+			trustZone: "tz1",
+			wantErr:   false,
+		},
+		{
+			name:          "non-existent",
+			trustZone:     "tz2",
+			wantErr:       true,
+			wantErrString: "failed to find trust zone tz2 in local config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				TrustZones: []*trust_zone_proto.TrustZone{
+					fixtures.TrustZone("tz1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			}
+			lds, _ := buildLocalDataSource(t, cfg)
+
+			got, err := lds.GetTrustZoneByName(tt.trustZone)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				require.Nil(t, err)
+				assert.EqualExportedValues(t, cfg.TrustZones[0], got)
+				assert.False(t, slices.Contains(lds.config.TrustZones, got), "Pointer to trust zone in config returned")
+			}
+		})
+	}
 }
 
 func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
@@ -548,7 +587,56 @@ func TestLocalDataSource_GetCluster(t *testing.T) {
 }
 
 func TestLocalDataSource_GetClusterByName(t *testing.T) {
-	// TODO: reinstate old test
+	t.Parallel()
+	tests := []struct {
+		name          string
+		cluster       string
+		trustZoneID   string
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:        "success",
+			cluster:     "local1",
+			trustZoneID: "tz1-id",
+			wantErr:     false,
+		},
+		{
+			name:          "non-existent",
+			cluster:       "local2",
+			trustZoneID:   "tz2-id",
+			wantErr:       true,
+			wantErrString: "failed to find cluster local2 in trust zone tz2-id in local config",
+		},
+		{
+			name:          "wrong trust zone",
+			cluster:       "local1",
+			trustZoneID:   "tz2-id",
+			wantErr:       true,
+			wantErrString: "failed to find cluster local1 in trust zone tz2-id in local config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			}
+			lds, _ := buildLocalDataSource(t, cfg)
+
+			got, err := lds.GetClusterByName(tt.cluster, tt.trustZoneID)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				require.Nil(t, err)
+				assert.EqualExportedValues(t, cfg.Clusters[0], got)
+				assert.False(t, slices.Contains(lds.config.Clusters, got), "Pointer to cluster in config returned")
+			}
+		})
+	}
 }
 
 func TestLocalDataSource_ListClusters(t *testing.T) {
@@ -859,7 +947,46 @@ func TestLocalDataSource_GetAttestationPolicy(t *testing.T) {
 }
 
 func TestLocalDataSource_GetAttestationPolicyByName(t *testing.T) {
-	// TODO: reinstate old test
+	t.Parallel()
+	tests := []struct {
+		name          string
+		policy        string
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:    "success",
+			policy:  "ap1",
+			wantErr: false,
+		},
+		{
+			name:          "non-existent",
+			policy:        "ap2",
+			wantErr:       true,
+			wantErrString: "failed to find attestation policy ap2 in local config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
+					fixtures.AttestationPolicy("ap1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			}
+			lds, _ := buildLocalDataSource(t, cfg)
+
+			got, err := lds.GetAttestationPolicyByName(tt.policy)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				require.Nil(t, err)
+				assert.EqualExportedValues(t, cfg.AttestationPolicies[0], got)
+				assert.False(t, slices.Contains(lds.config.AttestationPolicies, got), "Pointer to attestation policy in config returned")
+			}
+		})
+	}
 }
 
 func TestLocalDataSource_ListAttestationPolicies(t *testing.T) {
