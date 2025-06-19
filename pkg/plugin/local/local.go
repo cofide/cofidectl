@@ -17,7 +17,7 @@ import (
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/proto"
-	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
+	"github.com/cofide/cofidectl/internal/pkg/utils"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
 	"github.com/google/uuid"
@@ -594,7 +594,7 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 
 	federations, err := lds.ListFederations(
 		&datasourcepb.ListFederationsRequest_Filter{
-			TrustZoneId: fixtures.StringPtr(federationProto.GetTrustZoneId()),
+			TrustZoneId: utils.PtrOf(federationProto.GetTrustZoneId()),
 		},
 	)
 	if err != nil {
