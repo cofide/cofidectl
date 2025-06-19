@@ -57,7 +57,7 @@ func (f *HelmSPIREProviderFactory) Build(
 		}
 	}
 	spireCRDsValues := map[string]any{}
-	return helm.NewHelmSPIREProvider(ctx, cluster, spireValues, spireCRDsValues, kubeConfig)
+	return helm.NewHelmSPIREProvider(ctx, trustZone.GetName(), cluster, spireValues, spireCRDsValues, kubeConfig)
 }
 
 func (f *HelmSPIREProviderFactory) GetHelmValues(

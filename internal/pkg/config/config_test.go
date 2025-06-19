@@ -174,7 +174,7 @@ func TestConfig_GetClusterByName(t *testing.T) {
 		name        string
 		clusters    []*clusterpb.Cluster
 		cluster     string
-		trustZone   string
+		trustZoneID string
 		wantCluster *clusterpb.Cluster
 		wantOk      bool
 	}{
@@ -185,7 +185,7 @@ func TestConfig_GetClusterByName(t *testing.T) {
 				fixtures.Cluster("local2"),
 			},
 			cluster:     "local2",
-			trustZone:   "tz2",
+			trustZoneID: "tz2-id",
 			wantCluster: fixtures.Cluster("local2"),
 			wantOk:      true,
 		},
@@ -193,7 +193,7 @@ func TestConfig_GetClusterByName(t *testing.T) {
 			name:        "not found",
 			clusters:    []*clusterpb.Cluster{},
 			cluster:     "local1",
-			trustZone:   "tz1",
+			trustZoneID: "tz1-id",
 			wantCluster: nil,
 			wantOk:      false,
 		},
@@ -203,7 +203,7 @@ func TestConfig_GetClusterByName(t *testing.T) {
 				fixtures.Cluster("local1"),
 			},
 			cluster:     "local1",
-			trustZone:   "tz2",
+			trustZoneID: "tz2-id",
 			wantCluster: nil,
 			wantOk:      false,
 		},
@@ -211,7 +211,7 @@ func TestConfig_GetClusterByName(t *testing.T) {
 			name:        "nil list",
 			clusters:    nil,
 			cluster:     "local1",
-			trustZone:   "tz1",
+			trustZoneID: "tz1-id",
 			wantCluster: nil,
 			wantOk:      false,
 		},
@@ -221,7 +221,7 @@ func TestConfig_GetClusterByName(t *testing.T) {
 			c := &Config{
 				Clusters: tt.clusters,
 			}
-			gotCluster, gotOk := c.GetClusterByName(tt.cluster, tt.trustZone)
+			gotCluster, gotOk := c.GetClusterByName(tt.cluster, tt.trustZoneID)
 			assert.EqualExportedValues(t, tt.wantCluster, gotCluster)
 			assert.Equal(t, tt.wantOk, gotOk)
 		})
@@ -232,7 +232,7 @@ func TestConfig_GetClustersByTrustZone(t *testing.T) {
 	tests := []struct {
 		name         string
 		clusters     []*clusterpb.Cluster
-		trustZone    string
+		trustZoneID  string
 		wantClusters []*clusterpb.Cluster
 	}{
 		{
@@ -241,7 +241,7 @@ func TestConfig_GetClustersByTrustZone(t *testing.T) {
 				fixtures.Cluster("local1"),
 				fixtures.Cluster("local2"),
 			},
-			trustZone:    "tz2",
+			trustZoneID:  "tz2-id",
 			wantClusters: []*clusterpb.Cluster{fixtures.Cluster("local2")},
 		},
 		{
@@ -250,7 +250,7 @@ func TestConfig_GetClustersByTrustZone(t *testing.T) {
 				fixtures.Cluster("local1"),
 				fixtures.Cluster("local1"),
 			},
-			trustZone: "tz1",
+			trustZoneID: "tz1-id",
 			wantClusters: []*clusterpb.Cluster{
 				fixtures.Cluster("local1"),
 				fixtures.Cluster("local1"),
@@ -259,7 +259,7 @@ func TestConfig_GetClustersByTrustZone(t *testing.T) {
 		{
 			name:         "not found",
 			clusters:     []*clusterpb.Cluster{},
-			trustZone:    "tz1",
+			trustZoneID:  "tz1-id",
 			wantClusters: []*clusterpb.Cluster{},
 		},
 		{
@@ -267,13 +267,13 @@ func TestConfig_GetClustersByTrustZone(t *testing.T) {
 			clusters: []*clusterpb.Cluster{
 				fixtures.Cluster("local1"),
 			},
-			trustZone:    "tz2",
+			trustZoneID:  "tz2-id",
 			wantClusters: []*clusterpb.Cluster{},
 		},
 		{
 			name:         "nil list",
 			clusters:     nil,
-			trustZone:    "tz1",
+			trustZoneID:  "tz1-id",
 			wantClusters: []*clusterpb.Cluster{},
 		},
 	}
@@ -282,7 +282,7 @@ func TestConfig_GetClustersByTrustZone(t *testing.T) {
 			c := &Config{
 				Clusters: tt.clusters,
 			}
-			gotClusters := c.GetClustersByTrustZone(tt.trustZone)
+			gotClusters := c.GetClustersByTrustZone(tt.trustZoneID)
 			assert.EqualExportedValues(t, tt.wantClusters, gotClusters)
 		})
 	}

@@ -4,6 +4,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	provisionplugin "github.com/cofide/cofidectl/pkg/plugin/provision"
@@ -46,9 +48,29 @@ func (d *DownCommand) DownCmd() *cobra.Command {
 				return err
 			}
 
+			tzs, err := ds.ListTrustZones()
+			if err != nil {
+				return err
+			}
+
+			trustZoneIDs := []string{}
+			for _, tzName := range opts.trustZones {
+				var trustZoneID string
+				for _, tz := range tzs {
+					if tz.Name == tzName {
+						trustZoneID = tz.GetId()
+						break
+					}
+				}
+				if trustZoneID == "" {
+					return fmt.Errorf("trust zone '%s' not found", tzName)
+				}
+				trustZoneIDs = append(trustZoneIDs, trustZoneID)
+			}
+
 			tearDownOpts := provisionplugin.TearDownOpts{
-				KubeCfgFile: kubeCfgFile,
-				TrustZones:  opts.trustZones,
+				KubeCfgFile:  kubeCfgFile,
+				TrustZoneIDs: trustZoneIDs,
 			}
 			statusCh, err := provision.TearDown(cmd.Context(), ds, &tearDownOpts)
 			if err != nil {

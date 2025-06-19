@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -76,12 +76,12 @@ func (h *SpireHelm) TearDown(ctx context.Context, ds datasource.DataSource, opts
 }
 
 func (h *SpireHelm) GetHelmValues(ctx context.Context, ds datasource.DataSource, opts *provision.GetHelmValuesOpts) (map[string]any, error) {
-	trustZone, err := ds.GetTrustZone(opts.TrustZoneName)
+	cluster, err := ds.GetCluster(opts.ClusterID)
 	if err != nil {
 		return nil, err
 	}
 
-	cluster, err := ds.GetCluster(opts.ClusterName, opts.TrustZoneName)
+	trustZone, err := ds.GetTrustZone(cluster.GetTrustZoneId())
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (h *SpireHelm) GetHelmValues(ctx context.Context, ds datasource.DataSource,
 }
 
 func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *provision.DeployOpts, statusCh chan<- *provisionpb.Status) error {
-	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZoneIDs)
 	if err != nil {
 		statusCh <- provision.StatusError("Deploying", "Failed listing trust zones", err)
 		return err
@@ -121,7 +121,7 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 }
 
 func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, opts *provision.TearDownOpts, statusCh chan<- *provisionpb.Status) error {
-	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZones)
+	trustZoneClusters, err := h.ListTrustZoneClusters(ds, opts.TrustZoneIDs)
 	if err != nil {
 		statusCh <- provision.StatusError("Uninstalling", "Failed listing trust zones", err)
 		return err
@@ -134,17 +134,17 @@ func (h *SpireHelm) tearDown(ctx context.Context, ds datasource.DataSource, opts
 }
 
 // ListTrustZoneClusters returns a slice of TrustZoneClusters. If no trust zones exist, it returns an error.
-func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource, trustZoneNames []string) ([]TrustZoneCluster, error) {
+func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource, trustZoneIDs []string) ([]TrustZoneCluster, error) {
 	var trustZones []*trust_zone_proto.TrustZone
-	if len(trustZoneNames) == 0 {
+	if len(trustZoneIDs) == 0 {
 		var err error
 		trustZones, err = ds.ListTrustZones()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		for _, trustZoneName := range trustZoneNames {
-			trustZone, err := ds.GetTrustZone(trustZoneName)
+		for _, trustZoneID := range trustZoneIDs {
+			trustZone, err := ds.GetTrustZone(trustZoneID)
 			if err != nil {
 				return nil, err
 			}
@@ -209,7 +209,7 @@ func (h *SpireHelm) WatchAndConfigure(ctx context.Context, ds datasource.DataSou
 		cluster := tzc.Cluster
 
 		if cluster.GetExternalServer() {
-			sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
+			sb := provision.NewStatusBuilder(trustZone.GetName(), cluster.GetName())
 			statusCh <- sb.Done("Ready", "Skipped waiting for external SPIRE server pod and service")
 			continue
 		}
@@ -230,7 +230,7 @@ func (h *SpireHelm) GetBundleAndEndpoint(
 	cluster *clusterpb.Cluster,
 	kubeCfgFile string,
 ) error {
-	sb := provision.NewStatusBuilder(trustZone.Name, cluster.GetName())
+	sb := provision.NewStatusBuilder(trustZone.GetName(), cluster.GetName())
 	statusCh <- sb.Ok("Waiting", "Waiting for SPIRE server pod and service")
 
 	spireAPI, err := h.spireAPIFactory.Build(kubeCfgFile, cluster.GetKubernetesContext())

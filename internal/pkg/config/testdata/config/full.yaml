@@ -14,39 +14,48 @@ trust_zones:
         refresh_hint: "2"
         sequence_number: "3"
       federations:
-        - from: tz1
-          to: tz2
+        - id: fed1-id
+          trust_zone_id: tz1-id
+          remote_trust_zone_id: tz2-id
       attestation_policies:
-        - trust_zone: tz1
-          policy: ap1
-          federates_with:
-            - tz2
+        - id: apb1-id
+          trust_zone_id: tz1-id
+          policy_id: ap1-id
+          federations:
+            - trust_zone_id: tz2-id
       jwt_issuer: https://tz1.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
+      id: tz1-id
     - name: tz2
       trust_domain: td2
       bundle_endpoint_url: 127.0.0.2
       federations:
-        - from: tz2
-          to: tz1
+        - id: fed2-id
+          trust_zone_id: tz2-id
+          remote_trust_zone_id: tz1-id
       attestation_policies:
-        - trust_zone: tz2
-          policy: ap2
-          federates_with:
-            - tz1
+        - id: apb2-id
+          trust_zone_id: tz2-id
+          policy_id: ap2-id
+          federations:
+            - trust_zone_id: tz1-id
       jwt_issuer: https://tz2.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
+      id: tz2-id
     - name: tz6
       trust_domain: td6
       bundle_endpoint_url: 127.0.0.5
       attestation_policies:
-        - trust_zone: tz6
-          policy: ap4
+        - id: apb3-id
+          trust_zone_id: tz6-id
+          policy_id: ap4-id
       jwt_issuer: https://tz6.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
+      id: tz6-id
 clusters:
-    - name: local1
-      trust_zone: tz1
+    - id: local1-id
+      name: local1
+      trust_zone_id: tz1-id
       kubernetes_context: kind-local1
       trust_provider:
         kind: kubernetes
@@ -61,20 +70,23 @@ clusters:
             nameOverride: custom-server-name
       profile: kubernetes
       external_server: false
-    - name: local2
-      trust_zone: tz2
+    - id: local2-id
+      name: local2
+      trust_zone_id: tz2-id
       kubernetes_context: kind-local2
       trust_provider:
         kind: kubernetes
       profile: kubernetes
       external_server: false
 attestation_policies:
-    - name: ap1
+    - id: ap1-id
+      name: ap1
       kubernetes:
         namespace_selector:
             match_labels:
                 kubernetes.io/metadata.name: ns1
-    - name: ap2
+    - id: ap2-id
+      name: ap2
       kubernetes:
         pod_selector:
             match_expressions:
@@ -82,7 +94,8 @@ attestation_policies:
                   operator: In
                   values:
                     - bar
-    - name: ap3
+    - id: ap3-id
+      name: ap3
       kubernetes:
         namespace_selector:
             match_labels:
@@ -106,7 +119,8 @@ attestation_policies:
                   operator: Exists
                 - key: baz
                   operator: DoesNotExist
-    - name: ap4
+    - id: ap4-id
+      name: ap4
       static:
         spiffe_id: spiffe://example.com/foo
         selectors:

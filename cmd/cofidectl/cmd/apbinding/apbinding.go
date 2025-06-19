@@ -4,11 +4,14 @@
 package apbinding
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"strings"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
+	trustzonepb "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
@@ -73,8 +76,7 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			renderList(bindings)
-			return nil
+			return renderList(ds, bindings)
 		},
 	}
 
@@ -88,24 +90,56 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 func (c *APBindingCommand) list(source datasource.DataSource, opts ListOpts) ([]*ap_binding_proto.APBinding, error) {
 	filter := &datasourcepb.ListAPBindingsRequest_Filter{}
 	if opts.trustZone != "" {
-		filter.TrustZoneName = &opts.trustZone
+		trustZone, err := source.GetTrustZoneByName(opts.trustZone)
+		if err != nil {
+			return nil, err
+		}
+		filter.TrustZoneId = trustZone.Id
 	}
 	if opts.attestationPolicy != "" {
-		filter.PolicyName = &opts.attestationPolicy
+		policy, err := source.GetAttestationPolicyByName(opts.attestationPolicy)
+		if err != nil {
+			return nil, err
+		}
+		filter.PolicyId = policy.Id
 	}
 	return source.ListAPBindings(filter)
 }
 
-func renderList(bindings []*ap_binding_proto.APBinding) {
+func renderFederations(bindings []*ap_binding_proto.APBindingFederation, tzMap map[string]string) string {
+	federations := []string{}
+	for _, binding := range bindings {
+		federations = append(federations, tzMap[binding.GetTrustZoneId()])
+	}
+
+	return strings.Join(federations, ", ")
+}
+
+func renderList(source datasource.DataSource, bindings []*ap_binding_proto.APBinding) error {
+	tzs, err := source.ListTrustZones()
+	if err != nil {
+		return err
+	}
+	tzMap := make(map[string]string)
+	for _, tz := range tzs {
+		tzMap[tz.GetId()] = tz.GetName()
+	}
+
+	policies, err := source.ListAttestationPolicies()
+	if err != nil {
+		return err
+	}
+	policyMap := make(map[string]string)
+	for _, policy := range policies {
+		policyMap[policy.GetId()] = policy.GetName()
+	}
+
 	data := make([][]string, len(bindings))
 	for i, binding := range bindings {
 		data[i] = []string{
-			// nolint:staticcheck
-			binding.TrustZone,
-			// nolint:staticcheck
-			binding.Policy,
-			// nolint:staticcheck
-			strings.Join(binding.FederatesWith, ", "),
+			tzMap[binding.GetTrustZoneId()],
+			policyMap[binding.GetPolicyId()],
+			renderFederations(binding.GetFederations(), tzMap),
 		}
 	}
 
@@ -114,6 +148,7 @@ func renderList(bindings []*ap_binding_proto.APBinding) {
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
+	return nil
 }
 
 var apBindingAddCmdDesc = `
@@ -138,10 +173,46 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 				return err
 			}
 
+			tz, err := ds.GetTrustZoneByName(opts.trustZone)
+			if err != nil {
+				return err
+			}
+			trustZoneID := tz.GetId()
+
+			policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
+			if err != nil {
+				return err
+			}
+			policyID := policy.GetId()
+
+			federations := []*ap_binding_proto.APBindingFederation{}
+			if len(opts.federatesWith) != 0 {
+				tzs, err := ds.ListTrustZones()
+				if err != nil {
+					return err
+				}
+
+				for _, federation := range opts.federatesWith {
+					var trustZone *trustzonepb.TrustZone
+					for _, tz := range tzs {
+						if tz.Name == federation {
+							trustZone = tz
+							break
+						}
+					}
+					if trustZone == nil {
+						return fmt.Errorf("federated trust zone not found: %s", federation)
+					}
+					federations = append(federations, &ap_binding_proto.APBindingFederation{
+						TrustZoneId: trustZone.Id,
+					})
+				}
+			}
+
 			binding := &ap_binding_proto.APBinding{
-				TrustZone:     opts.trustZone,
-				Policy:        opts.attestationPolicy,
-				FederatesWith: opts.federatesWith,
+				TrustZoneId: &trustZoneID,
+				PolicyId:    &policyID,
+				Federations: federations,
 			}
 			_, err = ds.AddAPBinding(binding)
 			return err
@@ -180,11 +251,31 @@ func (c *APBindingCommand) GetDelCommand() *cobra.Command {
 				return err
 			}
 
-			binding := &ap_binding_proto.APBinding{
-				TrustZone: opts.trustZone,
-				Policy:    opts.attestationPolicy,
+			trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
+			if err != nil {
+				return err
 			}
-			return ds.DestroyAPBinding(binding)
+
+			policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
+			if err != nil {
+				return err
+			}
+
+			bindings, err := ds.ListAPBindings(&datasourcepb.ListAPBindingsRequest_Filter{
+				TrustZoneId: trustZone.Id,
+				PolicyId:    policy.Id,
+			})
+			if err != nil {
+				return err
+			}
+			if len(bindings) == 0 {
+				return errors.New("no binding found")
+			}
+			if len(bindings) > 1 {
+				return errors.New("multiple bindings found")
+			}
+			binding := bindings[0]
+			return ds.DestroyAPBinding(binding.GetId())
 		},
 	}
 

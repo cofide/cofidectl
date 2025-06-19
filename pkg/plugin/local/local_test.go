@@ -8,7 +8,7 @@ import (
 	"slices"
 	"testing"
 
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl_plugin/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/google/go-cmp/cmp"
 	spiretypes "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
@@ -120,13 +120,17 @@ func TestLocalDataSource_AddTrustZone(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, loader := buildLocalDataSource(t, tt.config)
 
+			tt.trustZone.Id = nil
+
 			got, err := lds.AddTrustZone(tt.trustZone)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
+				tt.trustZone.Id = got.Id
 				assert.EqualExportedValues(t, tt.trustZone, got)
 				assert.False(t, slices.Contains(lds.config.TrustZones, tt.trustZone), "Pointer to trust zone stored in config")
+				assert.False(t, slices.Contains(lds.config.TrustZones, got), "Pointer to trust zone in config returned")
 				// Check that the trust zone was persisted.
 				gotConfig := readConfig(t, loader)
 				gotTrustZone, ok := gotConfig.GetTrustZoneByName(tt.trustZone.Name)
@@ -142,26 +146,26 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		trustZone     string
+		trustZoneID   string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:      "success",
-			trustZone: "tz1",
-			wantErr:   false,
+			name:        "success",
+			trustZoneID: "tz1-id",
+			wantErr:     false,
 		},
 		{
 			name:          "invalid trust zone",
-			trustZone:     "invalid-tz",
+			trustZoneID:   "invalid-tz",
 			wantErr:       true,
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
 		{
 			name:          "cluster exists in trust zone",
-			trustZone:     "tz2",
+			trustZoneID:   "tz2-id",
 			wantErr:       true,
-			wantErrString: "one or more clusters exist in trust zone tz2 in local config",
+			wantErrString: "one or more clusters exist in trust zone tz2-id in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -181,7 +185,7 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
-			err := lds.DestroyTrustZone(tt.trustZone)
+			err := lds.DestroyTrustZone(tt.trustZoneID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
@@ -202,6 +206,49 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 }
 
 func TestLocalDataSource_GetTrustZone(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		trustZoneID   string
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:        "success",
+			trustZoneID: "tz1-id",
+			wantErr:     false,
+		},
+		{
+			name:          "non-existent",
+			trustZoneID:   "tz2-id",
+			wantErr:       true,
+			wantErrString: "failed to find trust zone tz2-id in local config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				TrustZones: []*trust_zone_proto.TrustZone{
+					fixtures.TrustZone("tz1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			}
+			lds, _ := buildLocalDataSource(t, cfg)
+
+			got, err := lds.GetTrustZone(tt.trustZoneID)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				require.Nil(t, err)
+				assert.EqualExportedValues(t, cfg.TrustZones[0], got)
+				assert.False(t, slices.Contains(lds.config.TrustZones, got), "Pointer to trust zone in config returned")
+			}
+		})
+	}
+}
+
+func TestLocalDataSource_GetTrustZoneByName(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
@@ -231,7 +278,7 @@ func TestLocalDataSource_GetTrustZone(t *testing.T) {
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 
-			got, err := lds.GetTrustZone(tt.trustZone)
+			got, err := lds.GetTrustZoneByName(tt.trustZone)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
@@ -269,9 +316,9 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 		},
 		{
 			name:          "non-existent",
-			trustZone:     &trust_zone_proto.TrustZone{Name: "tz2"},
+			trustZone:     &trust_zone_proto.TrustZone{Id: fixtures.StringPtr("tz2-id"), Name: "tz2"},
 			wantErr:       true,
-			wantErrString: "failed to find trust zone tz2 in local config",
+			wantErrString: "failed to find trust zone tz2-id in local config",
 		},
 		{
 			name: "disallowed trust domain",
@@ -289,8 +336,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				tz := fixtures.TrustZone("tz1")
 				// nolint:staticcheck
 				tz.AttestationPolicies = []*ap_binding_proto.APBinding{
-					// nolint:staticcheck
-					{TrustZone: "tz1", Policy: "ap2"},
+					{TrustZoneId: fixtures.StringPtr("tz1-id"), PolicyId: fixtures.StringPtr("ap2-id")},
 				}
 				return tz
 			}(),
@@ -303,7 +349,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				tz := fixtures.TrustZone("tz1")
 				// nolint:staticcheck
 				tz.Federations = []*federation_proto.Federation{
-					{From: "tz1", To: "tz3"},
+					{TrustZoneId: fixtures.StringPtr("tz1-id"), RemoteTrustZoneId: fixtures.StringPtr("tz3-id")},
 				}
 				return tz
 			}(),
@@ -333,6 +379,7 @@ func TestLocalDataSource_UpdateTrustZone(t *testing.T) {
 				assert.EqualExportedValues(t, tt.trustZone, trustZone)
 				assert.EqualExportedValues(t, tt.trustZone, lds.config.TrustZones[0])
 				assert.False(t, slices.Contains(lds.config.TrustZones, tt.trustZone), "Pointer to trust zone stored in config")
+				assert.False(t, slices.Contains(lds.config.TrustZones, trustZone), "Pointer to trust zone in config returned")
 				// Check that the trust zone was persisted.
 				gotConfig := readConfig(t, loader)
 				gotTrustZone, ok := gotConfig.GetTrustZoneByName(tt.trustZone.Name)
@@ -403,18 +450,6 @@ func TestLocalDataSource_AddCluster(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "duplicate",
-			config: &config.Config{
-				Clusters: []*clusterpb.Cluster{
-					fixtures.Cluster("local1"),
-				},
-				Plugins: fixtures.Plugins("plugins1"),
-			},
-			cluster:       fixtures.Cluster("local1"),
-			wantErr:       true,
-			wantErrString: "cluster local1 already exists in trust zone tz1 in local config",
-		},
-		{
 			name: "one cluster per trust zone",
 			config: &config.Config{
 				Clusters: []*clusterpb.Cluster{
@@ -429,23 +464,26 @@ func TestLocalDataSource_AddCluster(t *testing.T) {
 				return cluster
 			}(),
 			wantErr:       true,
-			wantErrString: "trust zone tz1 already has a cluster",
+			wantErrString: "trust zone tz1-id already has a cluster",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, loader := buildLocalDataSource(t, tt.config)
 
+			tt.cluster.Id = nil
 			got, err := lds.AddCluster(tt.cluster)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
+				tt.cluster.Id = got.Id
 				assert.EqualExportedValues(t, tt.cluster, got)
 				assert.False(t, slices.Contains(lds.config.Clusters, tt.cluster), "Pointer to cluster stored in config")
+				assert.False(t, slices.Contains(lds.config.Clusters, got), "Pointer to cluster in config returned")
 				// Check that the trust zone was persisted.
 				gotConfig := readConfig(t, loader)
-				gotCluster, ok := gotConfig.GetClusterByName(tt.cluster.GetName(), tt.cluster.GetTrustZone())
+				gotCluster, ok := gotConfig.GetClusterByID(tt.cluster.GetId())
 				assert.True(t, ok)
 				assert.EqualExportedValues(t, tt.cluster, gotCluster)
 				assert.NotNil(t, gotCluster.Id)
@@ -458,30 +496,20 @@ func TestLocalDataSource_DestroyCluster(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		cluster       string
-		trustZoneName string
+		clusterID     string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:          "success",
-			cluster:       "local1",
-			trustZoneName: "tz1",
-			wantErr:       false,
+			name:      "success",
+			clusterID: "local1-id",
+			wantErr:   false,
 		},
 		{
 			name:          "invalid cluster",
-			cluster:       "invalid-cluster",
-			trustZoneName: "tz1",
+			clusterID:     "invalid-cluster",
 			wantErr:       true,
-			wantErrString: "failed to find cluster invalid-cluster in trust zone tz1 in local config",
-		},
-		{
-			name:          "wrong trust zone",
-			cluster:       "local1",
-			trustZoneName: "invalid-tz",
-			wantErr:       true,
-			wantErrString: "failed to find cluster local1 in trust zone invalid-tz in local config",
+			wantErrString: "failed to find cluster invalid-cluster in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -499,7 +527,7 @@ func TestLocalDataSource_DestroyCluster(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
-			err := lds.DestroyCluster(tt.cluster, tt.trustZoneName)
+			err := lds.DestroyCluster(tt.clusterID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
@@ -519,30 +547,20 @@ func TestLocalDataSource_GetCluster(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		cluster       string
-		trustZone     string
+		clusterID     string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
 			name:      "success",
-			cluster:   "local1",
-			trustZone: "tz1",
+			clusterID: "local1-id",
 			wantErr:   false,
 		},
 		{
 			name:          "non-existent",
-			cluster:       "local2",
-			trustZone:     "tz2",
+			clusterID:     "local2-id",
 			wantErr:       true,
-			wantErrString: "failed to find cluster local2 in trust zone tz2 in local config",
-		},
-		{
-			name:          "scoped to trust zone",
-			cluster:       "local1",
-			trustZone:     "tz2",
-			wantErr:       true,
-			wantErrString: "failed to find cluster local1 in trust zone tz2 in local config",
+			wantErrString: "failed to find cluster local2-id in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -555,7 +573,60 @@ func TestLocalDataSource_GetCluster(t *testing.T) {
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 
-			got, err := lds.GetCluster(tt.cluster, tt.trustZone)
+			got, err := lds.GetCluster(tt.clusterID)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				require.Nil(t, err)
+				assert.EqualExportedValues(t, cfg.Clusters[0], got)
+				assert.False(t, slices.Contains(lds.config.Clusters, got), "Pointer to cluster in config returned")
+			}
+		})
+	}
+}
+
+func TestLocalDataSource_GetClusterByName(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		cluster       string
+		trustZoneID   string
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:        "success",
+			cluster:     "local1",
+			trustZoneID: "tz1-id",
+			wantErr:     false,
+		},
+		{
+			name:          "non-existent",
+			cluster:       "local2",
+			trustZoneID:   "tz2-id",
+			wantErr:       true,
+			wantErrString: "failed to find cluster local2 in trust zone tz2-id in local config",
+		},
+		{
+			name:          "wrong trust zone",
+			cluster:       "local1",
+			trustZoneID:   "tz2-id",
+			wantErr:       true,
+			wantErrString: "failed to find cluster local1 in trust zone tz2-id in local config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				Clusters: []*clusterpb.Cluster{
+					fixtures.Cluster("local1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			}
+			lds, _ := buildLocalDataSource(t, cfg)
+
+			got, err := lds.GetClusterByName(tt.cluster, tt.trustZoneID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
@@ -573,6 +644,7 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 	tests := []struct {
 		name         string
 		config       *config.Config
+		filter       *datasourcepb.ListClustersRequest_Filter
 		wantClusters []*clusterpb.Cluster
 		wantErr      bool
 	}{
@@ -587,13 +659,13 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 			config: &config.Config{
 				Clusters: []*clusterpb.Cluster{
 					fixtures.Cluster("local1"),
-					fixtures.Cluster("local1"),
+					fixtures.Cluster("local2"),
 				},
 				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantClusters: []*clusterpb.Cluster{
 				fixtures.Cluster("local1"),
-				fixtures.Cluster("local1"),
+				fixtures.Cluster("local2"),
 			},
 			wantErr: false,
 		},
@@ -606,6 +678,9 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 				},
 				Plugins: fixtures.Plugins("plugins1"),
 			},
+			filter: &datasourcepb.ListClustersRequest_Filter{
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+			},
 			wantClusters: []*clusterpb.Cluster{
 				fixtures.Cluster("local1"),
 			},
@@ -615,7 +690,7 @@ func TestLocalDataSource_ListClusters(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, _ := buildLocalDataSource(t, tt.config)
-			got, err := lds.ListClusters("tz1")
+			got, err := lds.ListClusters(tt.filter)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
@@ -658,17 +733,17 @@ func TestLocalDataSource_UpdateCluster(t *testing.T) {
 			name:          "non-existent",
 			cluster:       fixtures.Cluster("local2"),
 			wantErr:       true,
-			wantErrString: "failed to find cluster local2 in trust zone tz2 in local config",
+			wantErrString: "failed to find cluster local2-id in trust zone tz2-id in local config",
 		},
 		{
 			name: "disallowed trust zone",
 			cluster: func() *clusterpb.Cluster {
 				cluster := fixtures.Cluster("local1")
-				cluster.TrustZone = fixtures.StringPtr("tz2")
+				cluster.TrustZoneId = fixtures.StringPtr("tz2-id")
 				return cluster
 			}(),
 			wantErr:       true,
-			wantErrString: "cannot update trust zone for existing cluster local1 in trust zone tz1",
+			wantErrString: "cannot update trust zone for existing cluster local1-id in trust zone tz1-id",
 		},
 		{
 			name: "disallowed nil trust provider",
@@ -678,7 +753,7 @@ func TestLocalDataSource_UpdateCluster(t *testing.T) {
 				return cluster
 			}(),
 			wantErr:       true,
-			wantErrString: "cannot remove trust provider for cluster local1 in trust zone tz1",
+			wantErrString: "cannot remove trust provider for cluster local1-id in trust zone tz1-id",
 		},
 		{
 			name: "disallowed trust provider kind",
@@ -688,7 +763,7 @@ func TestLocalDataSource_UpdateCluster(t *testing.T) {
 				return cluster
 			}(),
 			wantErr:       true,
-			wantErrString: "cannot update trust provider kind for existing cluster local1 in trust zone tz1",
+			wantErrString: "cannot update trust provider kind for existing cluster local1-id in trust zone tz1-id",
 		},
 		{
 			name: "disallowed profile",
@@ -698,7 +773,7 @@ func TestLocalDataSource_UpdateCluster(t *testing.T) {
 				return cluster
 			}(),
 			wantErr:       true,
-			wantErrString: "cannot update profile for existing cluster local1 in trust zone tz1",
+			wantErrString: "cannot update profile for existing cluster local1-id in trust zone tz1-id",
 		},
 	}
 	for _, tt := range tests {
@@ -723,9 +798,10 @@ func TestLocalDataSource_UpdateCluster(t *testing.T) {
 				assert.EqualExportedValues(t, tt.cluster, cluster)
 				assert.EqualExportedValues(t, tt.cluster, lds.config.Clusters[0])
 				assert.False(t, slices.Contains(lds.config.Clusters, tt.cluster), "Pointer to cluster stored in config")
+				assert.False(t, slices.Contains(lds.config.Clusters, cluster), "Pointer to cluster in config returned")
 				// Check that the cluster was persisted.
 				gotConfig := readConfig(t, loader)
-				gotCluster, ok := gotConfig.GetClusterByName(tt.cluster.GetName(), tt.cluster.GetTrustZone())
+				gotCluster, ok := gotConfig.GetClusterByID(tt.cluster.GetId())
 				assert.True(t, ok)
 				assert.EqualExportedValues(t, tt.cluster, gotCluster)
 			}
@@ -748,30 +824,21 @@ func TestLocalDataSource_AddAttestationPolicy(t *testing.T) {
 			policy:  fixtures.AttestationPolicy("ap1"),
 			wantErr: false,
 		},
-		{
-			name: "duplicate",
-			config: &config.Config{
-				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
-					fixtures.AttestationPolicy("ap1"),
-				},
-				Plugins: fixtures.Plugins("plugins1"),
-			},
-			policy:        fixtures.AttestationPolicy("ap1"),
-			wantErr:       true,
-			wantErrString: "attestation policy ap1 already exists in local config",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, loader := buildLocalDataSource(t, tt.config)
 
+			tt.policy.Id = nil
 			got, err := lds.AddAttestationPolicy(tt.policy)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
+				tt.policy.Id = got.Id
 				assert.EqualExportedValues(t, tt.policy, got)
-				assert.False(t, slices.Contains(lds.config.AttestationPolicies, tt.policy), "Pointer to trust zone stored in config")
+				assert.False(t, slices.Contains(lds.config.AttestationPolicies, tt.policy), "Pointer to attestation policy stored in config")
+				assert.False(t, slices.Contains(lds.config.AttestationPolicies, got), "Pointer to attestation policy in config returned")
 				// Check that the policy was persisted.
 				gotConfig := readConfig(t, loader)
 				gotPolicy, ok := gotConfig.GetAttestationPolicyByName(tt.policy.Name)
@@ -787,26 +854,26 @@ func TestLocalDataSource_DestroyAttestationPolicy(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		policy        string
+		policyID      string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:    "success",
-			policy:  "ap1",
-			wantErr: false,
+			name:     "success",
+			policyID: "ap1-id",
+			wantErr:  false,
 		},
 		{
 			name:          "invalid policy",
-			policy:        "invalid-ap",
+			policyID:      "invalid-ap",
 			wantErr:       true,
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
 		{
 			name:          "bound to trust zone",
-			policy:        "ap2",
+			policyID:      "ap2-id",
 			wantErr:       true,
-			wantErrString: "attestation policy ap2 is bound to trust zone tz2 in local config",
+			wantErrString: "attestation policy ap2-id is bound to trust zone tz2 in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -822,7 +889,7 @@ func TestLocalDataSource_DestroyAttestationPolicy(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
-			err := lds.DestroyAttestationPolicy(tt.policy)
+			err := lds.DestroyAttestationPolicy(tt.policyID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
@@ -839,6 +906,49 @@ func TestLocalDataSource_DestroyAttestationPolicy(t *testing.T) {
 }
 
 func TestLocalDataSource_GetAttestationPolicy(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		policyID      string
+		wantErr       bool
+		wantErrString string
+	}{
+		{
+			name:     "success",
+			policyID: "ap1-id",
+			wantErr:  false,
+		},
+		{
+			name:          "non-existent",
+			policyID:      "ap2-id",
+			wantErr:       true,
+			wantErrString: "failed to find attestation policy ap2-id in local config",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
+					fixtures.AttestationPolicy("ap1"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			}
+			lds, _ := buildLocalDataSource(t, cfg)
+
+			got, err := lds.GetAttestationPolicy(tt.policyID)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrString)
+			} else {
+				require.Nil(t, err)
+				assert.EqualExportedValues(t, cfg.AttestationPolicies[0], got)
+				assert.False(t, slices.Contains(lds.config.AttestationPolicies, got), "Pointer to attestation policy in config returned")
+			}
+		})
+	}
+}
+
+func TestLocalDataSource_GetAttestationPolicyByName(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
@@ -868,14 +978,14 @@ func TestLocalDataSource_GetAttestationPolicy(t *testing.T) {
 			}
 			lds, _ := buildLocalDataSource(t, cfg)
 
-			got, err := lds.GetAttestationPolicy(tt.policy)
+			got, err := lds.GetAttestationPolicyByName(tt.policy)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
 				assert.EqualExportedValues(t, cfg.AttestationPolicies[0], got)
-				assert.False(t, slices.Contains(lds.config.AttestationPolicies, got), "Pointer to trust zone in config returned")
+				assert.False(t, slices.Contains(lds.config.AttestationPolicies, got), "Pointer to attestation policy in config returned")
 			}
 		})
 	}
@@ -936,25 +1046,25 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 		{
 			name: "success",
 			binding: &ap_binding_proto.APBinding{
-				TrustZone: "tz1",
-				Policy:    "ap2",
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("ap2-id"),
 			},
 			wantErr: false,
 		},
 		{
-			name: "federates with",
+			name: "success with federations",
 			binding: &ap_binding_proto.APBinding{
-				TrustZone:     "tz1",
-				Policy:        "ap2",
-				FederatesWith: []string{"tz2"},
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("ap2-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("tz2-id")}},
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid trust zone",
 			binding: &ap_binding_proto.APBinding{
-				TrustZone: "invalid",
-				Policy:    "ap2",
+				TrustZoneId: fixtures.StringPtr("invalid"),
+				PolicyId:    fixtures.StringPtr("ap2"),
 			},
 			wantErr:       true,
 			wantErrString: "failed to find trust zone invalid in local config",
@@ -962,8 +1072,8 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 		{
 			name: "invalid policy",
 			binding: &ap_binding_proto.APBinding{
-				TrustZone: "tz1",
-				Policy:    "invalid",
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("invalid"),
 			},
 			wantErr:       true,
 			wantErrString: "failed to find attestation policy invalid in local config",
@@ -971,32 +1081,32 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 		{
 			name: "federates with self",
 			binding: &ap_binding_proto.APBinding{
-				TrustZone:     "tz1",
-				Policy:        "ap2",
-				FederatesWith: []string{"tz1"},
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("ap2-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("tz1-id")}},
 			},
 			wantErr:       true,
-			wantErrString: "attestation policy ap2 federates with its own trust zone tz1",
+			wantErrString: "attestation policy ap2-id federates with its own trust zone tz1-id",
 		},
 		{
 			name: "federates with invalid tz",
 			binding: &ap_binding_proto.APBinding{
-				TrustZone:     "tz1",
-				Policy:        "ap2",
-				FederatesWith: []string{"invalid"},
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("ap2-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("invalid")}},
 			},
 			wantErr:       true,
-			wantErrString: "attestation policy ap2 federates with unknown trust zone invalid",
+			wantErrString: "attestation policy ap2-id federates with unknown trust zone invalid",
 		},
 		{
 			name: "federates with unfederated tz",
 			binding: &ap_binding_proto.APBinding{
-				TrustZone:     "tz1",
-				Policy:        "ap2",
-				FederatesWith: []string{"tz3"},
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("ap2-id"),
+				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("tz3-id")}},
 			},
 			wantErr:       true,
-			wantErrString: "attestation policy ap2 federates with tz3 but trust zone tz1 does not",
+			wantErrString: "attestation policy ap2-id federates with tz3-id but trust zone tz1-id does not",
 		},
 	}
 	for _, tt := range tests {
@@ -1014,15 +1124,20 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
+
+			tt.binding.Id = nil
 			got, err := lds.AddAPBinding(tt.binding)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
+				tt.binding.Id = got.Id
 				assert.EqualExportedValues(t, tt.binding, got)
 				// nolint:staticcheck
 				assert.False(t, slices.Contains(lds.config.TrustZones[0].AttestationPolicies, tt.binding), "Pointer to attestation policy binding stored in config")
+				// nolint:staticcheck
+				assert.False(t, slices.Contains(lds.config.TrustZones[0].AttestationPolicies, got), "Pointer to attestation policy binding in config returned")
 				// Check that the binding was persisted.
 				gotConfig := readConfig(t, loader)
 				// nolint:staticcheck
@@ -1038,35 +1153,20 @@ func TestLocalDataSource_DestroyAPBinding(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		binding       *ap_binding_proto.APBinding
+		bindingID     string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name: "success",
-			binding: &ap_binding_proto.APBinding{
-				TrustZone: "tz1",
-				Policy:    "ap1",
-			},
-			wantErr: false,
+			name:      "success",
+			bindingID: "apb1-id",
+			wantErr:   false,
 		},
 		{
-			name: "invalid trust zone",
-			binding: &ap_binding_proto.APBinding{
-				TrustZone: "invalid",
-				Policy:    "ap1",
-			},
+			name:          "invalid binding",
+			bindingID:     "invalid-binding",
 			wantErr:       true,
-			wantErrString: "failed to find trust zone invalid in local config",
-		},
-		{
-			name: "invalid policy",
-			binding: &ap_binding_proto.APBinding{
-				TrustZone: "tz1",
-				Policy:    "invalid",
-			},
-			wantErr:       true,
-			wantErrString: "failed to find attestation policy binding for invalid in trust zone tz1",
+			wantErrString: "failed to find attestation policy binding invalid-binding in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -1081,18 +1181,23 @@ func TestLocalDataSource_DestroyAPBinding(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
-			err := lds.DestroyAPBinding(tt.binding)
+			err := lds.DestroyAPBinding(tt.bindingID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
 				// nolint:staticcheck
-				assert.NotContains(t, lds.config.TrustZones[0].AttestationPolicies, tt.binding)
+				for _, binding := range lds.config.TrustZones[0].AttestationPolicies {
+					assert.NotEqual(t, tt.bindingID, binding.Id)
+				}
+
 				// Check that the binding removal was persisted.
 				gotConfig := readConfig(t, loader)
 				// nolint:staticcheck
-				assert.NotContains(t, gotConfig.TrustZones[0].AttestationPolicies, tt.binding)
+				for _, binding := range gotConfig.TrustZones[0].AttestationPolicies {
+					assert.NotEqual(t, tt.bindingID, binding.Id)
+				}
 			}
 		})
 	}
@@ -1117,7 +1222,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "filter by trust zone tz1",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				TrustZoneName: fixtures.StringPtr("tz1"),
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
 			},
 			// nolint:staticcheck
 			want:    fixtures.TrustZone("tz1").AttestationPolicies,
@@ -1126,7 +1231,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "filter by trust zone tz3",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				TrustZoneName: fixtures.StringPtr("tz3"),
+				TrustZoneId: fixtures.StringPtr("tz3-id"),
 			},
 			want:    []*ap_binding_proto.APBinding{},
 			wantErr: false,
@@ -1134,7 +1239,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "filter by policy ap1",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				PolicyName: fixtures.StringPtr("ap1"),
+				PolicyId: fixtures.StringPtr("ap1-id"),
 			},
 			// nolint:staticcheck
 			want:    fixtures.TrustZone("tz1").AttestationPolicies[:1],
@@ -1143,8 +1248,8 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "filter by trust zone and policy",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				TrustZoneName: fixtures.StringPtr("tz1"),
-				PolicyName:    fixtures.StringPtr("ap1"),
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+				PolicyId:    fixtures.StringPtr("ap1-id"),
 			},
 			// nolint:staticcheck
 			want:    fixtures.TrustZone("tz1").AttestationPolicies[:1],
@@ -1153,7 +1258,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "invalid trust zone",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				TrustZoneName: fixtures.StringPtr("invalid"),
+				TrustZoneId: fixtures.StringPtr("invalid"),
 			},
 			want:          []*ap_binding_proto.APBinding{},
 			wantErr:       true,
@@ -1162,7 +1267,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 		{
 			name: "invalid policy",
 			filter: &datasourcepb.ListAPBindingsRequest_Filter{
-				PolicyName: fixtures.StringPtr("invalid"),
+				PolicyId: fixtures.StringPtr("invalid"),
 			},
 			want:    []*ap_binding_proto.APBinding{},
 			wantErr: false,
@@ -1205,16 +1310,16 @@ func TestLocalDataSource_AddFederation(t *testing.T) {
 		{
 			name: "success",
 			federation: &federation_proto.Federation{
-				From: "tz1",
-				To:   "tz3",
+				TrustZoneId:       fixtures.StringPtr("tz1-id"),
+				RemoteTrustZoneId: fixtures.StringPtr("tz3-id"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid from trust zone",
 			federation: &federation_proto.Federation{
-				From: "invalid",
-				To:   "tz2",
+				TrustZoneId:       fixtures.StringPtr("invalid"),
+				RemoteTrustZoneId: fixtures.StringPtr("tz2-id"),
 			},
 			wantErr:       true,
 			wantErrString: "failed to find trust zone invalid in local config",
@@ -1222,8 +1327,8 @@ func TestLocalDataSource_AddFederation(t *testing.T) {
 		{
 			name: "invalid to trust zone",
 			federation: &federation_proto.Federation{
-				From: "tz1",
-				To:   "invalid",
+				TrustZoneId:       fixtures.StringPtr("tz1-id"),
+				RemoteTrustZoneId: fixtures.StringPtr("invalid"),
 			},
 			wantErr:       true,
 			wantErrString: "failed to find trust zone invalid in local config",
@@ -1231,20 +1336,20 @@ func TestLocalDataSource_AddFederation(t *testing.T) {
 		{
 			name: "federate with self",
 			federation: &federation_proto.Federation{
-				From: "tz1",
-				To:   "tz1",
+				TrustZoneId:       fixtures.StringPtr("tz1-id"),
+				RemoteTrustZoneId: fixtures.StringPtr("tz1-id"),
 			},
 			wantErr:       true,
-			wantErrString: "cannot federate trust zone tz1 with itself",
+			wantErrString: "cannot federate trust zone tz1-id with itself",
 		},
 		{
 			name: "duplicate",
 			federation: &federation_proto.Federation{
-				From: "tz1",
-				To:   "tz2",
+				TrustZoneId:       fixtures.StringPtr("tz1-id"),
+				RemoteTrustZoneId: fixtures.StringPtr("tz2-id"),
 			},
 			wantErr:       true,
-			wantErrString: "federation already exists between tz1 and tz2",
+			wantErrString: "federation already exists between tz1-id and tz2-id",
 		},
 	}
 	for _, tt := range tests {
@@ -1264,9 +1369,12 @@ func TestLocalDataSource_AddFederation(t *testing.T) {
 				assert.EqualError(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
+				tt.federation.Id = got.Id
 				assert.EqualExportedValues(t, tt.federation, got)
 				// nolint:staticcheck
 				assert.False(t, slices.Contains(lds.config.TrustZones[0].Federations, tt.federation), "Pointer to federation stored in config")
+				// nolint:staticcheck
+				assert.False(t, slices.Contains(lds.config.TrustZones[0].Federations, got), "Pointer to federation in config returned")
 				// Check that the federation was persisted.
 				gotConfig := readConfig(t, loader)
 				// nolint:staticcheck
@@ -1282,26 +1390,20 @@ func TestLocalDataSource_DestroyFederation(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
-		federation    *federation_proto.Federation
+		federationID  string
 		wantErr       bool
 		wantErrString string
 	}{
 		{
-			name:       "success",
-			federation: &federation_proto.Federation{From: "tz1", To: "tz2"},
-			wantErr:    false,
+			name:         "success",
+			federationID: "fed1-id",
+			wantErr:      false,
 		},
 		{
 			name:          "invalid federation",
-			federation:    &federation_proto.Federation{From: "tz1", To: "invalid-tz"},
+			federationID:  "invalid-federation",
 			wantErr:       true,
-			wantErrString: "failed to find federation for trust zone tz1 in local config",
-		},
-		{
-			name:          "invalid trust zone",
-			federation:    &federation_proto.Federation{From: "invalid-tz", To: "tz2"},
-			wantErr:       true,
-			wantErrString: "failed to find trust zone invalid-tz in local config",
+			wantErrString: "failed to find federation invalid-federation in local config",
 		},
 	}
 	for _, tt := range tests {
@@ -1316,7 +1418,7 @@ func TestLocalDataSource_DestroyFederation(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
-			err := lds.DestroyFederation(tt.federation)
+			err := lds.DestroyFederation(tt.federationID)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.EqualError(t, err, tt.wantErrString)
@@ -1340,12 +1442,15 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  *config.Config
+		filter  *datasourcepb.ListFederationsRequest_Filter
 		wantErr bool
+		want    []*federation_proto.Federation
 	}{
 		{
 			name:    "none",
 			config:  config.NewConfig(),
 			wantErr: false,
+			want:    []*federation_proto.Federation{},
 		},
 		{
 			name: "two",
@@ -1357,22 +1462,35 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 				Plugins: fixtures.Plugins("plugins1"),
 			},
 			wantErr: false,
+			// nolint:staticcheck
+			want: append(fixtures.TrustZone("tz1").Federations, fixtures.TrustZone("tz2").Federations...),
+		},
+		{
+			name: "with trust zone filter",
+			config: &config.Config{
+				TrustZones: []*trust_zone_proto.TrustZone{
+					fixtures.TrustZone("tz1"),
+					fixtures.TrustZone("tz2"),
+				},
+				Plugins: fixtures.Plugins("plugins1"),
+			},
+			filter: &datasourcepb.ListFederationsRequest_Filter{
+				TrustZoneId: fixtures.StringPtr("tz1-id"),
+			},
+			wantErr: false,
+			// nolint:staticcheck
+			want: fixtures.TrustZone("tz1").Federations,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lds, _ := buildLocalDataSource(t, tt.config)
-			got, err := lds.ListFederations()
+			got, err := lds.ListFederations(tt.filter)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.Nil(t, err)
-				want := []*federation_proto.Federation{}
-				for _, tz := range tt.config.TrustZones {
-					// nolint:staticcheck
-					want = append(want, tz.Federations...)
-				}
-				if diff := cmp.Diff(got, want, protocmp.Transform()); diff != "" {
+				if diff := cmp.Diff(got, tt.want, protocmp.Transform()); diff != "" {
 					t.Errorf("LocalDataSource.ListFederations() mismatch (-want,+got):\n%s", diff)
 				}
 				for _, gotFederation := range got {
@@ -1380,62 +1498,6 @@ func TestLocalDataSource_ListFederations(t *testing.T) {
 						// nolint:staticcheck
 						assert.False(t, slices.Contains(tz.Federations, gotFederation), "Pointer to federation in config returned")
 					}
-				}
-			}
-		})
-	}
-}
-
-func TestLocalDataSource_ListFederationsByTrustZone(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name          string
-		trustZone     string
-		wantErr       bool
-		wantErrString string
-	}{
-		{
-			name:      "none",
-			trustZone: "tz3",
-			wantErr:   false,
-		},
-		{
-			name:      "two",
-			trustZone: "tz1",
-			wantErr:   false,
-		},
-		{
-			name:          "invalid trust zone",
-			trustZone:     "invalid",
-			wantErr:       true,
-			wantErrString: "failed to find trust zone invalid in local config",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &config.Config{
-				TrustZones: []*trust_zone_proto.TrustZone{
-					fixtures.TrustZone("tz1"),
-					fixtures.TrustZone("tz3"),
-				},
-				Plugins: fixtures.Plugins("plugins1"),
-			}
-			lds, _ := buildLocalDataSource(t, cfg)
-			got, err := lds.ListFederationsByTrustZone(tt.trustZone)
-			if tt.wantErr {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.wantErrString)
-			} else {
-				require.Nil(t, err)
-				want, ok := cfg.GetTrustZoneByName(tt.trustZone)
-				require.True(t, ok)
-				// nolint:staticcheck
-				if diff := cmp.Diff(got, want.Federations, protocmp.Transform()); diff != "" {
-					t.Errorf("LocalDataSource.ListFederationsByTrustZone() mismatch (-want,+got):\n%s", diff)
-				}
-				for _, gotFederation := range got {
-					// nolint:staticcheck
-					assert.False(t, slices.Contains(want.Federations, gotFederation), "Pointer to attestation policy binding in config returned")
 				}
 			}
 		})

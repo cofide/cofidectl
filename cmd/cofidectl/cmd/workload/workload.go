@@ -10,7 +10,7 @@ import (
 	"log/slog"
 	"os"
 
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -77,23 +77,21 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 			}
 
 			var trustZones []*trust_zone_proto.TrustZone
-
 			if opts.trustZone != "" {
-				trustZone, err := ds.GetTrustZone(opts.trustZone)
+				trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
 				if err != nil {
-					return err
+					return fmt.Errorf("trust zone %s not found", opts.trustZone)
 				}
-
-				trustZones = append(trustZones, trustZone)
+				trustZones = []*trust_zone_proto.TrustZone{trustZone}
 			} else {
 				trustZones, err = ds.ListTrustZones()
 				if err != nil {
 					return err
 				}
-			}
 
-			if len(trustZones) == 0 {
-				return fmt.Errorf("no trust zones have been configured")
+				if len(trustZones) == 0 {
+					return fmt.Errorf("no trust zones have been configured")
+				}
 			}
 
 			kubeConfig, err := cmd.Flags().GetString("kube-config")
@@ -161,7 +159,7 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 }
 
 func (w *WorkloadCommand) status(ctx context.Context, ds datasource.DataSource, kubeConfig string, opts StatusOpts) error {
-	trustZone, err := ds.GetTrustZone(opts.trustZone)
+	trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
 	if err != nil {
 		return err
 	}
@@ -278,23 +276,21 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 			}
 
 			var trustZones []*trust_zone_proto.TrustZone
-
 			if opts.trustZone != "" {
-				trustZone, err := ds.GetTrustZone(opts.trustZone)
+				trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
 				if err != nil {
-					return err
+					return fmt.Errorf("trust zone %s not found", opts.trustZone)
 				}
-
-				trustZones = append(trustZones, trustZone)
+				trustZones = []*trust_zone_proto.TrustZone{trustZone}
 			} else {
 				trustZones, err = ds.ListTrustZones()
 				if err != nil {
 					return err
 				}
-			}
 
-			if len(trustZones) == 0 {
-				return fmt.Errorf("no trust zones have been configured")
+				if len(trustZones) == 0 {
+					return fmt.Errorf("no trust zones have been configured")
+				}
 			}
 
 			kubeConfig, err := cmd.Flags().GetString("kube-config")

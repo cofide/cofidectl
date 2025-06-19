@@ -2,6 +2,6 @@ trust_zones:
     - trust_domain: td1
       bundle_endpoint_url: 127.0.0.1
       federations:
-        - from: tz1
-          to: tz2
+        - trust_zone_id: tz1-id
+          remote_trust_zone_id: tz2-id
       attestation_policies: []

@@ -43,7 +43,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				return cluster
 			}(),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
 				require.True(t, ok)
 				// nolint:staticcheck
 				trustZone.AttestationPolicies = nil
@@ -564,7 +564,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				return cluster
 			}(),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
 				require.True(t, ok)
 				// nolint:staticcheck
 				trustZone.AttestationPolicies = nil
@@ -730,7 +730,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 				trustZone, ok := cfg.GetTrustZoneByName("tz1")
 				require.True(t, ok)
 				// nolint:staticcheck
-				trustZone.AttestationPolicies[0].Policy = "invalid-ap"
+				trustZone.AttestationPolicies[0].PolicyId = fixtures.StringPtr("invalid-ap")
 			},
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
@@ -739,10 +739,10 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			trustZone: fixtures.TrustZone("tz1"),
 			cluster:   fixtures.Cluster("local1"),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByName("tz1")
+				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
 				require.True(t, ok)
 				// nolint:staticcheck
-				trustZone.Federations[0].To = "invalid-tz"
+				trustZone.Federations[0].RemoteTrustZoneId = fixtures.StringPtr("invalid-tz")
 			},
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},

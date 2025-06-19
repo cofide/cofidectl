@@ -9,7 +9,7 @@ import (
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/provision_plugin/v1alpha1"
+	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
@@ -55,6 +55,7 @@ func TestSpireHelm_Deploy(t *testing.T) {
 		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
 		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
 	}
+
 	assert.EqualExportedValues(t, want, statuses)
 }
 
@@ -101,7 +102,7 @@ func TestSpireHelm_Deploy_specificTrustZone(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz2"}}
+	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZoneIDs: []string{"tz2-id"}}
 	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
@@ -148,7 +149,7 @@ func TestSpireHelm_TearDown_specificTrustZone(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZones: []string{"tz1"}}
+	opts := provision.TearDownOpts{KubeCfgFile: "fake-kube.cfg", TrustZoneIDs: []string{"tz1-id"}}
 	statusCh, err := spireHelm.TearDown(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 
@@ -166,7 +167,7 @@ func TestSpireHelm_GetHelmValues(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.GetHelmValuesOpts{TrustZoneName: "tz1", ClusterName: "local1"}
+	opts := provision.GetHelmValuesOpts{ClusterID: "local1-id"}
 	values, err := spireHelm.GetHelmValues(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
 	want := map[string]any{"key1": "value1", "key2": "value2"}

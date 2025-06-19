@@ -408,5 +408,10 @@ func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, name string
 		return err
 	}
 
-	return ds.DestroyAttestationPolicy(name)
+	ap, err := ds.GetAttestationPolicyByName(name)
+	if err != nil {
+		return err
+	}
+
+	return ds.DestroyAttestationPolicy(ap.GetId())
 }

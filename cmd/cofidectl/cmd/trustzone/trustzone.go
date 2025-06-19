@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
 	trustprovider "github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
@@ -199,15 +200,17 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 		BundleEndpointProfile: &bundleEndpointProfile,
 	}
 
-	_, err = ds.AddTrustZone(newTrustZone)
+	receivedTz, err := ds.AddTrustZone(newTrustZone)
 	if err != nil {
-		return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.Name, err)
+		return fmt.Errorf("failed to create trust zone %s: %w", newTrustZone.GetName(), err)
 	}
+
+	newTrustZone = receivedTz
 
 	if !opts.noCluster {
 		newCluster := &clusterpb.Cluster{
 			Name:              &opts.kubernetesCluster,
-			TrustZone:         &opts.name,
+			TrustZoneId:       newTrustZone.Id,
 			KubernetesContext: &opts.context,
 			TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
 			Profile:           &opts.profile,
@@ -216,7 +219,7 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 
 		_, err = ds.AddCluster(newCluster)
 		if err != nil {
-			if err := ds.DestroyTrustZone(opts.name); err != nil {
+			if err := ds.DestroyTrustZone(newTrustZone.GetId()); err != nil {
 				slog.Error("Failed to destroy trust zone during rollback", "error", err)
 			}
 			return fmt.Errorf("failed to create cluster %s: %w", newCluster.GetName(), err)
@@ -263,7 +266,15 @@ func (c *TrustZoneCommand) GetDelCommand() *cobra.Command {
 }
 
 func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource, kubeConfig string, force bool) error {
-	clusters, err := ds.ListClusters(name)
+	tz, err := ds.GetTrustZoneByName(name)
+	if err != nil {
+		return err
+	}
+	id := tz.GetId()
+
+	clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
+		TrustZoneId: &id,
+	})
 	if err != nil {
 		return err
 	}
@@ -281,7 +292,7 @@ func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource,
 	}
 
 	for i, cluster := range clusters {
-		err = ds.DestroyCluster(cluster.GetName(), name)
+		err = ds.DestroyCluster(cluster.GetId())
 		if err != nil {
 			for _, rollbackCluster := range clusters[:i] {
 				if _, err := ds.AddCluster(rollbackCluster); err != nil {
@@ -292,7 +303,7 @@ func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource,
 		}
 	}
 
-	err = ds.DestroyTrustZone(name)
+	err = ds.DestroyTrustZone(id)
 	if err != nil {
 		return fmt.Errorf("failed to destroy trust zone %s: %w", name, err)
 	}
@@ -330,7 +341,7 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 }
 
 func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string) error {
-	trustZone, err := source.GetTrustZone(tzName)
+	trustZone, err := source.GetTrustZoneByName(tzName)
 	if err != nil {
 		return err
 	}
@@ -345,7 +356,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 		return err
 	}
 
-	prov, err := helmprovider.NewHelmSPIREProvider(ctx, cluster, nil, nil, kubeConfig)
+	prov, err := helmprovider.NewHelmSPIREProvider(ctx, trustZone.GetName(), cluster, nil, nil, kubeConfig)
 	if err != nil {
 		return err
 	}

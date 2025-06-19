@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofide-api-sdk/pkg/connect/client/test"
 	"github.com/cofide/cofidectl/internal/pkg/config"
@@ -68,7 +69,7 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 			trustZoneName:  "tz3",
 			injectFailure:  true,
 			wantErr:        true,
-			wantErrMessage: "fake destroy failure",
+			wantErrMessage: "fake add failure",
 		},
 	}
 	for _, tt := range tests {
@@ -91,19 +92,26 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrMessage)
 
-				// Check that trust zone and cluster were not added.
-				_, err := ds.GetTrustZone("tz3")
-				require.Error(t, err)
-				_, err = ds.GetCluster("local3", "tz3")
-				require.Error(t, err)
+				// Check that trust zone was not added.
+				trustZones, err := ds.ListTrustZones()
+				require.NoError(t, err)
+				for _, trustZone := range trustZones {
+					require.NotEqual(t, "tz3", trustZone.Name)
+				}
 			} else {
 				require.NoError(t, err)
 
 				// Check that trust zone and cluster were added.
-				_, err := ds.GetTrustZone(tt.trustZoneName)
+				trustZone, err := ds.GetTrustZoneByName(tt.trustZoneName)
 				require.NoError(t, err)
-				_, err = ds.GetCluster("local3", tt.trustZoneName)
+				require.NotNil(t, trustZone)
+
+				clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
+					TrustZoneId: trustZone.Id,
+				})
 				require.NoError(t, err)
+				require.Len(t, clusters, 1)
+				assert.Equal(t, "local3", clusters[0].GetName())
 			}
 		})
 	}
@@ -147,14 +155,14 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 				assert.ErrorContains(t, err, tt.wantErrMessage)
 
 				// Check that trust zone and clusters were not deleted.
-				_, err := ds.GetTrustZone("tz1")
+				_, err := ds.GetTrustZone("tz1-id")
 				require.NoError(t, err)
 				if tt.injectFailure {
 					// Currently the local datasource limits us to one cluster per trust zone, so rolling back deletion fails.
 					assert.Equal(t, 1, ds.(*failingDS).clustersAdded)
 				} else {
 					for _, cluster := range defaultConfig().Clusters {
-						_, err := ds.GetCluster(cluster.GetName(), cluster.GetTrustZone())
+						_, err := ds.GetCluster(cluster.GetId())
 						require.NoError(t, err)
 					}
 				}
@@ -162,10 +170,10 @@ func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {
 				require.NoError(t, err)
 
 				// Check that trust zone and clusters were deleted.
-				_, err := ds.GetTrustZone(tt.trustZoneName)
+				_, err := ds.GetTrustZoneByName(tt.trustZoneName)
 				require.Error(t, err)
 				for _, cluster := range defaultConfig().Clusters {
-					_, err := ds.GetCluster(cluster.GetName(), cluster.GetTrustZone())
+					_, err := ds.GetCluster(cluster.GetId())
 					require.Error(t, err)
 				}
 			}
@@ -181,7 +189,7 @@ type failingDS struct {
 
 // AddTrustZone fails unconditionally.
 func (f *failingDS) AddTrustZone(trustZone *trust_zone_proto.TrustZone) (*trust_zone_proto.TrustZone, error) {
-	return nil, errors.New("fake destroy failure")
+	return nil, errors.New("fake add failure")
 }
 
 // AddCluster keeps track of the number of clusters added.
@@ -191,12 +199,12 @@ func (f *failingDS) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, 
 }
 
 // DestroyCluster fails when a second cluster is destroyed, allowing testing of rollback.
-func (f *failingDS) DestroyCluster(name, trustZoneName string) error {
+func (f *failingDS) DestroyCluster(id string) error {
 	f.clustersDestroyed++
 	if f.clustersDestroyed == 2 {
 		return errors.New("fake destroy failure")
 	}
-	return f.LocalDataSource.DestroyCluster(name, trustZoneName)
+	return f.LocalDataSource.DestroyCluster(id)
 }
 
 func newFakeDataSource(t *testing.T, cfg *config.Config) datasource.DataSource {
