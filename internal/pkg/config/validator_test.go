@@ -7,14 +7,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidator_ValidateValid(t *testing.T) {
 	tests := []struct {
-		name string
-		file string
+		name           string
+		file           string
+		wantErr        bool
+		wantErrMessage string
 	}{
-		{name: "empty", file: "empty.yaml"},
+		{name: "empty", file: "empty.yaml", wantErr: true, wantErrMessage: "plugins: field is required but not present"},
 		{name: "defaults", file: "default.yaml"},
 		{name: "full", file: "full.yaml"},
 	}
@@ -22,8 +25,12 @@ func TestValidator_ValidateValid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := readTestConfig(t, tt.file)
 			v := NewValidator()
-			if err := v.Validate([]byte(data)); err != nil {
-				t.Fatalf("Validator.Validate() error = %v", err)
+			err := v.Validate([]byte(data))
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrMessage)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -94,7 +101,7 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 		{
 			name:    "missing attestation policy field",
 			data:    string(readTestConfig(t, "missing_attestation_policy_field.yaml")),
-			wantErr: "attestation_policies.0: incomplete value {name:\"ap1\",id?:string,kubernetes?:{namespace_selector?:{match_labels?:{},match_expressions?:[]},pod_selector?:{match_labels?:{},match_expressions?:[]}}} | {name:\"ap1\",id?:string,static?:{spiffe_id!:string,selectors!:[]}}",
+			wantErr: "attestation_policies.0: incomplete value {name:\"ap1\",id?:string,kubernetes?:{namespace_selector?:~(#APLabelSelector),pod_selector?:~(#APLabelSelector)}} | {name:\"ap1\",id?:string,static?:{spiffe_id!:string,selectors!:[]}}",
 		},
 		{
 			name:    "plugins not a map",
