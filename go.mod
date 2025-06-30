@@ -4,7 +4,7 @@ go 1.24.2
 
 require (
 	buf.build/go/protoyaml v0.6.0
-	cuelang.org/go v0.10.1
+	cuelang.org/go v0.13.2
 	github.com/cofide/cofide-api-sdk v0.24.1
 	github.com/fatih/color v1.18.0
 	github.com/gofrs/flock v0.12.1
@@ -21,6 +21,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.18.3
 )
+
+require github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250425153114-8976f5be98c1.1 // indirect
@@ -121,9 +123,8 @@ require (
 	github.com/zeebo/errs v1.4.0 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/mod v0.25.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
-	golang.org/x/oauth2 v0.28.0 // indirect
+	golang.org/x/oauth2 v0.29.0 // indirect
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect
