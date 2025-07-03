@@ -55,12 +55,18 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 		name           string
 		trustZoneName  string
 		injectFailure  bool
+		withOIDCIssuer bool
 		wantErr        bool
 		wantErrMessage string
 	}{
 		{
 			name:          "success",
 			trustZoneName: "tz3",
+		},
+		{
+			name: "success with OIDC issuer",
+			trustZoneName: "tz-oidc",
+			withOIDCIssuer: true,
 		},
 		{
 			name:           "already exists",
@@ -86,11 +92,15 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				name:              tt.trustZoneName,
 				trustDomain:       "td3",
 				kubernetesCluster: "local3",
-				kubernetesClusterOIDCIssuerURL: "https://oidc.local3:6443",
 				context:           "kind-local3",
 				profile:           "kubernetes",
 				noCluster:         false,
 			}
+
+			if tt.withOIDCIssuer {
+				opts.kubernetesClusterOIDCIssuerURL = "https://some.oidc"
+			}
+
 			c := TrustZoneCommand{}
 			err := c.addTrustZone(context.Background(), opts, ds)
 			if tt.wantErr {
