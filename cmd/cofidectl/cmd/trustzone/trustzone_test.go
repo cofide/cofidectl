@@ -25,6 +25,7 @@ func TestValidateOpts(t *testing.T) {
 	tt := []struct {
 		name        string
 		domain      string
+		oidcIssuerURL string
 		errExpected bool
 	}{
 		{domain: "example.com", errExpected: false},
@@ -36,11 +37,14 @@ func TestValidateOpts(t *testing.T) {
 		{domain: "user:password@example.com", errExpected: true},
 		{domain: "example?.com", errExpected: true},
 		{domain: "exam%3Aple.com", errExpected: true},
+		{domain: "valid.com", oidcIssuerURL: "https://valid.oidc", errExpected: false},
+		{domain: "valid.com", oidcIssuerURL: "https://validwithport.oidc:644", errExpected: false},
+		{domain: "valid.com", oidcIssuerURL: "h://invalid.oidc", errExpected: true},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.domain, func(t *testing.T) {
-			err := validateOpts(addOpts{trustDomain: tc.domain})
+			err := validateOpts(addOpts{trustDomain: tc.domain, kubernetesClusterOIDCIssuerURL: tc.oidcIssuerURL})
 			assert.Equal(t, tc.errExpected, err != nil)
 		})
 	}
@@ -82,6 +86,7 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				name:              tt.trustZoneName,
 				trustDomain:       "td3",
 				kubernetesCluster: "local3",
+				kubernetesClusterOIDCIssuerURL: "https://oidc.local3:6443",
 				context:           "kind-local3",
 				profile:           "kubernetes",
 				noCluster:         false,
