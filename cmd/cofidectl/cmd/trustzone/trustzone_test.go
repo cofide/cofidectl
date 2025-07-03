@@ -20,11 +20,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const fakeOIDCIssuerURL = "https://some.oidc"
+
 func TestValidateOpts(t *testing.T) {
 	// https://github.com/spiffe/spiffe/blob/main/standards/SPIFFE-ID.md#21-trust-domain
 	tt := []struct {
 		name        string
 		domain      string
+		oidcIssuerURL string
 		errExpected bool
 	}{
 		{domain: "example.com", errExpected: false},
@@ -36,11 +39,15 @@ func TestValidateOpts(t *testing.T) {
 		{domain: "user:password@example.com", errExpected: true},
 		{domain: "example?.com", errExpected: true},
 		{domain: "exam%3Aple.com", errExpected: true},
+		{domain: "valid.com", oidcIssuerURL: "https://valid.oidc", errExpected: false},
+		{domain: "valid.com", oidcIssuerURL: "https://validwithport.oidc:644", errExpected: false},
+		{domain: "valid.com", oidcIssuerURL: "h://invalid.oidc", errExpected: true},
+		{domain: "INVALID.COM", oidcIssuerURL: "https://valid.oidc", errExpected: true},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.domain, func(t *testing.T) {
-			err := validateOpts(addOpts{trustDomain: tc.domain})
+			err := validateOpts(addOpts{trustDomain: tc.domain, kubernetesClusterOIDCIssuerURL: tc.oidcIssuerURL})
 			assert.Equal(t, tc.errExpected, err != nil)
 		})
 	}
@@ -51,12 +58,18 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 		name           string
 		trustZoneName  string
 		injectFailure  bool
+		withOIDCIssuer bool
 		wantErr        bool
 		wantErrMessage string
 	}{
 		{
 			name:          "success",
 			trustZoneName: "tz3",
+		},
+		{
+			name: "success with OIDC issuer",
+			trustZoneName: "tz-oidc",
+			withOIDCIssuer: true,
 		},
 		{
 			name:           "already exists",
@@ -86,6 +99,11 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				profile:           "kubernetes",
 				noCluster:         false,
 			}
+
+			if tt.withOIDCIssuer {
+				opts.kubernetesClusterOIDCIssuerURL = fakeOIDCIssuerURL
+			}
+
 			c := TrustZoneCommand{}
 			err := c.addTrustZone(context.Background(), opts, ds)
 			if tt.wantErr {
@@ -112,6 +130,10 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, clusters, 1)
 				assert.Equal(t, "local3", clusters[0].GetName())
+
+				if tt.withOIDCIssuer {
+					assert.Equal(t, fakeOIDCIssuerURL, clusters[0].GetOidcIssuerUrl())
+				}
 			}
 		})
 	}

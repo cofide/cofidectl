@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"slices"
 	"strconv"
@@ -123,14 +124,15 @@ This command will add a new trust zone to the Cofide configuration state.
 `
 
 type addOpts struct {
-	name              string
-	trustDomain       string
-	kubernetesCluster string
-	context           string
-	profile           string
-	jwtIssuer         string
-	externalServer    bool
-	noCluster         bool
+	name                           string
+	trustDomain                    string
+	kubernetesCluster              string
+	kubernetesClusterOIDCIssuerURL string
+	context                        string
+	profile                        string
+	jwtIssuer                      string
+	externalServer                 bool
+	noCluster                      bool
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
@@ -170,6 +172,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringVar(&opts.trustDomain, "trust-domain", "", "Trust domain to use for this trust zone")
 	f.StringVar(&opts.kubernetesCluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
+	f.StringVar(&opts.kubernetesClusterOIDCIssuerURL, "kubernetes-oidc-issuer", "", "OIDC issuer URL for the Kubernetes cluster")
 	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 	f.StringVar(&opts.jwtIssuer, "jwt-issuer", "", "JWT issuer to use for this trust zone")
@@ -215,6 +218,7 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 			TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
 			Profile:           &opts.profile,
 			ExternalServer:    &opts.externalServer,
+			OidcIssuerUrl:     &opts.kubernetesClusterOIDCIssuerURL,
 		}
 
 		_, err = ds.AddCluster(newCluster)
@@ -526,5 +530,24 @@ func checkContext(contexts []string, context string) bool {
 
 func validateOpts(opts addOpts) error {
 	_, err := spiffeid.TrustDomainFromString(opts.trustDomain)
+	if err != nil {
+		return err
+	}
+	if opts.kubernetesClusterOIDCIssuerURL != "" {
+		err = validateOIDCIssuerURL(opts.kubernetesClusterOIDCIssuerURL)
+	}
 	return err
+}
+
+func validateOIDCIssuerURL(oidcIssuerURL string) error {
+	parsed, err := url.Parse(oidcIssuerURL)
+	if err != nil {
+		return err
+	}
+
+	if !slices.Contains([]string{"http", "https"}, parsed.Scheme) {
+		return fmt.Errorf("unsupported scheme: %s", parsed.Scheme)
+	}
+
+	return nil
 }
