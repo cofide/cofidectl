@@ -123,14 +123,15 @@ This command will add a new trust zone to the Cofide configuration state.
 `
 
 type addOpts struct {
-	name              string
-	trustDomain       string
-	kubernetesCluster string
-	context           string
-	profile           string
-	jwtIssuer         string
-	externalServer    bool
-	noCluster         bool
+	name                           string
+	trustDomain                    string
+	kubernetesCluster              string
+	kubernetesClusterOIDCIssuerURL string
+	context                        string
+	profile                        string
+	jwtIssuer                      string
+	externalServer                 bool
+	noCluster                      bool
 }
 
 func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
@@ -215,6 +216,10 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 			TrustProvider:     &trust_provider_proto.TrustProvider{Kind: &trustProviderKind},
 			Profile:           &opts.profile,
 			ExternalServer:    &opts.externalServer,
+		}
+
+		if opts.kubernetesClusterOIDCIssuerURL != "" {
+			newCluster.OidcIssuerUrl = &opts.kubernetesClusterOIDCIssuerURL
 		}
 
 		_, err = ds.AddCluster(newCluster)
