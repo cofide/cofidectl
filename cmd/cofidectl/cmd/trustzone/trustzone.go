@@ -530,6 +530,9 @@ func checkContext(contexts []string, context string) bool {
 
 func validateOpts(opts addOpts) error {
 	_, err := spiffeid.TrustDomainFromString(opts.trustDomain)
+	if err != nil {
+		return err
+	}
 	if opts.kubernetesClusterOIDCIssuerURL != "" {
 		err = validateOIDCIssuerURL(opts.kubernetesClusterOIDCIssuerURL)
 	}
