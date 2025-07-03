@@ -20,6 +20,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const fakeOIDCIssuerURL = "https://some.oidc"
+
 func TestValidateOpts(t *testing.T) {
 	// https://github.com/spiffe/spiffe/blob/main/standards/SPIFFE-ID.md#21-trust-domain
 	tt := []struct {
@@ -98,7 +100,7 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 			}
 
 			if tt.withOIDCIssuer {
-				opts.kubernetesClusterOIDCIssuerURL = "https://some.oidc"
+				opts.kubernetesClusterOIDCIssuerURL = fakeOIDCIssuerURL
 			}
 
 			c := TrustZoneCommand{}
@@ -127,6 +129,10 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, clusters, 1)
 				assert.Equal(t, "local3", clusters[0].GetName())
+
+				if tt.withOIDCIssuer {
+					assert.Equal(t, fakeOIDCIssuerURL, clusters[0].GetOidcIssuerUrl())
+				}
 			}
 		})
 	}
