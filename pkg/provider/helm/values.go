@@ -129,10 +129,23 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 
 	spireServerEnabled := !g.cluster.GetExternalServer()
 
+	// Default to true but check additional values for override
+	controllerManagerEnabled := true
+
+	if g.values != nil {
+		if spireServer, ok := g.values["spire-server"].(map[string]any); ok {
+			if controllerManager, ok := spireServer["controllerManager"].(map[string]any); ok {
+				if enabled, ok := controllerManager["enabled"].(bool); ok {
+					controllerManagerEnabled = enabled
+				}
+			}
+		}
+	}
+
 	ssv := spireServerValues{
 		caKeyType:                "rsa-2048",
 		caTTL:                    "12h",
-		controllerManagerEnabled: true,
+		controllerManagerEnabled: controllerManagerEnabled,
 		enabled:                  spireServerEnabled,
 		fullnameOverride:         "spire-server",
 		logLevel:                 "DEBUG",
@@ -154,102 +167,104 @@ func (g *HelmValuesGenerator) GenerateValues() (map[string]any, error) {
 		return nil, fmt.Errorf("failed to get controllerManager map from spireServer: %w", err)
 	}
 
-	identities, err := getOrCreateNestedMap(controllerManager, "identities")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get identities map from controllerManager: %w", err)
-	}
+	if ssv.controllerManagerEnabled {
+		identities, err := getOrCreateNestedMap(controllerManager, "identities")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get identities map from controllerManager: %w", err)
+		}
 
-	csids, err := getOrCreateNestedMap(identities, "clusterSPIFFEIDs")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities: %w", err)
-	}
+		csids, err := getOrCreateNestedMap(identities, "clusterSPIFFEIDs")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get clusterSPIFFEIDs map from identities: %w", err)
+		}
 
-	// Disables the default ClusterSPIFFEID CR.
-	csids["default"] = map[string]any{
-		"enabled": false,
-	}
+		// Disables the default ClusterSPIFFEID CR.
+		csids["default"] = map[string]any{
+			"enabled": false,
+		}
 
-	cses, err := getOrCreateNestedMap(identities, "clusterStaticEntries")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get clusterStaticEntries map from identities: %w", err)
-	}
+		cses, err := getOrCreateNestedMap(identities, "clusterStaticEntries")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get clusterStaticEntries map from identities: %w", err)
+		}
 
-	filter := &datasourcepb.ListAPBindingsRequest_Filter{TrustZoneId: g.trustZone.Id}
-	bindings, err := g.source.ListAPBindings(filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list attestation policy bindings: %w", err)
-	}
+		filter := &datasourcepb.ListAPBindingsRequest_Filter{TrustZoneId: g.trustZone.Id}
+		bindings, err := g.source.ListAPBindings(filter)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list attestation policy bindings: %w", err)
+		}
 
-	needSPIREAgentsStaticEntry := false
+		needSPIREAgentsStaticEntry := false
 
-	// Adds the attestation policies as either ClusterSPIFFEID or ClusterStaticEntry CRs to be reconciled by the spire-controller-manager.
-	for _, binding := range bindings {
-		policy, err := g.source.GetAttestationPolicy(binding.GetPolicyId())
+		// Adds the attestation policies as either ClusterSPIFFEID or ClusterStaticEntry CRs to be reconciled by the spire-controller-manager.
+		for _, binding := range bindings {
+			policy, err := g.source.GetAttestationPolicy(binding.GetPolicyId())
+			if err != nil {
+				return nil, err
+			}
+
+			if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Kubernetes); ok {
+				clusterSPIFFEID, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+				if err != nil {
+					return nil, err
+				}
+
+				csids[policy.GetName()] = clusterSPIFFEID
+			} else if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Static); ok {
+				clusterStaticEntry, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
+				if err != nil {
+					return nil, err
+				}
+
+				needSPIREAgentsStaticEntry = true
+
+				cses[policy.GetName()] = clusterStaticEntry
+			}
+		}
+
+		// Adds a ClusterStaticEntry CR for the SPIRE agents, so that the parent ID is deterministic.
+		if needSPIREAgentsStaticEntry {
+			cses["spire-agents"] = map[string]any{
+				"parentID": fmt.Sprintf("spiffe://%s%s", g.trustZone.GetTrustDomain(), serverIdPath),
+				"spiffeID": fmt.Sprintf("spiffe://%s/cluster/%s/spire/agents", g.trustZone.GetTrustDomain(), g.cluster.GetName()),
+				"selectors": []string{
+					fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATSPIREAgentNamespaceSelector, spireAgentNamespace),
+					fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATSPIREAgentSASelector, spireAgentSA),
+					fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATClusterSelector, g.cluster.GetName()),
+				},
+			}
+		}
+
+		federationFilter := &datasourcepb.ListFederationsRequest_Filter{TrustZoneId: g.trustZone.Id}
+		federations, err := g.source.ListFederations(federationFilter)
 		if err != nil {
 			return nil, err
 		}
-
-		if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Kubernetes); ok {
-			clusterSPIFFEID, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
-			if err != nil {
-				return nil, err
-			}
-
-			csids[policy.GetName()] = clusterSPIFFEID
-		} else if _, ok := policy.Policy.(*attestation_policy_proto.AttestationPolicy_Static); ok {
-			clusterStaticEntry, err := attestationpolicy.NewAttestationPolicy(policy).GetHelmConfig(g.source, binding)
-			if err != nil {
-				return nil, err
-			}
-
-			needSPIREAgentsStaticEntry = true
-
-			cses[policy.GetName()] = clusterStaticEntry
-		}
-	}
-
-	// Adds a ClusterStaticEntry CR for the SPIRE agents, so that the parent ID is deterministic.
-	if needSPIREAgentsStaticEntry {
-		cses["spire-agents"] = map[string]any{
-			"parentID": fmt.Sprintf("spiffe://%s%s", g.trustZone.GetTrustDomain(), serverIdPath),
-			"spiffeID": fmt.Sprintf("spiffe://%s/cluster/%s/spire/agents", g.trustZone.GetTrustDomain(), g.cluster.GetName()),
-			"selectors": []string{
-				fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATSPIREAgentNamespaceSelector, spireAgentNamespace),
-				fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATSPIREAgentSASelector, spireAgentSA),
-				fmt.Sprintf("%s:%s:%s", k8sPSATSelectorType, k8sPSATClusterSelector, g.cluster.GetName()),
-			},
-		}
-	}
-
-	federationFilter := &datasourcepb.ListFederationsRequest_Filter{TrustZoneId: g.trustZone.Id}
-	federations, err := g.source.ListFederations(federationFilter)
-	if err != nil {
-		return nil, err
-	}
-	// Adds the federations as ClusterFederatedTrustDomain CRs to be reconciled by the spire-controller-manager.
-	if len(federations) > 0 {
-		for _, fed := range federations {
-			tz, err := g.source.GetTrustZone(fed.GetRemoteTrustZoneId())
-			if err != nil {
-				return nil, err
-			}
-
-			if tz.GetBundleEndpointUrl() != "" {
-				fedMap, err := getOrCreateNestedMap(spireServer, "federation")
-				if err != nil {
-					return nil, fmt.Errorf("failed to get federation map from spireServer: %w", err)
-				}
-
-				fedMap["enabled"] = true
-
-				cftd, err := getOrCreateNestedMap(identities, "clusterFederatedTrustDomains")
-				if err != nil {
-					return nil, fmt.Errorf("failed to get clusterFederatedTrustDomains map from identities: %w", err)
-				}
-
-				cftd[tz.GetName()], err = federation.NewFederation(tz).GetHelmConfig()
+		// Adds the federations as ClusterFederatedTrustDomain CRs
+		if len(federations) > 0 {
+			for _, fed := range federations {
+				tz, err := g.source.GetTrustZone(fed.GetRemoteTrustZoneId())
 				if err != nil {
 					return nil, err
+				}
+
+				if tz.GetBundleEndpointUrl() != "" {
+					fedMap, err := getOrCreateNestedMap(spireServer, "federation")
+					if err != nil {
+						return nil, fmt.Errorf("failed to get federation map from spireServer: %w", err)
+					}
+
+					fedMap["enabled"] = true
+
+					cftd, err := getOrCreateNestedMap(identities, "clusterFederatedTrustDomains")
+					if err != nil {
+						return nil, fmt.Errorf("failed to get clusterFederatedTrustDomains map from identities: %w", err)
+					}
+
+					cftd[tz.GetName()], err = federation.NewFederation(tz).GetHelmConfig()
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		}
