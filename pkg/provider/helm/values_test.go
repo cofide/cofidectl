@@ -677,6 +677,99 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "tz1 SPIRE controller manager disabled",
+			trustZone: func() *trust_zone_proto.TrustZone {
+				tz := fixtures.TrustZone("tz1")
+				tz.Bundle = nil
+				tz.BundleEndpointUrl = nil
+				tz.JwtIssuer = nil
+				return tz
+			}(),
+			cluster: func() *clusterpb.Cluster {
+				cluster := fixtures.Cluster("local1")
+				cluster.ExtraHelmValues = nil
+				return cluster
+			}(),
+			values: Values{
+				"spire-server": Values{
+					"controllerManager": Values{
+						"enabled": false,
+					},
+				},
+			},
+			want: Values{
+				"global": Values{
+					"deleteHooks": Values{
+						"enabled": false,
+					},
+					"installAndUpgradeHooks": Values{
+						"enabled": false,
+					},
+					"spire": Values{
+						"caSubject": Values{
+							"commonName":   "cofide.io",
+							"country":      "UK",
+							"organization": "Cofide",
+						},
+						"clusterName": "local1",
+						"namespaces": Values{
+							"create": true,
+						},
+						"recommendations": Values{
+							"enabled": true,
+						},
+						"trustDomain": "td1",
+					},
+				},
+				"spiffe-csi-driver": Values{
+					"fullnameOverride": "spiffe-csi-driver",
+				},
+				"spiffe-oidc-discovery-provider": Values{
+					"enabled": false,
+				},
+				"spire-agent": Values{
+					"fullnameOverride": "spire-agent",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPSAT": Values{
+							"enabled": true,
+						},
+					},
+					"sds": map[string]any{
+						"enabled":               true,
+						"defaultSVIDName":       "default",
+						"defaultBundleName":     "ROOTCA",
+						"defaultAllBundlesName": "ALL",
+					},
+					"workloadAttestors": Values{
+						"k8s": Values{
+							"disableContainerSelectors": true,
+							"enabled":                   true,
+						},
+					},
+				},
+				"spire-server": Values{
+					"caKeyType": "rsa-2048",
+					"caTTL":     "12h",
+					"controllerManager": Values{
+						"enabled": false,
+					},
+					"enabled":          true,
+					"fullnameOverride": "spire-server",
+					"logLevel":         "DEBUG",
+					"nodeAttestor": Values{
+						"k8sPSAT": Values{
+							"audience": []string{"spire-server"},
+							"enabled":  true,
+						},
+					},
+					"service": Values{
+						"type": "LoadBalancer",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
