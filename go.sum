@@ -78,14 +78,6 @@ github.com/cncf/xds/go v0.0.0-20211001041855-01bcc9b48dfe/go.mod h1:eXthEFrGJvWH
 github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/cockroachdb/apd/v3 v3.2.1 h1:U+8j7t0axsIgvQUqthuNm82HIrYXodOV2iWLWtEaIwg=
 github.com/cockroachdb/apd/v3 v3.2.1/go.mod h1:klXJcjp+FffLTHlhIG69tezTDvdP065naDsHzKhYSqc=
-github.com/cofide/cofide-api-sdk v0.24.3 h1:qzplHLKsHSkRFL8F/z3RIqB7kcLn2AdA/ZBBhELrHTQ=
-github.com/cofide/cofide-api-sdk v0.24.3/go.mod h1:C3/99J/ovYVnlfMx442rFkFStcbiDBy80fPXafYtRG4=
-github.com/cofide/cofide-api-sdk v0.24.4-0.20250709143049-cd82c7a4dfd3 h1:tSpwpHejH+j+uKvqPC7PlPXifFMva3XqDDtq+8csGzk=
-github.com/cofide/cofide-api-sdk v0.24.4-0.20250709143049-cd82c7a4dfd3/go.mod h1:FHXZIcrVNFpsWazmW/eP+rtdGARsj+uni2fElB1213Y=
-github.com/cofide/cofide-api-sdk v0.24.4-0.20250709145731-1c8c800ed3e1 h1:JctVfyfY9E19DZdcKMsuaVPw+m2w/6EZdXoJehLXi+I=
-github.com/cofide/cofide-api-sdk v0.24.4-0.20250709145731-1c8c800ed3e1/go.mod h1:FHXZIcrVNFpsWazmW/eP+rtdGARsj+uni2fElB1213Y=
-github.com/cofide/cofide-api-sdk v0.24.4-0.20250709150010-41d250774f66 h1:lcgjkwR6fFd+Gk5rWKf6REZFN9t46okADePBi9dU3nE=
-github.com/cofide/cofide-api-sdk v0.24.4-0.20250709150010-41d250774f66/go.mod h1:FHXZIcrVNFpsWazmW/eP+rtdGARsj+uni2fElB1213Y=
 github.com/cofide/cofide-api-sdk v0.25.1 h1:8s3XjwiKYtNuh+Hw4vy+NRnBCeLeM5QIhOqtbbTk43U=
 github.com/cofide/cofide-api-sdk v0.25.1/go.mod h1:FHXZIcrVNFpsWazmW/eP+rtdGARsj+uni2fElB1213Y=
 github.com/containerd/containerd v1.7.27 h1:yFyEyojddO3MIGVER2xJLWoCIn+Up4GaHFquP7hsFII=
