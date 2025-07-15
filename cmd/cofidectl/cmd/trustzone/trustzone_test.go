@@ -123,9 +123,12 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 			if tt.withKubeCACert {
 				var err error
 				caString, err := getFakeKubeCACert()
-				tmpFile, err := os.CreateTemp("", "cert-*.pem")
-				defer tmpFile.Close()
 				require.NoError(t, err)
+
+				tmpFile, err := os.CreateTemp("", "cert-*.pem")
+				require.NoError(t, err)
+				defer tmpFile.Close()
+
 				_, err = tmpFile.WriteString(caString)
 				require.NoError(t, err)
 
