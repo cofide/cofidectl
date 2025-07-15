@@ -156,9 +156,9 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 					assert.Equal(t, fakeOIDCIssuerURL, clusters[0].GetOidcIssuerUrl())
 				}
 
-				if tt.withKubeCACert {
-					assert.NotNil(t, clusters[0].GetOidcIssuerCaCert())
-				}
+if tt.withKubeCACert {
+	assert.Equal(t, []byte(opts.kubernetesClusterCACert), clusters[0].GetOidcIssuerCaCert())
+}
 			}
 		})
 	}
