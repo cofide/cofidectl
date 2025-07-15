@@ -128,6 +128,7 @@ type addOpts struct {
 	trustDomain                    string
 	kubernetesCluster              string
 	kubernetesClusterOIDCIssuerURL string
+	kubernetesClusterCACert string
 	context                        string
 	profile                        string
 	jwtIssuer                      string
@@ -173,6 +174,7 @@ func (c *TrustZoneCommand) GetAddCommand() *cobra.Command {
 	f.StringVar(&opts.trustDomain, "trust-domain", "", "Trust domain to use for this trust zone")
 	f.StringVar(&opts.kubernetesCluster, "kubernetes-cluster", "", "Kubernetes cluster associated with this trust zone")
 	f.StringVar(&opts.kubernetesClusterOIDCIssuerURL, "kubernetes-oidc-issuer", "", "OIDC issuer URL for the Kubernetes cluster")
+	f.StringVar(&opts.kubernetesClusterCACert, "kubernetes-ca-cert", "", "CA certificate of the Kubernetes cluster, used for TLS during OIDC validation")
 	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this trust zone")
 	f.StringVar(&opts.profile, "profile", "kubernetes", "Cofide profile used in the installation (e.g. kubernetes, istio)")
 	f.StringVar(&opts.jwtIssuer, "jwt-issuer", "", "JWT issuer to use for this trust zone")
@@ -219,6 +221,7 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 			Profile:           &opts.profile,
 			ExternalServer:    &opts.externalServer,
 			OidcIssuerUrl:     &opts.kubernetesClusterOIDCIssuerURL,
+			OidcIssuerCaCert:  []byte(opts.kubernetesClusterCACert),
 		}
 
 		_, err = ds.AddCluster(newCluster)
