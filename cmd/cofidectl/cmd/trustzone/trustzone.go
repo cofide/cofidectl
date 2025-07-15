@@ -128,7 +128,7 @@ type addOpts struct {
 	trustDomain                    string
 	kubernetesCluster              string
 	kubernetesClusterOIDCIssuerURL string
-	kubernetesClusterCACert string
+	kubernetesClusterCACert        string
 	context                        string
 	profile                        string
 	jwtIssuer                      string
