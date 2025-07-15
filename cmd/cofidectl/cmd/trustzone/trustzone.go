@@ -213,6 +213,14 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 	newTrustZone = receivedTz
 
 	if !opts.noCluster {
+		var caBytes []byte
+		if opts.kubernetesClusterCACert != "" {
+			caBytes, err = parseKubernetesCACertFromPath(opts.kubernetesClusterCACert)
+			if err != nil {
+				return fmt.Errorf("failed to create cluster with CA cert %w", err)
+			}
+		}
+
 		newCluster := &clusterpb.Cluster{
 			Name:              &opts.kubernetesCluster,
 			TrustZoneId:       newTrustZone.Id,
@@ -221,7 +229,10 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 			Profile:           &opts.profile,
 			ExternalServer:    &opts.externalServer,
 			OidcIssuerUrl:     &opts.kubernetesClusterOIDCIssuerURL,
-			OidcIssuerCaCert:  []byte(opts.kubernetesClusterCACert),
+		}
+
+		if caBytes != nil {
+			newCluster.OidcIssuerCaCert = caBytes
 		}
 
 		_, err = ds.AddCluster(newCluster)
@@ -234,6 +245,10 @@ func (c *TrustZoneCommand) addTrustZone(ctx context.Context, opts addOpts, ds da
 	}
 
 	return nil
+}
+
+func parseKubernetesCACertFromPath(path string) ([]byte, error) {
+	return os.ReadFile(path)
 }
 
 var trustZoneDelCmdDesc = `

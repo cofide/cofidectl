@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"testing"
 	"time"
 
@@ -121,8 +122,14 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 
 			if tt.withKubeCACert {
 				var err error
-				opts.kubernetesClusterCACert, err = getFakeKubeCACert()
+				caString, err := getFakeKubeCACert()
+				tmpFile, err := os.CreateTemp("", "cert-*.pem")
+				defer tmpFile.Close()
 				require.NoError(t, err)
+				_, err = tmpFile.WriteString(caString)
+				require.NoError(t, err)
+
+				opts.kubernetesClusterCACert = tmpFile.Name()
 			}
 
 			c := TrustZoneCommand{}
@@ -157,7 +164,9 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				}
 
 				if tt.withKubeCACert {
-					assert.Equal(t, []byte(opts.kubernetesClusterCACert), clusters[0].GetOidcIssuerCaCert())
+					caBytes, err := os.ReadFile(opts.kubernetesClusterCACert)
+					require.NoError(t, err)
+					assert.Equal(t, caBytes, clusters[0].GetOidcIssuerCaCert())
 				}
 			}
 		})
