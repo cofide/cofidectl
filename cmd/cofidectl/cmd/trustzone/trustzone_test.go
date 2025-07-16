@@ -4,9 +4,19 @@
 package trustzone
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
+	"fmt"
+	"math/big"
+	"os"
 	"testing"
+	"time"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
@@ -59,6 +69,7 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 		trustZoneName  string
 		injectFailure  bool
 		withOIDCIssuer bool
+		withKubeCACert bool
 		wantErr        bool
 		wantErrMessage string
 	}{
@@ -70,6 +81,11 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 			name: "success with OIDC issuer",
 			trustZoneName: "tz-oidc",
 			withOIDCIssuer: true,
+		},
+		{
+			name: "success with kube CA cert",
+			trustZoneName: "tz-ca-cert",
+			withKubeCACert: true,
 		},
 		{
 			name:           "already exists",
@@ -104,6 +120,21 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				opts.kubernetesClusterOIDCIssuerURL = fakeOIDCIssuerURL
 			}
 
+			if tt.withKubeCACert {
+				var err error
+				caString, err := getFakeKubeCACert()
+				require.NoError(t, err)
+
+				tmpFile, err := os.CreateTemp("", "cert-*.pem")
+				require.NoError(t, err)
+				defer tmpFile.Close()
+
+				_, err = tmpFile.WriteString(caString)
+				require.NoError(t, err)
+
+				opts.kubernetesClusterCACert = tmpFile.Name()
+			}
+
 			c := TrustZoneCommand{}
 			err := c.addTrustZone(context.Background(), opts, ds)
 			if tt.wantErr {
@@ -134,9 +165,46 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 				if tt.withOIDCIssuer {
 					assert.Equal(t, fakeOIDCIssuerURL, clusters[0].GetOidcIssuerUrl())
 				}
+
+				if tt.withKubeCACert {
+					caBytes, err := os.ReadFile(opts.kubernetesClusterCACert)
+					require.NoError(t, err)
+					assert.Equal(t, caBytes, clusters[0].GetOidcIssuerCaCert())
+				}
 			}
 		})
 	}
+}
+
+func getFakeKubeCACert() (string, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate private key: %w", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Fake Kubernetes CA"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return "", fmt.Errorf("failed to create certificate: %w", err)
+	}
+
+	var certPEM bytes.Buffer
+	if err := pem.Encode(&certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
+		return "", fmt.Errorf("failed to encode cert to PEM: %w", err)
+	}
+
+	return certPEM.String(), nil
 }
 
 func TestTrustZoneCommand_deleteTrustZone(t *testing.T) {

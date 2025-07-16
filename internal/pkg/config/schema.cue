@@ -43,6 +43,7 @@
 	extra_helm_values?: #HelmValues
 	external_server?: bool
 	oidc_issuer_url?: string
+	oidc_issuer_ca_cert?: string
 }
 
 #TrustProvider: {
