@@ -28,6 +28,8 @@ import (
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/spire"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 	"github.com/spf13/cobra"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 )
@@ -107,10 +109,11 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 				}
 			}
 
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Domain", "Cluster"})
-			table.SetBorder(false)
-			table.AppendBulk(data)
+			table := tablewriter.NewTable(os.Stdout, tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+				Borders: tw.BorderNone,
+			})))
+			table.Header([]string{"Name", "Trust Domain", "Cluster"})
+			table.Bulk(data)
 			table.Render()
 			return nil
 		},
