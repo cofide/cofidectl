@@ -5,6 +5,7 @@ package config
 
 import (
 	"buf.build/go/protoyaml"
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	config_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/config/v1alpha1"
@@ -18,6 +19,7 @@ type Config struct {
 	TrustZones          []*trust_zone_proto.TrustZone
 	Clusters            []*clusterpb.Cluster
 	AttestationPolicies []*attestation_policy_proto.AttestationPolicy
+	ApBindings          []*ap_binding_proto.APBinding
 	PluginConfig        map[string]*structpb.Struct
 	Plugins             *pluginspb.Plugins
 }
@@ -27,6 +29,7 @@ func NewConfig() *Config {
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		Clusters:            []*clusterpb.Cluster{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+		ApBindings:          []*ap_binding_proto.APBinding{},
 		PluginConfig:        map[string]*structpb.Struct{},
 		Plugins:             &pluginspb.Plugins{},
 	}
@@ -41,6 +44,7 @@ func newConfigFromProto(proto *config_proto.Config) *Config {
 		TrustZones:          proto.TrustZones,
 		Clusters:            proto.Clusters,
 		AttestationPolicies: proto.AttestationPolicies,
+		ApBindings:          proto.ApBindings,
 		PluginConfig:        proto.PluginConfig,
 		Plugins:             plugins,
 	}
@@ -51,6 +55,7 @@ func (c *Config) toProto() *config_proto.Config {
 		TrustZones:          c.TrustZones,
 		Clusters:            c.Clusters,
 		AttestationPolicies: c.AttestationPolicies,
+		ApBindings:          c.ApBindings,
 		PluginConfig:        c.PluginConfig,
 		Plugins:             c.Plugins,
 	}
@@ -69,6 +74,7 @@ func unmarshalYAML(data []byte) (*Config, error) {
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		Clusters:            []*clusterpb.Cluster{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+		ApBindings:          []*ap_binding_proto.APBinding{},
 		PluginConfig:        map[string]*structpb.Struct{},
 	}
 	err := protoyaml.Unmarshal(data, &proto)

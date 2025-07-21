@@ -17,12 +17,6 @@ trust_zones:
         - id: fed1-id
           trust_zone_id: tz1-id
           remote_trust_zone_id: tz2-id
-      attestation_policies:
-        - id: apb1-id
-          trust_zone_id: tz1-id
-          policy_id: ap1-id
-          federations:
-            - trust_zone_id: tz2-id
       jwt_issuer: https://tz1.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
       id: tz1-id
@@ -33,22 +27,12 @@ trust_zones:
         - id: fed2-id
           trust_zone_id: tz2-id
           remote_trust_zone_id: tz1-id
-      attestation_policies:
-        - id: apb2-id
-          trust_zone_id: tz2-id
-          policy_id: ap2-id
-          federations:
-            - trust_zone_id: tz1-id
       jwt_issuer: https://tz2.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
       id: tz2-id
     - name: tz6
       trust_domain: td6
       bundle_endpoint_url: 127.0.0.5
-      attestation_policies:
-        - id: apb3-id
-          trust_zone_id: tz6-id
-          policy_id: ap4-id
       jwt_issuer: https://tz6.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
       id: tz6-id
@@ -140,3 +124,17 @@ plugin_config:
 plugins:
     data_source: fake-datasource
     provision: fake-provision
+ap_bindings:
+    - id: apb1-id
+      trust_zone_id: tz1-id
+      policy_id: ap1-id
+      federations:
+        - trust_zone_id: tz2-id
+    - id: apb2-id
+      trust_zone_id: tz2-id
+      policy_id: ap2-id
+      federations:
+        - trust_zone_id: tz1-id
+    - id: apb3-id
+      trust_zone_id: tz6-id
+      policy_id: ap4-id

@@ -211,10 +211,6 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 	if !slices.EqualFunc(new.Federations, current.Federations, proto.FederationsEqual) {
 		return fmt.Errorf("cannot update federations for existing trust zone %s", *current.Id)
 	}
-	// nolint:staticcheck
-	if !slices.EqualFunc(new.AttestationPolicies, current.AttestationPolicies, proto.APBindingsEqual) {
-		return fmt.Errorf("cannot update attestation policies for existing trust zone %s", *current.Id)
-	}
 	return nil
 }
 
@@ -406,12 +402,9 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 
 func (lds *LocalDataSource) DestroyAttestationPolicy(id string) error {
 	// Fail if the policy is bound to any trust zones.
-	for _, trustZone := range lds.config.TrustZones {
-		// nolint:staticcheck
-		for _, binding := range trustZone.AttestationPolicies {
-			if binding.GetPolicyId() == id {
-				return fmt.Errorf("attestation policy %s is bound to trust zone %s in local config", id, trustZone.Name)
-			}
+	for _, binding := range lds.config.ApBindings {
+		if binding.GetPolicyId() == id {
+			return fmt.Errorf("attestation policy %s is bound to trust zone %s in local config", id, *binding.TrustZoneId)
 		}
 	}
 	for i, policy := range lds.config.AttestationPolicies {
@@ -480,9 +473,8 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 		return nil, fmt.Errorf("failed to find attestation policy %s in local config", binding.GetPolicyId())
 	}
 
-	// nolint:staticcheck
-	for _, apb := range localTrustZone.AttestationPolicies {
-		if apb.GetPolicyId() == binding.GetPolicyId() {
+	for _, apb := range lds.config.ApBindings {
+		if apb.GetPolicyId() == binding.GetPolicyId() && apb.GetTrustZoneId() == binding.GetTrustZoneId() {
 			return nil, fmt.Errorf("attestation policy %s is already bound to trust zone %s", binding.GetPolicyId(), binding.GetTrustZoneId())
 		}
 	}
@@ -507,8 +499,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 		}
 	}
 
-	// nolint:staticcheck
-	localTrustZone.AttestationPolicies = append(localTrustZone.AttestationPolicies, binding)
+	lds.config.ApBindings = append(lds.config.ApBindings, binding)
 	if err := lds.updateDataFile(); err != nil {
 		return nil, fmt.Errorf("failed to add attestation policy to local config: %w", err)
 	}
@@ -516,17 +507,13 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 }
 
 func (lds *LocalDataSource) DestroyAPBinding(id string) error {
-	for _, trustZone := range lds.config.TrustZones {
-		// nolint:staticcheck
-		for i, tzBinding := range trustZone.AttestationPolicies {
-			if tzBinding.GetId() == id {
-				// nolint:staticcheck
-				trustZone.AttestationPolicies = append(trustZone.AttestationPolicies[:i], trustZone.AttestationPolicies[i+1:]...)
-				if err := lds.updateDataFile(); err != nil {
-					return fmt.Errorf("failed to remove attestation policy binding from local config: %w", err)
-				}
-				return nil
+	for i, tzBinding := range lds.config.ApBindings {
+		if tzBinding.GetId() == id {
+			lds.config.ApBindings = append(lds.config.ApBindings[:i], lds.config.ApBindings[i+1:]...)
+			if err := lds.updateDataFile(); err != nil {
+				return fmt.Errorf("failed to remove attestation policy binding from local config: %w", err)
 			}
+			return nil
 		}
 	}
 
@@ -534,30 +521,28 @@ func (lds *LocalDataSource) DestroyAPBinding(id string) error {
 }
 
 func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error) {
-	var trustZones []*trust_zone_proto.TrustZone
-	if filter != nil && filter.TrustZoneId != nil {
-		trustZone, ok := lds.config.GetTrustZoneByID(filter.GetTrustZoneId())
+	if filter != nil && filter.GetTrustZoneId() != "" {
+		// Validate that the trust zone exists in the local config.
+		_, ok := lds.config.GetTrustZoneByID(filter.GetTrustZoneId())
 		if !ok {
 			return nil, fmt.Errorf("failed to find trust zone %s in local config", filter.GetTrustZoneId())
 		}
-		trustZones = []*trust_zone_proto.TrustZone{trustZone}
-	} else {
-		trustZones = lds.config.TrustZones
 	}
 	bindings := []*ap_binding_proto.APBinding{}
-	for _, trustZone := range trustZones {
-		// nolint:staticcheck
-		for _, binding := range trustZone.AttestationPolicies {
-			if filter != nil && filter.GetPolicyId() != "" && binding.GetPolicyId() != filter.GetPolicyId() {
-				continue
-			}
-
-			binding, err := proto.CloneAPBinding(binding)
-			if err != nil {
-				return nil, err
-			}
-			bindings = append(bindings, binding)
+	for _, binding := range lds.config.ApBindings {
+		if filter != nil && filter.GetPolicyId() != "" && binding.GetPolicyId() != filter.GetPolicyId() {
+			continue
 		}
+
+		if filter != nil && filter.GetTrustZoneId() != "" && binding.GetTrustZoneId() != filter.GetTrustZoneId() {
+			continue
+		}
+
+		binding, err := proto.CloneAPBinding(binding)
+		if err != nil {
+			return nil, err
+		}
+		bindings = append(bindings, binding)
 	}
 	return bindings, nil
 }

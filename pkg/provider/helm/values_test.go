@@ -6,6 +6,7 @@ package helm
 import (
 	"testing"
 
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -45,8 +46,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 			configFunc: func(cfg *config.Config) {
 				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
 				require.True(t, ok)
-				// nolint:staticcheck
-				trustZone.AttestationPolicies = nil
+				cfg.ApBindings = cfg.ApBindings[1:]
 				// nolint:staticcheck
 				trustZone.Federations = nil
 			},
@@ -566,8 +566,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 			configFunc: func(cfg *config.Config) {
 				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
 				require.True(t, ok)
-				// nolint:staticcheck
-				trustZone.AttestationPolicies = nil
+				cfg.ApBindings = cfg.ApBindings[1:]
 				// nolint:staticcheck
 				trustZone.Federations = nil
 			},
@@ -820,10 +819,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			trustZone: fixtures.TrustZone("tz1"),
 			cluster:   fixtures.Cluster("local1"),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByName("tz1")
-				require.True(t, ok)
-				// nolint:staticcheck
-				trustZone.AttestationPolicies[0].PolicyId = fixtures.StringPtr("invalid-ap")
+				cfg.ApBindings[0].PolicyId = fixtures.StringPtr("invalid-ap")
 			},
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
@@ -1835,6 +1831,11 @@ func defaultConfig() *config.Config {
 			fixtures.AttestationPolicy("ap1"),
 			fixtures.AttestationPolicy("ap2"),
 			fixtures.AttestationPolicy("ap4"),
+		},
+		ApBindings: []*ap_binding_proto.APBinding{
+			fixtures.APBinding("apb1"),
+			fixtures.APBinding("apb2"),
+			fixtures.APBinding("apb3"),
 		},
 		Plugins: fixtures.Plugins("plugins1"),
 	}

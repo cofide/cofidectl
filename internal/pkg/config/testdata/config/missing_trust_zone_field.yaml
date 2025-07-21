@@ -4,4 +4,3 @@ trust_zones:
       federations:
         - trust_zone_id: tz1-id
           remote_trust_zone_id: tz2-id
-      attestation_policies: []

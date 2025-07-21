@@ -6,6 +6,7 @@ package config
 import (
 	"testing"
 
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
@@ -48,6 +49,11 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap3"),
 					fixtures.AttestationPolicy("ap4"),
 				},
+				ApBindings: []*ap_binding_proto.APBinding{
+					fixtures.APBinding("apb1"),
+					fixtures.APBinding("apb2"),
+					fixtures.APBinding("apb3"),
+				},
 				PluginConfig: map[string]*structpb.Struct{
 					"plugin1": fixtures.PluginConfig("plugin1"),
 					"plugin2": fixtures.PluginConfig("plugin2"),
@@ -83,6 +89,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				Clusters:            []*clusterpb.Cluster{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+				ApBindings:          []*ap_binding_proto.APBinding{},
 				PluginConfig:        map[string]*structpb.Struct{},
 				Plugins:             &pluginspb.Plugins{},
 			},
@@ -105,6 +112,11 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap2"),
 					fixtures.AttestationPolicy("ap3"),
 					fixtures.AttestationPolicy("ap4"),
+				},
+				ApBindings: []*ap_binding_proto.APBinding{
+					fixtures.APBinding("apb1"),
+					fixtures.APBinding("apb2"),
+					fixtures.APBinding("apb3"),
 				},
 				PluginConfig: map[string]*structpb.Struct{
 					"plugin1": fixtures.PluginConfig("plugin1"),

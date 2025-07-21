@@ -52,18 +52,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				RemoteTrustZoneId: StringPtr("tz2-id"),
 			},
 		},
-		AttestationPolicies: []*ap_binding_proto.APBinding{
-			{
-				Id:          StringPtr("apb1-id"),
-				TrustZoneId: StringPtr("tz1-id"),
-				PolicyId:    StringPtr("ap1-id"),
-				Federations: []*ap_binding_proto.APBindingFederation{
-					{
-						TrustZoneId: StringPtr("tz2-id"),
-					},
-				},
-			},
-		},
 		JwtIssuer:             StringPtr("https://tz1.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
 	},
@@ -79,18 +67,6 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 				RemoteTrustZoneId: StringPtr("tz1-id"),
 			},
 		},
-		AttestationPolicies: []*ap_binding_proto.APBinding{
-			{
-				Id:          StringPtr("apb2-id"),
-				TrustZoneId: StringPtr("tz2-id"),
-				PolicyId:    StringPtr("ap2-id"),
-				Federations: []*ap_binding_proto.APBindingFederation{
-					{
-						TrustZoneId: StringPtr("tz1-id"),
-					},
-				},
-			},
-		},
 		JwtIssuer:             StringPtr("https://tz2.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
 	},
@@ -101,41 +77,30 @@ var trustZoneFixtures map[string]*trust_zone_proto.TrustZone = map[string]*trust
 		TrustDomain:           "td3",
 		BundleEndpointUrl:     StringPtr("127.0.0.3"),
 		Federations:           []*federation_proto.Federation{},
-		AttestationPolicies:   []*ap_binding_proto.APBinding{},
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE.Enum(),
 	},
 	// tz4 has no federations or bound attestation policies and uses the istio profile.
 	"tz4": {
-		Id:                  StringPtr("tz4-id"),
-		Name:                "tz4",
-		TrustDomain:         "td4",
-		BundleEndpointUrl:   StringPtr("127.0.0.4"),
-		Federations:         []*federation_proto.Federation{},
-		AttestationPolicies: []*ap_binding_proto.APBinding{},
+		Id:                StringPtr("tz4-id"),
+		Name:              "tz4",
+		TrustDomain:       "td4",
+		BundleEndpointUrl: StringPtr("127.0.0.4"),
+		Federations:       []*federation_proto.Federation{},
 	},
 	// tz5 has no federations or bound attestation policies and has an external SPIRE server.
 	"tz5": {
-		Id:                  StringPtr("tz5-id"),
-		Name:                "tz5",
-		TrustDomain:         "td5",
-		BundleEndpointUrl:   StringPtr("127.0.0.5"),
-		Federations:         []*federation_proto.Federation{},
-		AttestationPolicies: []*ap_binding_proto.APBinding{},
-	},
-	"tz6": {
-		Id:                StringPtr("tz6-id"),
-		Name:              "tz6",
-		TrustDomain:       "td6",
+		Id:                StringPtr("tz5-id"),
+		Name:              "tz5",
+		TrustDomain:       "td5",
 		BundleEndpointUrl: StringPtr("127.0.0.5"),
 		Federations:       []*federation_proto.Federation{},
-		AttestationPolicies: []*ap_binding_proto.APBinding{
-			{
-				Id:          StringPtr("apb3-id"),
-				TrustZoneId: StringPtr("tz6-id"),
-				PolicyId:    StringPtr("ap4-id"),
-				Federations: []*ap_binding_proto.APBindingFederation{},
-			},
-		},
+	},
+	"tz6": {
+		Id:                    StringPtr("tz6-id"),
+		Name:                  "tz6",
+		TrustDomain:           "td6",
+		BundleEndpointUrl:     StringPtr("127.0.0.5"),
+		Federations:           []*federation_proto.Federation{},
 		JwtIssuer:             StringPtr("https://tz6.example.com"),
 		BundleEndpointProfile: trust_zone_proto.BundleEndpointProfile_BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB.Enum(),
 	},
@@ -312,6 +277,35 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 	},
 }
 
+var apBindingFixtures map[string]*ap_binding_proto.APBinding = map[string]*ap_binding_proto.APBinding{
+	"apb1": {
+		Id:          StringPtr("apb1-id"),
+		TrustZoneId: StringPtr("tz1-id"),
+		PolicyId:    StringPtr("ap1-id"),
+		Federations: []*ap_binding_proto.APBindingFederation{
+			{
+				TrustZoneId: StringPtr("tz2-id"),
+			},
+		},
+	},
+	"apb2": {
+		Id:          StringPtr("apb2-id"),
+		TrustZoneId: StringPtr("tz2-id"),
+		PolicyId:    StringPtr("ap2-id"),
+		Federations: []*ap_binding_proto.APBindingFederation{
+			{
+				TrustZoneId: StringPtr("tz1-id"),
+			},
+		},
+	},
+	"apb3": {
+		Id:          StringPtr("apb3-id"),
+		TrustZoneId: StringPtr("tz6-id"),
+		PolicyId:    StringPtr("ap4-id"),
+		Federations: []*ap_binding_proto.APBindingFederation{},
+	},
+}
+
 var pluginConfigFixtures map[string]*structpb.Struct = map[string]*structpb.Struct{
 	"plugin1": func() *structpb.Struct {
 		s, err := structpb.NewStruct(map[string]any{
@@ -388,6 +382,18 @@ func AttestationPolicy(name string) *attestation_policy_proto.AttestationPolicy 
 		panic(fmt.Sprintf("failed to clone attestation policy: %s", err))
 	}
 	return ap
+}
+
+func APBinding(name string) *ap_binding_proto.APBinding {
+	apb, ok := apBindingFixtures[name]
+	if !ok {
+		panic(fmt.Sprintf("invalid attestation policy binding fixture %s", name))
+	}
+	apb, err := proto.CloneAPBinding(apb)
+	if err != nil {
+		panic(fmt.Sprintf("failed to clone attestation policy binding: %s", err))
+	}
+	return apb
 }
 
 func PluginConfig(name string) *structpb.Struct {
