@@ -8,17 +8,20 @@
 
 ## Prerequisites
 
+Pre-built `cofidectl` binaries may be downloaded from the project's [GitHub releases](https://github.com/cofide/cofidectl/releases) page.
+Alternatively, `cofidectl` may be built from source code.
 Building a `cofidectl` binary requires:
 
-* [Go 1.22 toolchain](https://golang.org/doc/install)
+* [Go 1.24 toolchain](https://golang.org/doc/install)
 * [`just`](https://github.com/casey/just) as a command runner
 
 To exercise the quickstart requires:
 
+* [`Docker`](https://docs.docker.com/engine/install/)
 * [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start)
 * [`kubectl`](https://kubernetes.io/docs/tasks/tools/)
-* [Cloud provider kind](https://github.com/kubernetes-sigs/cloud-provider-kind) to expose SPIRE federation endpoints
-* [`ko`](https://github.com/ko-build/ko) to build and deploy example application container images
+* [Cloud provider Kind](https://github.com/kubernetes-sigs/cloud-provider-kind) to expose SPIRE federation endpoints
+  * `docker run -d --name cloud-provider-kind --network kind --restart unless-stopped --privileged -v /var/run/docker.sock:/var/run/docker.sock registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.6.0`
 
 ## Build
 
@@ -89,6 +92,10 @@ kubectl logs -n demo deployments/ping-pong-client --follow
 ### Deploy multiple federated trust zones
 
 Follow [this guide](docs/multi-tz-federation.md) to see how to configure and deploy Cofide instances in multiple clusters and establish federated trust between workloads that span trust zones.
+
+## Contributing
+
+Contributions are appreciated! See the [contributor guide](CONTRIBUTING.md).
 
 ## Production use cases
 
