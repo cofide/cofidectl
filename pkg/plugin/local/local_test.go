@@ -183,6 +183,10 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
 				},
+				ApBindings: []*ap_binding_proto.APBinding{
+					fixtures.APBinding("apb1"),
+					fixtures.APBinding("apb2"),
+				},
 				Plugins: fixtures.Plugins("plugins1"),
 			}
 			lds, loader := buildLocalDataSource(t, cfg)
@@ -196,11 +200,14 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 				assert.Len(t, lds.config.TrustZones, 1)
 				// nolint:staticcheck
 				assert.Len(t, lds.config.TrustZones[0].Federations, 0)
-				// Check that the trust zone removal was persisted.
+				// Check that the association policy binding was removed too.
+				assert.Len(t, lds.config.ApBindings, 1) // Check that the trust zone removal was persisted.
 				gotConfig := readConfig(t, loader)
 				assert.Len(t, gotConfig.TrustZones, 1)
 				// nolint:staticcheck
 				assert.Len(t, gotConfig.TrustZones[0].Federations, 0)
+				// Check that the association policy binding was removed too.
+				assert.Len(t, gotConfig.ApBindings, 1)
 			}
 		})
 	}

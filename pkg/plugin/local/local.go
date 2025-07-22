@@ -114,7 +114,7 @@ func (lds *LocalDataSource) DestroyTrustZone(id string) error {
 	if len(lds.config.GetClustersByTrustZone(id)) > 0 {
 		return fmt.Errorf("one or more clusters exist in trust zone %s in local config", id)
 	}
-	// Deleting the trust zone also implicitly removes any attestation policies and federations
+	// Deleting the trust zone also implicitly removes any federations
 	// bound to it because they are stored in the trust zone message.
 	// Federations in other trust zones that reference this trust zone need to be cleaned up.
 	for _, trustZone := range lds.config.TrustZones {
@@ -129,6 +129,13 @@ func (lds *LocalDataSource) DestroyTrustZone(id string) error {
 			)
 		}
 	}
+	// Explicitly remove any attestation policy bindings that reference this trust zone.
+	lds.config.ApBindings = slices.DeleteFunc(
+		lds.config.ApBindings,
+		func(apb *ap_binding_proto.APBinding) bool {
+			return apb.GetTrustZoneId() == id
+		},
+	)
 	for i, trustZone := range lds.config.TrustZones {
 		if trustZone.GetId() == id {
 			lds.config.TrustZones = append(lds.config.TrustZones[:i], lds.config.TrustZones[i+1:]...)
