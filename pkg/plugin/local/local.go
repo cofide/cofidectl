@@ -509,7 +509,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 func (lds *LocalDataSource) DestroyAPBinding(id string) error {
 	for i, tzBinding := range lds.config.ApBindings {
 		if tzBinding.GetId() == id {
-			lds.config.ApBindings = append(lds.config.ApBindings[:i], lds.config.ApBindings[i+1:]...)
+			lds.config.ApBindings = slices.Delete(lds.config.ApBindings, i, i+1)
 			if err := lds.updateDataFile(); err != nil {
 				return fmt.Errorf("failed to remove attestation policy binding from local config: %w", err)
 			}
