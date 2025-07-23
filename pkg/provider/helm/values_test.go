@@ -45,7 +45,7 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				return cluster
 			}(),
 			configFunc: func(cfg *config.Config) {
-				cfg.ApBindings = cfg.ApBindings[1:]
+				cfg.APBindings = cfg.APBindings[1:]
 				cfg.Federations = nil
 			},
 			want: Values{
@@ -562,7 +562,7 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				return cluster
 			}(),
 			configFunc: func(cfg *config.Config) {
-				cfg.ApBindings = cfg.ApBindings[1:]
+				cfg.APBindings = cfg.APBindings[1:]
 				cfg.Federations = nil
 			},
 			values: Values{
@@ -814,7 +814,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			trustZone: fixtures.TrustZone("tz1"),
 			cluster:   fixtures.Cluster("local1"),
 			configFunc: func(cfg *config.Config) {
-				cfg.ApBindings[0].PolicyId = fixtures.StringPtr("invalid-ap")
+				cfg.APBindings[0].PolicyId = fixtures.StringPtr("invalid-ap")
 			},
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
@@ -1824,7 +1824,7 @@ func defaultConfig() *config.Config {
 			fixtures.AttestationPolicy("ap2"),
 			fixtures.AttestationPolicy("ap4"),
 		},
-		ApBindings: []*ap_binding_proto.APBinding{
+		APBindings: []*ap_binding_proto.APBinding{
 			fixtures.APBinding("apb1"),
 			fixtures.APBinding("apb2"),
 			fixtures.APBinding("apb3"),

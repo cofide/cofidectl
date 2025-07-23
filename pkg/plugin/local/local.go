@@ -116,8 +116,8 @@ func (lds *LocalDataSource) DestroyTrustZone(id string) error {
 	}
 
 	// Explicitly remove any attestation policy bindings that reference this trust zone.
-	lds.config.ApBindings = slices.DeleteFunc(
-		lds.config.ApBindings,
+	lds.config.APBindings = slices.DeleteFunc(
+		lds.config.APBindings,
 		func(apb *ap_binding_proto.APBinding) bool {
 			return apb.GetTrustZoneId() == id
 		},
@@ -399,7 +399,7 @@ func (lds *LocalDataSource) AddAttestationPolicy(policy *attestation_policy_prot
 
 func (lds *LocalDataSource) DestroyAttestationPolicy(id string) error {
 	// Fail if the policy is bound to any trust zones.
-	for _, binding := range lds.config.ApBindings {
+	for _, binding := range lds.config.APBindings {
 		if binding.GetPolicyId() == id {
 			return fmt.Errorf("attestation policy %s is bound to trust zone %s in local config", id, *binding.TrustZoneId)
 		}
@@ -470,7 +470,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 		return nil, fmt.Errorf("failed to find attestation policy %s in local config", binding.GetPolicyId())
 	}
 
-	for _, apb := range lds.config.ApBindings {
+	for _, apb := range lds.config.APBindings {
 		if apb.GetPolicyId() == binding.GetPolicyId() && apb.GetTrustZoneId() == binding.GetTrustZoneId() {
 			return nil, fmt.Errorf("attestation policy %s is already bound to trust zone %s", binding.GetPolicyId(), binding.GetTrustZoneId())
 		}
@@ -497,7 +497,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 		}
 	}
 
-	lds.config.ApBindings = append(lds.config.ApBindings, binding)
+	lds.config.APBindings = append(lds.config.APBindings, binding)
 	if err := lds.updateDataFile(); err != nil {
 		return nil, fmt.Errorf("failed to add attestation policy to local config: %w", err)
 	}
@@ -505,9 +505,9 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 }
 
 func (lds *LocalDataSource) DestroyAPBinding(id string) error {
-	for i, tzBinding := range lds.config.ApBindings {
-		if tzBinding.GetId() == id {
-			lds.config.ApBindings = slices.Delete(lds.config.ApBindings, i, i+1)
+	for i, apBinding := range lds.config.APBindings {
+		if apBinding.GetId() == id {
+			lds.config.APBindings = slices.Delete(lds.config.APBindings, i, i+1)
 			if err := lds.updateDataFile(); err != nil {
 				return fmt.Errorf("failed to remove attestation policy binding from local config: %w", err)
 			}
@@ -527,7 +527,7 @@ func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRe
 		}
 	}
 	bindings := []*ap_binding_proto.APBinding{}
-	for _, binding := range lds.config.ApBindings {
+	for _, binding := range lds.config.APBindings {
 		if filter != nil && filter.GetPolicyId() != "" && binding.GetPolicyId() != filter.GetPolicyId() {
 			continue
 		}

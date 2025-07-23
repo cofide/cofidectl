@@ -50,7 +50,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap3"),
 					fixtures.AttestationPolicy("ap4"),
 				},
-				ApBindings: []*ap_binding_proto.APBinding{
+				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
 					fixtures.APBinding("apb2"),
 					fixtures.APBinding("apb3"),
@@ -94,7 +94,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				Clusters:            []*clusterpb.Cluster{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
-				ApBindings:          []*ap_binding_proto.APBinding{},
+				APBindings:          []*ap_binding_proto.APBinding{},
 				Federations:         []*federation_proto.Federation{},
 				PluginConfig:        map[string]*structpb.Struct{},
 				Plugins:             &pluginspb.Plugins{},
@@ -119,7 +119,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap3"),
 					fixtures.AttestationPolicy("ap4"),
 				},
-				ApBindings: []*ap_binding_proto.APBinding{
+				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
 					fixtures.APBinding("apb2"),
 					fixtures.APBinding("apb3"),

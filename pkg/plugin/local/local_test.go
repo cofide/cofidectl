@@ -59,7 +59,7 @@ func TestNewLocalDataSource(t *testing.T) {
 				TrustZones:          []*trust_zone_proto.TrustZone{},
 				Clusters:            []*clusterpb.Cluster{},
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
-				ApBindings:          []*ap_binding_proto.APBinding{},
+				APBindings:          []*ap_binding_proto.APBinding{},
 				Federations:         []*federation_proto.Federation{},
 				PluginConfig:        map[string]*structpb.Struct{},
 				Plugins:             fixtures.Plugins("plugins1"),
@@ -184,7 +184,7 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
 				},
-				ApBindings: []*ap_binding_proto.APBinding{
+				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
 					fixtures.APBinding("apb2"),
 				},
@@ -206,14 +206,14 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 				// Check that the federations were removed too.
 				assert.Len(t, lds.config.Federations, 0)
 				// Check that the attestation policy binding was removed too.
-				assert.Len(t, lds.config.ApBindings, 1)
+				assert.Len(t, lds.config.APBindings, 1)
 
 				// Check that the trust zone removal was persisted.
 				gotConfig := readConfig(t, loader)
 				assert.Len(t, gotConfig.TrustZones, 1)
 				assert.Len(t, gotConfig.Federations, 0)
 				// Check that the attestation policy binding was removed too.
-				assert.Len(t, gotConfig.ApBindings, 1)
+				assert.Len(t, gotConfig.APBindings, 1)
 			}
 		})
 	}
@@ -874,7 +874,7 @@ func TestLocalDataSource_DestroyAttestationPolicy(t *testing.T) {
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
 				},
-				ApBindings: []*ap_binding_proto.APBinding{
+				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb2"),
 				},
 				Plugins: fixtures.Plugins("plugins1"),
@@ -1112,7 +1112,7 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 					fixtures.AttestationPolicy("ap1"),
 					fixtures.AttestationPolicy("ap2"),
 				},
-				ApBindings: []*ap_binding_proto.APBinding{
+				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
 					fixtures.APBinding("apb2"),
 				},
@@ -1133,11 +1133,11 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				require.Nil(t, err)
 				tt.binding.Id = got.Id
 				assert.EqualExportedValues(t, tt.binding, got)
-				assert.False(t, slices.Contains(lds.config.ApBindings, tt.binding), "Pointer to attestation policy binding stored in config")
-				assert.False(t, slices.Contains(lds.config.ApBindings, got), "Pointer to attestation policy binding in config returned")
+				assert.False(t, slices.Contains(lds.config.APBindings, tt.binding), "Pointer to attestation policy binding stored in config")
+				assert.False(t, slices.Contains(lds.config.APBindings, got), "Pointer to attestation policy binding in config returned")
 				// Check that the binding was persisted.
 				gotConfig := readConfig(t, loader)
-				gotBinding := gotConfig.ApBindings[2]
+				gotBinding := gotConfig.APBindings[2]
 				assert.EqualExportedValues(t, tt.binding, gotBinding)
 				assert.NotNil(t, gotBinding.Id)
 			}
@@ -1174,7 +1174,7 @@ func TestLocalDataSource_DestroyAPBinding(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 				},
-				ApBindings: []*ap_binding_proto.APBinding{
+				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
 				},
 				Plugins: fixtures.Plugins("plugins1"),
@@ -1186,13 +1186,13 @@ func TestLocalDataSource_DestroyAPBinding(t *testing.T) {
 				assert.EqualError(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
-				for _, binding := range lds.config.ApBindings {
+				for _, binding := range lds.config.APBindings {
 					assert.NotEqual(t, tt.bindingID, binding.Id)
 				}
 
 				// Check that the binding removal was persisted.
 				gotConfig := readConfig(t, loader)
-				for _, binding := range gotConfig.ApBindings {
+				for _, binding := range gotConfig.APBindings {
 					assert.NotEqual(t, tt.bindingID, binding.Id)
 				}
 			}
@@ -1276,7 +1276,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 				AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 					fixtures.AttestationPolicy("ap1"),
 				},
-				ApBindings: []*ap_binding_proto.APBinding{
+				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
 				},
 				Plugins: fixtures.Plugins("plugins1"),
@@ -1290,7 +1290,7 @@ func TestLocalDataSource_ListAPBindings(t *testing.T) {
 				require.NoError(t, err)
 				assert.EqualExportedValues(t, tt.want, got)
 				for _, gotBinding := range got {
-					assert.False(t, slices.Contains(lds.config.ApBindings, gotBinding), "Pointer to attestation policy binding in config returned")
+					assert.False(t, slices.Contains(lds.config.APBindings, gotBinding), "Pointer to attestation policy binding in config returned")
 				}
 			}
 		})

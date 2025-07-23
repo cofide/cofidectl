@@ -20,7 +20,7 @@ type Config struct {
 	TrustZones          []*trust_zone_proto.TrustZone
 	Clusters            []*clusterpb.Cluster
 	AttestationPolicies []*attestation_policy_proto.AttestationPolicy
-	ApBindings          []*ap_binding_proto.APBinding
+	APBindings          []*ap_binding_proto.APBinding
 	Federations         []*federation_proto.Federation
 	PluginConfig        map[string]*structpb.Struct
 	Plugins             *pluginspb.Plugins
@@ -31,7 +31,7 @@ func NewConfig() *Config {
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		Clusters:            []*clusterpb.Cluster{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
-		ApBindings:          []*ap_binding_proto.APBinding{},
+		APBindings:          []*ap_binding_proto.APBinding{},
 		Federations:         []*federation_proto.Federation{},
 		PluginConfig:        map[string]*structpb.Struct{},
 		Plugins:             &pluginspb.Plugins{},
@@ -47,7 +47,7 @@ func newConfigFromProto(proto *config_proto.Config) *Config {
 		TrustZones:          proto.TrustZones,
 		Clusters:            proto.Clusters,
 		AttestationPolicies: proto.AttestationPolicies,
-		ApBindings:          proto.ApBindings,
+		APBindings:          proto.ApBindings,
 		Federations:         proto.Federations,
 		PluginConfig:        proto.PluginConfig,
 		Plugins:             plugins,
@@ -59,7 +59,7 @@ func (c *Config) toProto() *config_proto.Config {
 		TrustZones:          c.TrustZones,
 		Clusters:            c.Clusters,
 		AttestationPolicies: c.AttestationPolicies,
-		ApBindings:          c.ApBindings,
+		ApBindings:          c.APBindings,
 		Federations:         c.Federations,
 		PluginConfig:        c.PluginConfig,
 		Plugins:             c.Plugins,
