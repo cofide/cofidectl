@@ -6,7 +6,6 @@
 	trust_domain!: string
 	bundle_endpoint_url?: string
 	bundle?: #Bundle
-	federations: [...#Federation]
 	jwt_issuer?: string
 	bundle_endpoint_profile?: #BundleEndpointProfile
 }
@@ -125,6 +124,7 @@
 	clusters: [...#Cluster]
 	attestation_policies: [...#AttestationPolicy]
 	ap_bindings: [...#APBinding]
+	federations: [...#Federation]
 	plugin_config?: #PluginConfig
 	plugins!: #Plugins
 }

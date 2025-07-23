@@ -13,20 +13,12 @@ trust_zones:
               expires_at: "1738987145"
         refresh_hint: "2"
         sequence_number: "3"
-      federations:
-        - id: fed1-id
-          trust_zone_id: tz1-id
-          remote_trust_zone_id: tz2-id
       jwt_issuer: https://tz1.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_SPIFFE
       id: tz1-id
     - name: tz2
       trust_domain: td2
       bundle_endpoint_url: 127.0.0.2
-      federations:
-        - id: fed2-id
-          trust_zone_id: tz2-id
-          remote_trust_zone_id: tz1-id
       jwt_issuer: https://tz2.example.com
       bundle_endpoint_profile: BUNDLE_ENDPOINT_PROFILE_HTTPS_WEB
       id: tz2-id
@@ -124,6 +116,13 @@ plugin_config:
 plugins:
     data_source: fake-datasource
     provision: fake-provision
+federations:
+    - id: fed1-id
+      trust_zone_id: tz1-id
+      remote_trust_zone_id: tz2-id
+    - id: fed2-id
+      trust_zone_id: tz2-id
+      remote_trust_zone_id: tz1-id
 ap_bindings:
     - id: apb1-id
       trust_zone_id: tz1-id

@@ -114,21 +114,7 @@ func (lds *LocalDataSource) DestroyTrustZone(id string) error {
 	if len(lds.config.GetClustersByTrustZone(id)) > 0 {
 		return fmt.Errorf("one or more clusters exist in trust zone %s in local config", id)
 	}
-	// Deleting the trust zone also implicitly removes any federations
-	// bound to it because they are stored in the trust zone message.
-	// Federations in other trust zones that reference this trust zone need to be cleaned up.
-	for _, trustZone := range lds.config.TrustZones {
-		if trustZone.GetId() != id {
-			// nolint:staticcheck
-			trustZone.Federations = slices.DeleteFunc(
-				// nolint:staticcheck
-				trustZone.Federations,
-				func(federation *federation_proto.Federation) bool {
-					return federation.GetRemoteTrustZoneId() == id
-				},
-			)
-		}
-	}
+
 	// Explicitly remove any attestation policy bindings that reference this trust zone.
 	lds.config.ApBindings = slices.DeleteFunc(
 		lds.config.ApBindings,
@@ -136,6 +122,15 @@ func (lds *LocalDataSource) DestroyTrustZone(id string) error {
 			return apb.GetTrustZoneId() == id
 		},
 	)
+
+	// Explicitly remove any federations that reference this trust zone.
+	lds.config.Federations = slices.DeleteFunc(
+		lds.config.Federations,
+		func(federation *federation_proto.Federation) bool {
+			return federation.GetTrustZoneId() == id || federation.GetRemoteTrustZoneId() == id
+		},
+	)
+
 	for i, trustZone := range lds.config.TrustZones {
 		if trustZone.GetId() == id {
 			lds.config.TrustZones = append(lds.config.TrustZones[:i], lds.config.TrustZones[i+1:]...)
@@ -212,11 +207,6 @@ func validateTrustZoneUpdate(current, new *trust_zone_proto.TrustZone) error {
 	}
 	if new.TrustDomain != current.TrustDomain {
 		return fmt.Errorf("cannot update trust domain for existing trust zone %s", *current.Id)
-	}
-	// The following should be updated though other means.
-	// nolint:staticcheck
-	if !slices.EqualFunc(new.Federations, current.Federations, proto.FederationsEqual) {
-		return fmt.Errorf("cannot update federations for existing trust zone %s", *current.Id)
 	}
 	return nil
 }
@@ -470,7 +460,7 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 	}
 	binding.Id = id
 
-	localTrustZone, ok := lds.config.GetTrustZoneByID(binding.GetTrustZoneId())
+	_, ok := lds.config.GetTrustZoneByID(binding.GetTrustZoneId())
 	if !ok {
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", binding.GetTrustZoneId())
 	}
@@ -487,9 +477,10 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 	}
 
 	remoteTzs := map[string]bool{}
-	// nolint:staticcheck
-	for _, federation := range localTrustZone.Federations {
-		remoteTzs[federation.GetRemoteTrustZoneId()] = true
+	for _, federation := range lds.config.Federations {
+		if federation.GetTrustZoneId() == binding.GetTrustZoneId() {
+			remoteTzs[federation.GetRemoteTrustZoneId()] = true
+		}
 	}
 
 	for _, remoteTz := range binding.Federations {
@@ -570,7 +561,7 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 	}
 	federationProto.Id = id
 
-	fromTrustZone, ok := lds.config.GetTrustZoneByID(federationProto.GetTrustZoneId())
+	_, ok := lds.config.GetTrustZoneByID(federationProto.GetTrustZoneId())
 	if !ok {
 		return nil, fmt.Errorf("failed to find trust zone %s in local config", federationProto.GetTrustZoneId())
 	}
@@ -598,8 +589,7 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 		}
 	}
 
-	// nolint:staticcheck
-	fromTrustZone.Federations = append(fromTrustZone.Federations, federationProto)
+	lds.config.Federations = append(lds.config.Federations, federationProto)
 
 	if err := lds.updateDataFile(); err != nil {
 		return nil, fmt.Errorf("failed to add federation to local config: %s", err)
@@ -608,41 +598,33 @@ func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Fede
 }
 
 func (lds *LocalDataSource) DestroyFederation(id string) error {
-	for _, trustZone := range lds.config.TrustZones {
-		// nolint:staticcheck
-		for i, fed := range trustZone.Federations {
-			if fed.GetId() == id {
-				// nolint:staticcheck
-				trustZone.Federations = append(trustZone.Federations[:i], trustZone.Federations[i+1:]...)
-				if err := lds.updateDataFile(); err != nil {
-					return fmt.Errorf("failed to remove federation from local config: %s", err)
-				}
-				return nil
+	for i, fed := range lds.config.Federations {
+		if fed.GetId() == id {
+			lds.config.Federations = slices.Delete(lds.config.Federations, i, i+1)
+			if err := lds.updateDataFile(); err != nil {
+				return fmt.Errorf("failed to remove federation from local config: %s", err)
 			}
+			return nil
 		}
 	}
 	return fmt.Errorf("failed to find federation %s in local config", id)
 }
 
 func (lds *LocalDataSource) ListFederations(filter *datasourcepb.ListFederationsRequest_Filter) ([]*federation_proto.Federation, error) {
-	// federations are expressed in-line with the trust zone(s) so we need to iterate the trust zones
 	federations := []*federation_proto.Federation{}
-	for _, trustZone := range lds.config.TrustZones {
-		// nolint:staticcheck
-		for _, federation := range trustZone.Federations {
-			include := true
-			if filter != nil {
-				if filter.TrustZoneId != nil && federation.GetTrustZoneId() != filter.GetTrustZoneId() {
-					include = false
-				}
+	for _, federation := range lds.config.Federations {
+		include := true
+		if filter != nil {
+			if filter.TrustZoneId != nil && federation.GetTrustZoneId() != filter.GetTrustZoneId() {
+				include = false
 			}
-			if include {
-				federation, err := proto.CloneFederation(federation)
-				if err != nil {
-					return nil, err
-				}
-				federations = append(federations, federation)
+		}
+		if include {
+			federation, err := proto.CloneFederation(federation)
+			if err != nil {
+				return nil, err
 			}
+			federations = append(federations, federation)
 		}
 	}
 	return federations, nil
