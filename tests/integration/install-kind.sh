@@ -61,11 +61,11 @@ function ensure_kind_network() {
 
 function run_cloud_provider_kind() {
   docker run -d \
+    --name cloud-provider-kind \
     --network kind \
     --restart unless-stopped \
-    --name cloud-provider-kind \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.5.0
+    registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.6.0
 }
 
 function check_non_root_docker_access() {

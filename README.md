@@ -6,24 +6,17 @@
 
 *Note: `cofidectl` is an early-stage project under active development, so please be aware that it is subject to breaking changes.*
 
-## Prerequisites
+## Install
 
 Pre-built `cofidectl` binaries may be downloaded from the project's [GitHub releases](https://github.com/cofide/cofidectl/releases) page.
 Alternatively, `cofidectl` may be built from source code.
+
+## Build
+
 Building a `cofidectl` binary requires:
 
 * [Go 1.24 toolchain](https://golang.org/doc/install)
 * [`just`](https://github.com/casey/just) as a command runner
-
-To exercise the quickstart requires:
-
-* [`Docker`](https://docs.docker.com/engine/install/)
-* [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start)
-* [`kubectl`](https://kubernetes.io/docs/tasks/tools/)
-* [Cloud provider Kind](https://github.com/kubernetes-sigs/cloud-provider-kind) to expose SPIRE federation endpoints
-  * `docker run -d --name cloud-provider-kind --network kind --restart unless-stopped --privileged -v /var/run/docker.sock:/var/run/docker.sock registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.6.0`
-
-## Build
 
 To run the unit tests and build the `cofidectl` binary:
 
@@ -32,6 +25,14 @@ just build
 ```
 
 ## Quickstart
+
+To exercise the quickstart requires:
+
+* [`Docker`](https://docs.docker.com/engine/install/)
+* [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start)
+* [`kubectl`](https://kubernetes.io/docs/tasks/tools/)
+* [Cloud provider Kind](https://github.com/kubernetes-sigs/cloud-provider-kind) to expose SPIRE federation endpoints
+  * `docker run -d --name cloud-provider-kind --network kind --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.6.0`
 
 ### Deploy a single trust zone Cofide instance
 
