@@ -200,13 +200,13 @@ func TestLocalDataSource_DestroyTrustZone(t *testing.T) {
 				assert.Len(t, lds.config.TrustZones, 1)
 				// nolint:staticcheck
 				assert.Len(t, lds.config.TrustZones[0].Federations, 0)
-				// Check that the association policy binding was removed too.
+				// Check that the attestation policy binding was removed too.
 				assert.Len(t, lds.config.ApBindings, 1) // Check that the trust zone removal was persisted.
 				gotConfig := readConfig(t, loader)
 				assert.Len(t, gotConfig.TrustZones, 1)
 				// nolint:staticcheck
 				assert.Len(t, gotConfig.TrustZones[0].Federations, 0)
-				// Check that the association policy binding was removed too.
+				// Check that the attestation policy binding was removed too.
 				assert.Len(t, gotConfig.ApBindings, 1)
 			}
 		})
