@@ -5,9 +5,11 @@ package config
 
 import (
 	"buf.build/go/protoyaml"
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	config_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/config/v1alpha1"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -18,6 +20,8 @@ type Config struct {
 	TrustZones          []*trust_zone_proto.TrustZone
 	Clusters            []*clusterpb.Cluster
 	AttestationPolicies []*attestation_policy_proto.AttestationPolicy
+	APBindings          []*ap_binding_proto.APBinding
+	Federations         []*federation_proto.Federation
 	PluginConfig        map[string]*structpb.Struct
 	Plugins             *pluginspb.Plugins
 }
@@ -27,6 +31,8 @@ func NewConfig() *Config {
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		Clusters:            []*clusterpb.Cluster{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+		APBindings:          []*ap_binding_proto.APBinding{},
+		Federations:         []*federation_proto.Federation{},
 		PluginConfig:        map[string]*structpb.Struct{},
 		Plugins:             &pluginspb.Plugins{},
 	}
@@ -41,6 +47,8 @@ func newConfigFromProto(proto *config_proto.Config) *Config {
 		TrustZones:          proto.TrustZones,
 		Clusters:            proto.Clusters,
 		AttestationPolicies: proto.AttestationPolicies,
+		APBindings:          proto.ApBindings,
+		Federations:         proto.Federations,
 		PluginConfig:        proto.PluginConfig,
 		Plugins:             plugins,
 	}
@@ -51,6 +59,8 @@ func (c *Config) toProto() *config_proto.Config {
 		TrustZones:          c.TrustZones,
 		Clusters:            c.Clusters,
 		AttestationPolicies: c.AttestationPolicies,
+		ApBindings:          c.APBindings,
+		Federations:         c.Federations,
 		PluginConfig:        c.PluginConfig,
 		Plugins:             c.Plugins,
 	}
@@ -69,6 +79,8 @@ func unmarshalYAML(data []byte) (*Config, error) {
 		TrustZones:          []*trust_zone_proto.TrustZone{},
 		Clusters:            []*clusterpb.Cluster{},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{},
+		ApBindings:          []*ap_binding_proto.APBinding{},
+		Federations:         []*federation_proto.Federation{},
 		PluginConfig:        map[string]*structpb.Struct{},
 	}
 	err := protoyaml.Unmarshal(data, &proto)

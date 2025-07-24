@@ -6,8 +6,10 @@ package helm
 import (
 	"testing"
 
+	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
@@ -43,12 +45,8 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 				return cluster
 			}(),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
-				require.True(t, ok)
-				// nolint:staticcheck
-				trustZone.AttestationPolicies = nil
-				// nolint:staticcheck
-				trustZone.Federations = nil
+				cfg.APBindings = cfg.APBindings[1:]
+				cfg.Federations = nil
 			},
 			want: Values{
 				"global": Values{
@@ -564,12 +562,8 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 				return cluster
 			}(),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
-				require.True(t, ok)
-				// nolint:staticcheck
-				trustZone.AttestationPolicies = nil
-				// nolint:staticcheck
-				trustZone.Federations = nil
+				cfg.APBindings = cfg.APBindings[1:]
+				cfg.Federations = nil
 			},
 			values: Values{
 				"spire-server": Values{
@@ -820,10 +814,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			trustZone: fixtures.TrustZone("tz1"),
 			cluster:   fixtures.Cluster("local1"),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByName("tz1")
-				require.True(t, ok)
-				// nolint:staticcheck
-				trustZone.AttestationPolicies[0].PolicyId = fixtures.StringPtr("invalid-ap")
+				cfg.APBindings[0].PolicyId = fixtures.StringPtr("invalid-ap")
 			},
 			wantErrString: "failed to find attestation policy invalid-ap in local config",
 		},
@@ -832,10 +823,7 @@ func TestHelmValuesGenerator_GenerateValues_failure(t *testing.T) {
 			trustZone: fixtures.TrustZone("tz1"),
 			cluster:   fixtures.Cluster("local1"),
 			configFunc: func(cfg *config.Config) {
-				trustZone, ok := cfg.GetTrustZoneByID("tz1-id")
-				require.True(t, ok)
-				// nolint:staticcheck
-				trustZone.Federations[0].RemoteTrustZoneId = fixtures.StringPtr("invalid-tz")
+				cfg.Federations[0].RemoteTrustZoneId = fixtures.StringPtr("invalid-tz")
 			},
 			wantErrString: "failed to find trust zone invalid-tz in local config",
 		},
@@ -1835,6 +1823,15 @@ func defaultConfig() *config.Config {
 			fixtures.AttestationPolicy("ap1"),
 			fixtures.AttestationPolicy("ap2"),
 			fixtures.AttestationPolicy("ap4"),
+		},
+		APBindings: []*ap_binding_proto.APBinding{
+			fixtures.APBinding("apb1"),
+			fixtures.APBinding("apb2"),
+			fixtures.APBinding("apb3"),
+		},
+		Federations: []*federation_proto.Federation{
+			fixtures.Federation("fed1"),
+			fixtures.Federation("fed2"),
 		},
 		Plugins: fixtures.Plugins("plugins1"),
 	}
