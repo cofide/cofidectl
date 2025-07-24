@@ -27,7 +27,7 @@ import (
 
 const (
 	SPIRERepositoryName = "spire"
-	SPIRERepositoryUrl  = "https://spiffe.github.io/helm-charts-hardened/"
+	SPIRERepositoryURL  = "https://spiffe.github.io/helm-charts-hardened/"
 
 	SPIREChartName        = "spire"
 	SPIREChartVersion     = "0.24.5"
@@ -102,7 +102,7 @@ func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *cl
 		spireCRDsValues:     spireCRDsValues,
 		trustZoneName:       trustZoneName,
 		cluster:             cluster,
-		SPIRERepositoryURL:  SPIRERepositoryUrl,
+		SPIRERepositoryURL:  SPIRERepositoryURL,
 		SPIRERepositoryName: SPIRERepositoryName,
 	}
 
