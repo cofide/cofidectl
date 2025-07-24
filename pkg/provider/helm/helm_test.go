@@ -32,10 +32,22 @@ func TestNewHelmSPIREProvider_Options(t *testing.T) {
 	cluster := &clusterpb.Cluster{Name: fixtures.StringPtr("fake-cluster")}
 	repoURL := "https://example.com/charts"
 
-	t.Run("with custom repo url", func(t *testing.T) {
+	t.Run("with custom repo URL", func(t *testing.T) {
 		p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, nil, nil, WithSPIRERepositoryURL(repoURL))
 		require.NoError(t, err)
 		assert.Equal(t, repoURL, p.SPIRERepositoryURL)
+	})
+
+	t.Run("with custom repo name", func(t *testing.T) {
+		p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, nil, nil, WithSPIRERepositoryName("my-custom-repo"))
+		require.NoError(t, err)
+		assert.Equal(t, "my-custom-repo", p.SPIRERepositoryName)
+	})
+
+	t.Run("with custom repo name and repo URL", func(t *testing.T) {
+		p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, nil, nil, WithSPIRERepositoryURL(repoURL), WithSPIRERepositoryName("my-custom-repo"))
+		require.NoError(t, err)
+		assert.Equal(t, "my-custom-repo", p.SPIRERepositoryName)
 	})
 }
 
