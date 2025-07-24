@@ -11,6 +11,7 @@ import (
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHelmSPIREProvider(t *testing.T) {
@@ -19,12 +20,23 @@ func TestHelmSPIREProvider(t *testing.T) {
 	spireCRDsValues := map[string]any{}
 	kubeConfig := "fake-kube-config"
 
-	p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, spireValues, spireCRDsValues, kubeConfig)
+	p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, spireValues, spireCRDsValues, WithKubeConfig(kubeConfig))
 	assert.Nil(t, err)
 	assert.Equal(t, p.SPIREVersion, "0.24.5")
 	assert.Equal(t, p.SPIRECRDsVersion, "0.5.0")
 	assert.Equal(t, cluster.GetName(), p.cluster.GetName())
 	assert.Equal(t, kubeConfig, p.settings.KubeConfig)
+}
+
+func TestNewHelmSPIREProvider_Options(t *testing.T) {
+	cluster := &clusterpb.Cluster{Name: fixtures.StringPtr("fake-cluster")}
+	repoURL := "https://example.com/charts"
+
+	t.Run("with custom repo url", func(t *testing.T) {
+		p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, nil, nil, WithSPIRERepositoryURL(repoURL))
+		require.NoError(t, err)
+		assert.Equal(t, repoURL, p.SPIRERepositoryURL)
+	})
 }
 
 func TestGetChartRef(t *testing.T) {

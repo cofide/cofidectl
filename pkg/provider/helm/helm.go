@@ -45,35 +45,69 @@ var _ Provider = &HelmSPIREProvider{}
 // helm-charts-hardened Helm chart to install a SPIRE stack to a given Kubernetes context, making use of the Cofide
 // API concepts and abstractions
 type HelmSPIREProvider struct {
-	ctx              context.Context
-	settings         *cli.EnvSettings
-	cfg              *action.Configuration
-	SPIREVersion     string
-	SPIRECRDsVersion string
-	spireValues      map[string]any
-	spireCRDsValues  map[string]any
-	trustZoneName    string
-	cluster          *clusterpb.Cluster
+	ctx                 context.Context
+	settings            *cli.EnvSettings
+	cfg                 *action.Configuration
+	SPIREVersion        string
+	SPIRECRDsVersion    string
+	spireValues         map[string]any
+	spireCRDsValues     map[string]any
+	trustZoneName       string
+	cluster             *clusterpb.Cluster
+	SPIRERepositoryURL  string
+	SPIRERepositoryName string
 }
 
-func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, kubeConfig string) (*HelmSPIREProvider, error) {
+// HelmSPIREProviderOption is a function that configures a HelmSPIREProvider.
+type HelmSPIREProviderOption func(*HelmSPIREProvider)
+
+// WithKubeConfig sets the kubeconfig path
+func WithKubeConfig(kubeConfig string) HelmSPIREProviderOption {
+	return func(p *HelmSPIREProvider) {
+		if kubeConfig != "" {
+			p.settings.KubeConfig = kubeConfig
+		}
+	}
+}
+
+// WithSPIRERepositoryURL sets the SPIRE Helm repository URL
+func WithSPIRERepositoryURL(url string) HelmSPIREProviderOption {
+	return func(p *HelmSPIREProvider) {
+		if url != "" {
+			p.SPIRERepositoryURL = url
+		}
+	}
+}
+
+// WithSPIRERepositoryName sets the name for the SPIRE Helm repository
+func WithSPIRERepositoryName(name string) HelmSPIREProviderOption {
+	return func(p *HelmSPIREProvider) {
+		if name != "" {
+			p.SPIRERepositoryName = name
+		}
+	}
+}
+
+func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, opts ...HelmSPIREProviderOption) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
 	settings.SetNamespace(SPIREManagementNamespace)
 
-	if kubeConfig != "" {
-		settings.KubeConfig = kubeConfig
+	prov := &HelmSPIREProvider{
+		ctx:                 ctx,
+		settings:            settings,
+		SPIREVersion:        SPIREChartVersion,
+		SPIRECRDsVersion:    SPIRECRDsChartVersion,
+		spireValues:         spireValues,
+		spireCRDsValues:     spireCRDsValues,
+		trustZoneName:       trustZoneName,
+		cluster:             cluster,
+		SPIRERepositoryURL:  SPIRERepositoryUrl,
+		SPIRERepositoryName: SPIRERepositoryName,
 	}
 
-	prov := &HelmSPIREProvider{
-		ctx:              ctx,
-		settings:         settings,
-		SPIREVersion:     SPIREChartVersion,
-		SPIRECRDsVersion: SPIRECRDsChartVersion,
-		spireValues:      spireValues,
-		spireCRDsValues:  spireCRDsValues,
-		trustZoneName:    trustZoneName,
-		cluster:          cluster,
+	for _, opt := range opts {
+		opt(prov)
 	}
 
 	var err error
@@ -108,8 +142,8 @@ func (h *HelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Status) e
 		}
 
 		entry := &repo.Entry{
-			Name: SPIRERepositoryName,
-			URL:  SPIRERepositoryUrl,
+			Name: h.SPIRERepositoryName,
+			URL:  h.SPIRERepositoryURL,
 		}
 
 		chartRepo, err := repo.NewChartRepository(entry, getter.All(h.settings))
@@ -421,9 +455,9 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 	return len(ledger) > 0, nil
 }
 
-// IsClusterDeployed returns whether a Kubernetes cluster is reachable.
+// IsClusterReachable returns no error if a Kubernetes cluster is reachable.
 func IsClusterReachable(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) error {
-	prov, err := NewHelmSPIREProvider(ctx, "", cluster, nil, nil, kubeConfig)
+	prov, err := NewHelmSPIREProvider(ctx, "", cluster, nil, nil, WithKubeConfig(kubeConfig))
 	if err != nil {
 		return err
 	}
@@ -432,7 +466,7 @@ func IsClusterReachable(ctx context.Context, cluster *clusterpb.Cluster, kubeCon
 
 // IsClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
 func IsClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) (bool, error) {
-	prov, err := NewHelmSPIREProvider(ctx, "", cluster, nil, nil, kubeConfig)
+	prov, err := NewHelmSPIREProvider(ctx, "", cluster, nil, nil, WithKubeConfig(kubeConfig))
 	if err != nil {
 		return false, err
 	}
