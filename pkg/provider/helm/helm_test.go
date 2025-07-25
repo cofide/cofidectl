@@ -53,6 +53,7 @@ func TestNewHelmSPIREProvider_Options(t *testing.T) {
 	t.Run("with custom repo name and repo URL", func(t *testing.T) {
 		p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, nil, nil, WithSPIRERepositoryURL(repoURL), WithSPIRERepositoryName("my-custom-repo"))
 		require.NoError(t, err)
+		assert.Equal(t, repoURL, p.spireRepositoryURL)
 		assert.Equal(t, "my-custom-repo", p.spireRepositoryName)
 	})
 }
