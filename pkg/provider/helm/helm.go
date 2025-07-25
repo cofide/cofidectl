@@ -117,7 +117,7 @@ func WithSPIREChartName(name string) HelmSPIREProviderOption {
 	}
 }
 
-// WithSPIRECRDChartName is the name for the SPIRE CRDs Helm chart
+// WithSPIRECRDChartName sets the name for the SPIRE CRDs Helm chart
 func WithSPIRECRDChartName(name string) HelmSPIREProviderOption {
 	return func(p *HelmSPIREProvider) {
 		if name != "" {
