@@ -355,15 +355,15 @@ func newInstall(cfg *action.Configuration, chart string, version string) *action
 
 func (h *HelmSPIREProvider) installSPIRE() (*release.Release, error) {
 	client := newInstall(h.cfg, h.spireChartName, h.spireChartVersion)
-	return installChart(h.ctx, h.cfg, client, h.spireChartName, h.settings, h.spireValues)
+	return installChart(h.ctx, h.cfg, client, h.spireRepositoryName, h.spireChartName, h.settings, h.spireValues)
 }
 
 func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
 	client := newInstall(h.cfg, h.spireCRDChartName, h.spireCRDChartVersion)
-	return installChart(h.ctx, h.cfg, client, h.spireCRDChartName, h.settings, h.spireCRDsValues)
+	return installChart(h.ctx, h.cfg, client, h.spireRepositoryName, h.spireCRDChartName, h.settings, h.spireCRDsValues)
 }
 
-func installChart(ctx context.Context, cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
+func installChart(ctx context.Context, cfg *action.Configuration, client *action.Install, repoName string, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
@@ -372,7 +372,7 @@ func installChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, nil
 	}
 
-	chartRef, err := getChartRef(chartName)
+	chartRef, err := getChartRef(repoName, chartName)
 	if err != nil {
 		return nil, err
 	}
@@ -403,10 +403,10 @@ func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
 
 func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
 	client := newUpgrade(h.cfg, h.spireChartVersion)
-	return upgradeChart(h.ctx, h.cfg, client, h.spireChartName, h.settings, h.spireValues)
+	return upgradeChart(h.ctx, h.cfg, client, h.spireRepositoryName, h.spireChartName, h.settings, h.spireValues)
 }
 
-func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
+func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action.Upgrade, repoName string, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
@@ -416,7 +416,7 @@ func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, fmt.Errorf("%v not installed", chartName)
 	}
 
-	chartRef, err := getChartRef(chartName)
+	chartRef, err := getChartRef(repoName, chartName)
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +439,7 @@ func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action
 
 // getChartRef returns the full chart reference using either a custom repository path
 // from HELM_REPO_PATH environment variable or the default SPIRE repository.
-func getChartRef(chartName string) (string, error) {
+func getChartRef(repoName string, chartName string) (string, error) {
 	if chartName == "" {
 		return "", fmt.Errorf("chart name cannot be empty")
 	}
@@ -449,12 +449,15 @@ func getChartRef(chartName string) (string, error) {
 		if repoPath == "" {
 			return "", fmt.Errorf("HELM_REPO_PATH environment variable is set but empty")
 		}
-
 		repoPath = strings.TrimRight(repoPath, "/")
 		return fmt.Sprintf("%s/%s", repoPath, chartName), nil
 	}
 
-	return fmt.Sprintf("%s/%s", SPIRERepositoryName, chartName), nil
+	if repoName == "" {
+		return "", fmt.Errorf("repo name cannot be empty")
+	}
+
+	return fmt.Sprintf("%s/%s", repoName, chartName), nil
 }
 
 func newUninstall(cfg *action.Configuration) *action.Uninstall {

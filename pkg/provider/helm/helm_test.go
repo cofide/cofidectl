@@ -64,6 +64,7 @@ func TestGetChartRef(t *testing.T) {
 
 	tests := []struct {
 		name            string
+		repoName        string
 		helmRepoPath    string
 		helmRepoPathSet bool
 		chartName       string
@@ -73,6 +74,7 @@ func TestGetChartRef(t *testing.T) {
 	}{
 		{
 			name:            "with HELM_REPO_PATH set",
+			repoName:        "spire",
 			helmRepoPathSet: true,
 			helmRepoPath:    "spire-local",
 			chartName:       "spire",
@@ -81,6 +83,7 @@ func TestGetChartRef(t *testing.T) {
 		},
 		{
 			name:            "with HELM_REPO_PATH containing trailing slash",
+			repoName:        "spire",
 			helmRepoPathSet: true,
 			helmRepoPath:    "custom-repo/",
 			chartName:       "spire",
@@ -89,6 +92,7 @@ func TestGetChartRef(t *testing.T) {
 		},
 		{
 			name:            "with HELM_REPO_PATH containing trailing slashes",
+			repoName:        "spire",
 			helmRepoPathSet: true,
 			helmRepoPath:    "custom-repo//",
 			chartName:       "spire",
@@ -97,6 +101,7 @@ func TestGetChartRef(t *testing.T) {
 		},
 		{
 			name:            "with empty HELM_REPO_PATH",
+			repoName:        "spire",
 			helmRepoPathSet: true,
 			helmRepoPath:    "",
 			chartName:       "spire",
@@ -106,6 +111,7 @@ func TestGetChartRef(t *testing.T) {
 		},
 		{
 			name:            "with empty chart name",
+			repoName:        "spire",
 			helmRepoPathSet: false,
 			helmRepoPath:    "spire-local",
 			chartName:       "",
@@ -114,6 +120,7 @@ func TestGetChartRef(t *testing.T) {
 		},
 		{
 			name:            "with HELM_REPO_PATH not set",
+			repoName:        "spire",
 			helmRepoPathSet: false,
 			chartName:       "spire",
 			want:            "spire/spire",
@@ -121,10 +128,27 @@ func TestGetChartRef(t *testing.T) {
 		},
 		{
 			name:            "with empty HELM_REPO_PATH and an empty chart name",
+			repoName:        "spire",
 			helmRepoPathSet: false,
 			chartName:       "",
 			wantErr:         true,
 			errString:       "chart name cannot be empty",
+		},
+		{
+			name:            "with custom repo name",
+			repoName:        "foo-spire",
+			helmRepoPathSet: false,
+			chartName:       "spire",
+			wantErr:         false,
+			want:            "foo-spire/spire",
+		},
+		{
+			name:            "with empty custom repo name",
+			repoName:        "",
+			helmRepoPathSet: false,
+			chartName:       "spire",
+			wantErr:         true,
+			errString:       "repo name cannot be empty",
 		},
 	}
 
@@ -136,7 +160,7 @@ func TestGetChartRef(t *testing.T) {
 				os.Unsetenv("HELM_REPO_PATH")
 			}
 
-			got, err := getChartRef(tt.chartName)
+			got, err := getChartRef(tt.repoName, tt.chartName)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errString)
