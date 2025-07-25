@@ -29,10 +29,10 @@ const (
 	SPIRERepositoryName = "spire"
 	SPIRERepositoryURL  = "https://spiffe.github.io/helm-charts-hardened/"
 
-	SPIREChartName        = "spire"
-	SPIREChartVersion     = "0.24.5"
-	SPIRECRDsChartName    = "spire-crds"
-	SPIRECRDsChartVersion = "0.5.0"
+	SPIREChartName       = "spire"
+	SPIREChartVersion    = "0.24.5"
+	SPIRECRDChartName    = "spire-crds"
+	SPIRECRDChartVersion = "0.5.0"
 
 	// Kubernetes namespace in which Helm charts and CRDs will be installed.
 	SPIREManagementNamespace = "spire-mgmt"
@@ -45,17 +45,19 @@ var _ Provider = &HelmSPIREProvider{}
 // helm-charts-hardened Helm chart to install a SPIRE stack to a given Kubernetes context, making use of the Cofide
 // API concepts and abstractions
 type HelmSPIREProvider struct {
-	ctx                 context.Context
-	settings            *cli.EnvSettings
-	cfg                 *action.Configuration
-	SPIREVersion        string
-	SPIRECRDsVersion    string
-	spireValues         map[string]any
-	spireCRDsValues     map[string]any
-	trustZoneName       string
-	cluster             *clusterpb.Cluster
-	spireRepositoryURL  string
-	spireRepositoryName string
+	ctx                  context.Context
+	settings             *cli.EnvSettings
+	cfg                  *action.Configuration
+	spireChartName       string
+	spireCRDChartName    string
+	spireChartVersion    string
+	spireCRDChartVersion string
+	spireValues          map[string]any
+	spireCRDsValues      map[string]any
+	trustZoneName        string
+	cluster              *clusterpb.Cluster
+	spireRepositoryURL   string
+	spireRepositoryName  string
 }
 
 // HelmSPIREProviderOption is a function that configures a HelmSPIREProvider.
@@ -88,22 +90,60 @@ func WithSPIRERepositoryName(name string) HelmSPIREProviderOption {
 	}
 }
 
+// WithSPIREChartVersion sets the version for the SPIRE Helm chart
+func WithSPIREChartVersion(version string) HelmSPIREProviderOption {
+	return func(p *HelmSPIREProvider) {
+		if version != "" {
+			p.spireChartVersion = version
+		}
+	}
+}
+
+// WithSPIRECRDsChartVersion sets the version for the SPIRE CRDs Helm chart
+func WithSPIRECRDsChartVersion(version string) HelmSPIREProviderOption {
+	return func(p *HelmSPIREProvider) {
+		if version != "" {
+			p.spireCRDChartVersion = version
+		}
+	}
+}
+
+// WithSPIREChartName sets the name for the SPIRE Helm chart
+func WithSPIREChartName(name string) HelmSPIREProviderOption {
+	return func(p *HelmSPIREProvider) {
+		if name != "" {
+			p.spireChartName = name
+		}
+	}
+}
+
+// WithSPIRECRDChartName is the name for the SPIRE CRDs Helm chart
+func WithSPIRECRDChartName(name string) HelmSPIREProviderOption {
+	return func(p *HelmSPIREProvider) {
+		if name != "" {
+			p.spireCRDChartName = name
+		}
+	}
+}
+
 func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, opts ...HelmSPIREProviderOption) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
 	settings.SetNamespace(SPIREManagementNamespace)
 
 	prov := &HelmSPIREProvider{
-		ctx:                 ctx,
-		settings:            settings,
-		SPIREVersion:        SPIREChartVersion,
-		SPIRECRDsVersion:    SPIRECRDsChartVersion,
-		spireValues:         spireValues,
-		spireCRDsValues:     spireCRDsValues,
-		trustZoneName:       trustZoneName,
-		cluster:             cluster,
-		spireRepositoryURL:  SPIRERepositoryURL,
-		spireRepositoryName: SPIRERepositoryName,
+		ctx:                  ctx,
+		settings:             settings,
+		spireChartName:       SPIREChartName,
+		spireCRDChartName:    SPIRECRDChartName,
+		spireChartVersion:    SPIREChartVersion,
+		spireCRDChartVersion: SPIRECRDChartVersion,
+		spireValues:          spireValues,
+		spireCRDsValues:      spireCRDsValues,
+		trustZoneName:        trustZoneName,
+		cluster:              cluster,
+		spireRepositoryURL:   SPIRERepositoryURL,
+		spireRepositoryName:  SPIRERepositoryName,
 	}
 
 	for _, opt := range opts {
@@ -284,7 +324,7 @@ func (h *HelmSPIREProvider) CheckIfReachable() error {
 
 // CheckIfAlreadyInstalled returns true if the SPIRE chart has previously been installed.
 func (h *HelmSPIREProvider) CheckIfAlreadyInstalled() (bool, error) {
-	return checkIfAlreadyInstalled(h.cfg, SPIREChartName)
+	return checkIfAlreadyInstalled(h.cfg, h.spireChartName)
 }
 
 func DiscardLogger(format string, v ...any) {}
@@ -314,13 +354,13 @@ func newInstall(cfg *action.Configuration, chart string, version string) *action
 }
 
 func (h *HelmSPIREProvider) installSPIRE() (*release.Release, error) {
-	client := newInstall(h.cfg, SPIREChartName, h.SPIREVersion)
-	return installChart(h.ctx, h.cfg, client, SPIREChartName, h.settings, h.spireValues)
+	client := newInstall(h.cfg, h.spireChartName, h.spireChartVersion)
+	return installChart(h.ctx, h.cfg, client, h.spireChartName, h.settings, h.spireValues)
 }
 
 func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
-	client := newInstall(h.cfg, SPIRECRDsChartName, h.SPIRECRDsVersion)
-	return installChart(h.ctx, h.cfg, client, SPIRECRDsChartName, h.settings, h.spireCRDsValues)
+	client := newInstall(h.cfg, h.spireCRDChartName, h.spireCRDChartVersion)
+	return installChart(h.ctx, h.cfg, client, h.spireCRDChartName, h.settings, h.spireCRDsValues)
 }
 
 func installChart(ctx context.Context, cfg *action.Configuration, client *action.Install, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
@@ -362,8 +402,8 @@ func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
 }
 
 func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
-	client := newUpgrade(h.cfg, h.SPIREVersion)
-	return upgradeChart(h.ctx, h.cfg, client, SPIREChartName, h.settings, h.spireValues)
+	client := newUpgrade(h.cfg, h.spireChartVersion)
+	return upgradeChart(h.ctx, h.cfg, client, h.spireChartName, h.settings, h.spireValues)
 }
 
 func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action.Upgrade, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
@@ -424,12 +464,12 @@ func newUninstall(cfg *action.Configuration) *action.Uninstall {
 
 func (h *HelmSPIREProvider) uninstallSPIRE() (*release.UninstallReleaseResponse, error) {
 	client := newUninstall(h.cfg)
-	return uninstallChart(h.cfg, client, SPIREChartName)
+	return uninstallChart(h.cfg, client, h.spireChartName)
 }
 
 func (h *HelmSPIREProvider) uninstallSPIRECRDs() (*release.UninstallReleaseResponse, error) {
 	client := newUninstall(h.cfg)
-	return uninstallChart(h.cfg, client, SPIRECRDsChartName)
+	return uninstallChart(h.cfg, client, h.spireCRDChartName)
 }
 
 func uninstallChart(cfg *action.Configuration, client *action.Uninstall, chartName string) (*release.UninstallReleaseResponse, error) {

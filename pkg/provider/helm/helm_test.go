@@ -22,8 +22,8 @@ func TestHelmSPIREProvider(t *testing.T) {
 
 	p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, spireValues, spireCRDsValues, WithKubeConfig(kubeConfig))
 	assert.Nil(t, err)
-	assert.Equal(t, p.SPIREVersion, "0.24.5")
-	assert.Equal(t, p.SPIRECRDsVersion, "0.5.0")
+	assert.Equal(t, p.spireChartVersion, "0.24.5")
+	assert.Equal(t, p.spireCRDChartVersion, "0.5.0")
 	assert.Equal(t, cluster.GetName(), p.cluster.GetName())
 	assert.Equal(t, kubeConfig, p.settings.KubeConfig)
 }
@@ -31,6 +31,12 @@ func TestHelmSPIREProvider(t *testing.T) {
 func TestNewHelmSPIREProvider_Options(t *testing.T) {
 	cluster := &clusterpb.Cluster{Name: fixtures.StringPtr("fake-cluster")}
 	repoURL := "https://example.com/charts"
+
+	t.Run("with custom chart version", func(t *testing.T) {
+		p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, nil, nil, WithSPIREChartVersion("1.0.0"))
+		require.NoError(t, err)
+		assert.Equal(t, "1.0.0", p.spireChartVersion)
+	})
 
 	t.Run("with custom repo URL", func(t *testing.T) {
 		p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, nil, nil, WithSPIRERepositoryURL(repoURL))
