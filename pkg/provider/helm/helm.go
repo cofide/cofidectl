@@ -54,8 +54,8 @@ type HelmSPIREProvider struct {
 	spireCRDsValues     map[string]any
 	trustZoneName       string
 	cluster             *clusterpb.Cluster
-	SPIRERepositoryURL  string
-	SPIRERepositoryName string
+	spireRepositoryURL  string
+	spireRepositoryName string
 }
 
 // HelmSPIREProviderOption is a function that configures a HelmSPIREProvider.
@@ -74,7 +74,7 @@ func WithKubeConfig(kubeConfig string) HelmSPIREProviderOption {
 func WithSPIRERepositoryURL(url string) HelmSPIREProviderOption {
 	return func(p *HelmSPIREProvider) {
 		if url != "" {
-			p.SPIRERepositoryURL = url
+			p.spireRepositoryURL = url
 		}
 	}
 }
@@ -83,7 +83,7 @@ func WithSPIRERepositoryURL(url string) HelmSPIREProviderOption {
 func WithSPIRERepositoryName(name string) HelmSPIREProviderOption {
 	return func(p *HelmSPIREProvider) {
 		if name != "" {
-			p.SPIRERepositoryName = name
+			p.spireRepositoryName = name
 		}
 	}
 }
@@ -102,8 +102,8 @@ func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *cl
 		spireCRDsValues:     spireCRDsValues,
 		trustZoneName:       trustZoneName,
 		cluster:             cluster,
-		SPIRERepositoryURL:  SPIRERepositoryURL,
-		SPIRERepositoryName: SPIRERepositoryName,
+		spireRepositoryURL:  SPIRERepositoryURL,
+		spireRepositoryName: SPIRERepositoryName,
 	}
 
 	for _, opt := range opts {
@@ -142,8 +142,8 @@ func (h *HelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Status) e
 		}
 
 		entry := &repo.Entry{
-			Name: h.SPIRERepositoryName,
-			URL:  h.SPIRERepositoryURL,
+			Name: h.spireRepositoryName,
+			URL:  h.spireRepositoryURL,
 		}
 
 		chartRepo, err := repo.NewChartRepository(entry, getter.All(h.settings))
