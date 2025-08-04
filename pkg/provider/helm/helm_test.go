@@ -26,6 +26,7 @@ func TestHelmSPIREProvider(t *testing.T) {
 	assert.Equal(t, p.spireCRDChartVersion, "0.5.0")
 	assert.Equal(t, cluster.GetName(), p.cluster.GetName())
 	assert.Equal(t, kubeConfig, p.settings.KubeConfig)
+	assert.True(t, p.installCRDs)
 }
 
 func TestNewHelmSPIREProvider_Options(t *testing.T) {
@@ -55,6 +56,12 @@ func TestNewHelmSPIREProvider_Options(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, repoURL, p.spireRepositoryURL)
 		assert.Equal(t, "my-custom-repo", p.spireRepositoryName)
+	})
+
+	t.Run("with install SPIRE CRDs", func(t *testing.T) {
+		p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, nil, nil, WithInstallSPIRECRDs(false))
+		require.NoError(t, err)
+		assert.False(t, p.installCRDs)
 	})
 }
 

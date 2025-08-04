@@ -58,6 +58,7 @@ type HelmSPIREProvider struct {
 	cluster              *clusterpb.Cluster
 	spireRepositoryURL   string
 	spireRepositoryName  string
+	installCRDs          bool
 }
 
 // HelmSPIREProviderOption is a function that configures a HelmSPIREProvider.
@@ -126,6 +127,13 @@ func WithSPIRECRDChartName(name string) HelmSPIREProviderOption {
 	}
 }
 
+// WithInstallSPIRECRDs sets whether the SPIRE CRDs Helm chart will be installed
+func WithInstallSPIRECRDs(install bool) HelmSPIREProviderOption {
+	return func(p *HelmSPIREProvider) {
+		p.installCRDs = install
+	}
+}
+
 func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, opts ...HelmSPIREProviderOption) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
@@ -144,6 +152,7 @@ func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *cl
 		cluster:              cluster,
 		spireRepositoryURL:   SPIRERepositoryURL,
 		spireRepositoryName:  SPIRERepositoryName,
+		installCRDs:          true,
 	}
 
 	for _, opt := range opts {
@@ -247,15 +256,17 @@ func lockPath(filePath string) string {
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) error {
 	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
-	statusCh <- sb.Ok("Installing", "Installing SPIRE CRDs")
-	_, err := h.installSPIRECRDs()
-	if err != nil {
-		statusCh <- sb.Error("Installing", "Failed to install SPIRE CRDs", err)
-		return err
+	if h.installCRDs {
+		statusCh <- sb.Ok("Installing", "Installing SPIRE CRDs")
+		_, err := h.installSPIRECRDs()
+		if err != nil {
+			statusCh <- sb.Error("Installing", "Failed to install SPIRE CRDs", err)
+			return err
+		}
 	}
 
 	statusCh <- sb.Ok("Installing", "Installing SPIRE chart")
-	_, err = h.installSPIRE()
+	_, err := h.installSPIRE()
 	if err != nil {
 		statusCh <- sb.Error("Installing", "Failed to install SPIRE chart", err)
 		return err
