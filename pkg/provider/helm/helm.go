@@ -311,7 +311,7 @@ func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) 
 func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) error {
 	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
 	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE chart")
-	_, err := h.uninstallSPIRE()
+	err := h.uninstallSPIRE()
 	if err != nil {
 		statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE chart", err)
 		return err
@@ -319,7 +319,7 @@ func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status
 
 	if h.installCRDs {
 		statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE CRDs")
-		_, err := h.uninstallSPIRECRDs()
+		err := h.uninstallSPIRECRDs()
 		if err != nil {
 			statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE CRDs", err)
 			return err
@@ -478,27 +478,28 @@ func newUninstall(cfg *action.Configuration) *action.Uninstall {
 	return uninstall
 }
 
-func (h *HelmSPIREProvider) uninstallSPIRE() (*release.UninstallReleaseResponse, error) {
+func (h *HelmSPIREProvider) uninstallSPIRE() error {
 	client := newUninstall(h.cfg)
 	return uninstallChart(h.cfg, client, h.spireChartName)
 }
 
-func (h *HelmSPIREProvider) uninstallSPIRECRDs() (*release.UninstallReleaseResponse, error) {
+func (h *HelmSPIREProvider) uninstallSPIRECRDs() error {
 	client := newUninstall(h.cfg)
 	return uninstallChart(h.cfg, client, h.spireCRDChartName)
 }
 
-func uninstallChart(cfg *action.Configuration, client *action.Uninstall, chartName string) (*release.UninstallReleaseResponse, error) {
+func uninstallChart(cfg *action.Configuration, client *action.Uninstall, chartName string) error {
 	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
 	if err != nil {
-		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
+		return fmt.Errorf("cannot determine chart installation status: %s", err)
 	}
 
 	if !alreadyInstalled {
-		return nil, fmt.Errorf("%v not installed", chartName)
+		return nil
 	}
 
-	return client.Run(chartName)
+	_, err = client.Run(chartName)
+	return err
 }
 
 func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool, error) {

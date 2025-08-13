@@ -162,6 +162,10 @@ function main() {
   run_tests
   show_workload_status
   check_overridden_values
+  # Check for idempotence of up
+  up
+  down
+  # Check for idempotence of down
   down
   delete
   check_delete
