@@ -254,7 +254,7 @@ func GetRegistrationEntries(ctx context.Context, client *kubeutil.Client) (map[s
 		for _, selector := range selectors {
 			if selector.Type == k8sSelectorType {
 				if !strings.HasPrefix(selector.Value, k8sPodUIDSelectorPrefix) {
-					slog.Warn(fmt.Sprintf("failed to find the k8s:pod-uid selector value for workload with workload id: %s", registrationEntry.Id))
+					slog.Warn("Failed to find the k8s:pod-uid selector value for workload", "workload_id", registrationEntry.Id)
 					continue
 				}
 				podUID = strings.TrimPrefix(selector.Value, k8sPodUIDSelectorPrefix)
