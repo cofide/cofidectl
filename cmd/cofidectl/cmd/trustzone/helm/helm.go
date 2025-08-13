@@ -81,7 +81,9 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() {
+					_ = f.Close()
+				}()
 				reader = f
 			}
 			values, err := readValues(reader)
@@ -180,6 +182,7 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 			}
 
 			var writer io.Writer
+			var closer io.Closer
 			if opts.outputPath == "-" {
 				writer = os.Stdout
 			} else {
@@ -187,11 +190,19 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				closer = f
 				writer = f
 			}
-			if err := writeValues(values, writer); err != nil {
+			err = writeValues(values, writer)
+			var closeErr error
+			if closer != nil {
+				closeErr = closer.Close()
+			}
+			if err != nil {
 				return err
+			}
+			if closeErr != nil {
+				return closeErr
 			}
 			if opts.outputPath != "-" {
 				fmt.Printf("Wrote Helm values to %s\n", opts.outputPath)
@@ -235,6 +246,10 @@ func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, t
 // writeValues writes values in YAML format to the specified writer.
 func writeValues(values map[string]any, writer io.Writer) error {
 	encoder := yaml.NewEncoder(writer)
-	defer encoder.Close()
-	return encoder.Encode(values)
+	err := encoder.Encode(values)
+	closeErr := encoder.Close()
+	if err != nil {
+		return err
+	}
+	return closeErr
 }
