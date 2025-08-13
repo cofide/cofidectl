@@ -3,6 +3,7 @@ version: "2"
 linters:
   enable:
     - goheader
+    - sloglint
   settings:
     goheader:
       values:
@@ -14,3 +15,10 @@ linters:
       template: |-
         Copyright {{ VALID_YEAR }} {{ COMPANY }}.
         SPDX-License-Identifier: Apache-2.0
+    sloglint:
+      # slog messages must be static strings
+      static-msg: true
+      # slog messages must be Capitalised
+      msg-style: capitalized
+      # slog attribute keys must be in snake_case
+      key-naming-case: snake
