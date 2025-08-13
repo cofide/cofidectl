@@ -310,18 +310,20 @@ func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) 
 // The action is performed synchronously and status is streamed through the provided status channel.
 func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) error {
 	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
-	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE CRDs")
-	_, err := h.uninstallSPIRECRDs()
-	if err != nil {
-		statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE CRDs", err)
-		return err
-	}
-
 	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE chart")
-	_, err = h.uninstallSPIRE()
+	_, err := h.uninstallSPIRE()
 	if err != nil {
 		statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE chart", err)
 		return err
+	}
+
+	if h.installCRDs {
+		statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE CRDs")
+		_, err := h.uninstallSPIRECRDs()
+		if err != nil {
+			statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE CRDs", err)
+			return err
+		}
 	}
 
 	statusCh <- sb.Done("Uninstalled", "Uninstallation completed")
