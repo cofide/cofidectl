@@ -390,7 +390,7 @@ func installChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, err
 	}
 
-	options, err := client.ChartPathOptions.LocateChart(
+	options, err := client.LocateChart(
 		chartRef,
 		settings,
 	)
@@ -434,7 +434,7 @@ func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action
 		return nil, err
 	}
 
-	options, err := client.ChartPathOptions.LocateChart(
+	options, err := client.LocateChart(
 		chartRef,
 		settings,
 	)

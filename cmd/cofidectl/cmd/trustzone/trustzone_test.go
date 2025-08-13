@@ -35,10 +35,10 @@ const fakeOIDCIssuerURL = "https://some.oidc"
 func TestValidateOpts(t *testing.T) {
 	// https://github.com/spiffe/spiffe/blob/main/standards/SPIFFE-ID.md#21-trust-domain
 	tt := []struct {
-		name        string
-		domain      string
+		name          string
+		domain        string
 		oidcIssuerURL string
-		errExpected bool
+		errExpected   bool
 	}{
 		{domain: "example.com", errExpected: false},
 		{domain: "example-domain.com", errExpected: false},
@@ -78,13 +78,13 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 			trustZoneName: "tz3",
 		},
 		{
-			name: "success with OIDC issuer",
-			trustZoneName: "tz-oidc",
+			name:           "success with OIDC issuer",
+			trustZoneName:  "tz-oidc",
 			withOIDCIssuer: true,
 		},
 		{
-			name: "success with kube CA cert",
-			trustZoneName: "tz-ca-cert",
+			name:           "success with kube CA cert",
+			trustZoneName:  "tz-ca-cert",
 			withKubeCACert: true,
 		},
 		{
@@ -127,7 +127,10 @@ func TestTrustZoneCommand_addTrustZone(t *testing.T) {
 
 				tmpFile, err := os.CreateTemp("", "cert-*.pem")
 				require.NoError(t, err)
-				defer tmpFile.Close()
+				defer func() {
+					err := tmpFile.Close()
+					require.NoError(t, err)
+				}()
 
 				_, err = tmpFile.WriteString(caString)
 				require.NoError(t, err)

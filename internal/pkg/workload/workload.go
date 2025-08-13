@@ -263,7 +263,9 @@ func getDebugContainerLogs(ctx context.Context, client *kubeutil.Client, podName
 	if err != nil {
 		return "", err
 	}
-	defer logs.Close()
+	defer func() {
+		_ = logs.Close()
+	}()
 
 	// Read the logs
 	buf := new(bytes.Buffer)

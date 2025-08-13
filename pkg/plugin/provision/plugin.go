@@ -204,7 +204,9 @@ func (s *GRPCServer) Deploy(req *provisionpb.DeployRequest, stream grpc.ServerSt
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	opts := DeployOpts{
 		KubeCfgFile:  req.GetKubeCfgFile(),
@@ -230,7 +232,9 @@ func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.Serv
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	opts := TearDownOpts{
 		KubeCfgFile:  req.GetKubeCfgFile(),
@@ -256,7 +260,9 @@ func (s *GRPCServer) GetHelmValues(ctx context.Context, req *provisionpb.GetHelm
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	opts := GetHelmValuesOpts{
 		ClusterID: req.GetClusterId(),

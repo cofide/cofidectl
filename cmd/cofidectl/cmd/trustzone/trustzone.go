@@ -386,6 +386,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 	if installed, err := prov.CheckIfAlreadyInstalled(); err != nil {
 		return err
 	} else if !installed {
+		//nolint:staticcheck // ST1005: error strings should not be capitalized
 		return errors.New("Cofide configuration has not been installed. Have you run cofidectl up?")
 	}
 

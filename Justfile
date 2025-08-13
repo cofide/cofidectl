@@ -16,7 +16,7 @@ test *args:
 test-race: (test "--" "-race")
 
 lint *args:
-    golangci-lint run --show-stats {{args}}
+    golangci-lint run {{args}}
 
 install-kind:
     tests/integration/install-kind.sh

@@ -66,9 +66,6 @@ func TestNewHelmSPIREProvider_Options(t *testing.T) {
 }
 
 func TestGetChartRef(t *testing.T) {
-	originalPath := os.Getenv("HELM_REPO_PATH")
-	defer os.Setenv("HELM_REPO_PATH", originalPath)
-
 	tests := []struct {
 		name            string
 		repoName        string
@@ -162,9 +159,17 @@ func TestGetChartRef(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.helmRepoPathSet {
-				os.Setenv("HELM_REPO_PATH", tt.helmRepoPath)
+				t.Setenv("HELM_REPO_PATH", tt.helmRepoPath)
 			} else {
-				os.Unsetenv("HELM_REPO_PATH")
+				// t.Setenv cannot unset an environment variable.
+				// To correctly test the "unset" case, we must manually unset it
+				// if it exists, and restore it afterwards. t.Cleanup is perfect for this.
+				if val, ok := os.LookupEnv("HELM_REPO_PATH"); ok {
+					require.NoError(t, os.Unsetenv("HELM_REPO_PATH"))
+					t.Cleanup(func() {
+						require.NoError(t, os.Setenv("HELM_REPO_PATH", val))
+					})
+				}
 			}
 
 			got, err := getChartRef(tt.repoName, tt.chartName)
