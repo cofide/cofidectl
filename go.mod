@@ -1,6 +1,6 @@
 module github.com/cofide/cofidectl
 
-go 1.24.4
+go 1.24.6
 
 require (
 	buf.build/go/protoyaml v0.6.0
