@@ -581,6 +581,14 @@ func validateOIDCIssuerURL(oidcIssuerURL string) (string, error) {
 		return "", fmt.Errorf("URL must include a host")
 	}
 
+	if u.RawQuery != "" {
+		return "", fmt.Errorf("URL must not have a query component")
+	}
+
+	if u.Fragment != "" {
+		return "", fmt.Errorf("URL must not have a fragment component")
+	}
+
 	// Normalize by removing any trailing slash.
-	return strings.TrimSuffix(oidcIssuerURL, "/"), nil
+	return strings.TrimRight(oidcIssuerURL, "/"), nil
 }
