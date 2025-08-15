@@ -12,6 +12,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
@@ -589,5 +590,6 @@ func validateAndParseOIDCIssuerURL(oidcIssuerURL string) (string, error) {
 		return "", fmt.Errorf("URL must not have a fragment component")
 	}
 
+	u.Path = strings.TrimRight(u.Path, "/")
 	return u.String(), nil
 }
