@@ -12,7 +12,6 @@ import (
 	"os"
 	"slices"
 	"strconv"
-	"strings"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
@@ -553,7 +552,8 @@ func validateOpts(opts addOpts) error {
 	if err != nil {
 		return err
 	}
-	normalisedURL, err := validateOIDCIssuerURL(opts.kubernetesClusterOIDCIssuerURL)
+
+	normalisedURL, err := validateAndParseOIDCIssuerURL(opts.kubernetesClusterOIDCIssuerURL)
 	if err != nil {
 		return fmt.Errorf("invalid --kubernetes-oidc-issuer: %w", err)
 	}
@@ -562,7 +562,7 @@ func validateOpts(opts addOpts) error {
 	return nil
 }
 
-func validateOIDCIssuerURL(oidcIssuerURL string) (string, error) {
+func validateAndParseOIDCIssuerURL(oidcIssuerURL string) (string, error) {
 	// It's an optional flag, so if it's empty, it's valid.
 	if oidcIssuerURL == "" {
 		return "", nil
@@ -589,6 +589,5 @@ func validateOIDCIssuerURL(oidcIssuerURL string) (string, error) {
 		return "", fmt.Errorf("URL must not have a fragment component")
 	}
 
-	// Normalize by removing any trailing slash.
-	return strings.TrimRight(oidcIssuerURL, "/"), nil
+	return u.String(), nil
 }
