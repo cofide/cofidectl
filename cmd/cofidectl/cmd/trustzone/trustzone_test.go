@@ -53,6 +53,8 @@ func TestValidateOpts(t *testing.T) {
 		{domain: "valid.com", oidcIssuerURL: "https://validwithport.oidc:644", errExpected: false},
 		{domain: "valid.com", oidcIssuerURL: "h://invalid.oidc", errExpected: true},
 		{domain: "INVALID.COM", oidcIssuerURL: "https://valid.oidc", errExpected: true},
+		{domain: "valid.com", oidcIssuerURL: "http://valid.oidc", errExpected: true},
+		{domain: "valid.com", oidcIssuerURL: "https://valid.oidc/", errExpected: false},
 	}
 
 	for _, tc := range tt {
