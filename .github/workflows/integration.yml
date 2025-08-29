@@ -28,7 +28,7 @@ jobs:
         run: just install-kind
 
       - name: Install ko
-        uses: ko-build/setup-ko@v0.6
+        uses: ko-build/setup-ko@v0.9
         env:
           KO_DOCKER_REPO: kind.local
 
@@ -70,7 +70,7 @@ jobs:
         run: just install-kind
 
       - name: Install ko
-        uses: ko-build/setup-ko@v0.6
+        uses: ko-build/setup-ko@v0.9
         env:
           KO_DOCKER_REPO: kind.local
 
