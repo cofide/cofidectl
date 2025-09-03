@@ -119,10 +119,11 @@ This command will display the status of workloads in the Cofide configuration st
 `
 
 type StatusOpts struct {
-	podName       string
-	namespace     string
-	trustZone     string
-	wlVolumeMount string
+	podName                 string
+	namespace               string
+	trustZone               string
+	spiffeSocketVolumeMount string
+	spiffeSocketPath        string
 }
 
 func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
@@ -151,7 +152,8 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 	f.StringVar(&opts.podName, "pod-name", "", "Pod name for the workload")
 	f.StringVar(&opts.namespace, "namespace", "", "Namespace for the workload")
 	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone for the workload")
-	f.StringVar(&opts.wlVolumeMount, "workload-api-volume-mount", "spiffe-workload-api", "The volume mount for the Workload API socket")
+	f.StringVar(&opts.spiffeSocketVolumeMount, "spiffe-socket-volume-mount", "spiffe-workload-api", "The volume mount for the SPIFFE socket (UDS)")
+	f.StringVar(&opts.spiffeSocketPath, "spiffe-socket-path", "spiffe-workload-api", "The path to the SPIFFE socket (UDS)")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("pod-name"))
 	cobra.CheckErr(cmd.MarkFlagRequired("namespace"))
@@ -176,7 +178,7 @@ func (w *WorkloadCommand) status(ctx context.Context, ds datasource.DataSource, 
 		return err
 	}
 
-	statusCh, dataCh := getWorkloadStatus(ctx, client, opts.podName, opts.namespace, opts.wlVolumeMount)
+	statusCh, dataCh := getWorkloadStatus(ctx, client, opts.podName, opts.namespace, opts.spiffeSocketVolumeMount, opts.spiffeSocketPath)
 
 	// Create a spinner to display whilst the debug container is created and executed and logs retrieved
 	if err := statusspinner.WatchProvisionStatus(ctx, statusCh, false); err != nil {
@@ -241,14 +243,14 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 	return nil
 }
 
-func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, podName, namespace, wlVolumeMount string) (<-chan *provisionpb.Status, chan string) {
+func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, podName, namespace, spiffeSocketPath, spiffeSocketVolumeMount string) (<-chan *provisionpb.Status, chan string) {
 	statusCh := make(chan *provisionpb.Status)
 	dataCh := make(chan string, 1)
 
 	go func() {
 		defer close(statusCh)
 		defer close(dataCh)
-		workload.GetStatus(ctx, statusCh, dataCh, client, podName, namespace, wlVolumeMount)
+		workload.GetStatus(ctx, statusCh, dataCh, client, podName, namespace, spiffeSocketPath, spiffeSocketVolumeMount)
 	}()
 
 	return statusCh, dataCh

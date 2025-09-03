@@ -20,7 +20,7 @@ import (
 )
 
 const debugContainerNamePrefix = "cofidectl-debug"
-const debugContainerImage = "ghcr.io/cofide/cofidectl-debug-container:v0.2.1"
+const debugContainerImage = "ghcr.io/cofide/cofidectl-debug-container:v0.2.2-dev"
 
 type Workload struct {
 	Name             string
@@ -145,7 +145,7 @@ func GetUnregisteredWorkloads(ctx context.Context, kubeCfgFile string, kubeConte
 	return unregisteredWorkloads, nil
 }
 
-func GetStatus(ctx context.Context, statusCh chan<- *provisionpb.Status, dataCh chan string, client *kubeutil.Client, podName, namespace, wlVolumeMount string) {
+func GetStatus(ctx context.Context, statusCh chan<- *provisionpb.Status, dataCh chan string, client *kubeutil.Client, podName, namespace, spiffeSocketPath, spiffeSocketVolumeMount string) {
 	debugContainerName := fmt.Sprintf("%s-%s", debugContainerNamePrefix, rand.String(5))
 
 	statusCh <- provision.StatusOk(
@@ -153,7 +153,7 @@ func GetStatus(ctx context.Context, statusCh chan<- *provisionpb.Status, dataCh 
 		fmt.Sprintf("Waiting for ephemeral debug container to be created in %s", podName),
 	)
 
-	if err := createDebugContainer(ctx, client, podName, namespace, wlVolumeMount, debugContainerName); err != nil {
+	if err := createDebugContainer(ctx, client, podName, namespace, spiffeSocketPath, spiffeSocketVolumeMount, debugContainerName); err != nil {
 		statusCh <- provision.StatusError(
 			"Creating",
 			fmt.Sprintf("Failed waiting for ephemeral debug container to be created in %s", podName),
@@ -193,7 +193,7 @@ func GetStatus(ctx context.Context, statusCh chan<- *provisionpb.Status, dataCh 
 	)
 }
 
-func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName string, namespace string, wlVolumeMount string, debugContainerName string) error {
+func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName, namespace, spiffeSocketPath, spiffeSocketVolumeName, debugContainerName string) error {
 	pod, err := client.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -209,11 +209,18 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName 
 			VolumeMounts: []v1.VolumeMount{
 				{
 					ReadOnly:  true,
-					Name:      wlVolumeMount,
-					MountPath: fmt.Sprintf("/%s", wlVolumeMount),
+					Name:      spiffeSocketVolumeName,
+					MountPath: fmt.Sprintf("/%s", spiffeSocketVolumeName),
 				}},
 		},
 		TargetContainerName: pod.Spec.Containers[0].Name,
+	}
+
+	if spiffeSocketPath != "" {
+		debugContainer.Env = append(debugContainer.Env, v1.EnvVar{
+			Name:  "SPIFFE_ENDPOINT_SOCKET",
+			Value: spiffeSocketPath,
+		})
 	}
 
 	pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, debugContainer)
