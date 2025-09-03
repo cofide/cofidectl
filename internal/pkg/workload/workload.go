@@ -209,7 +209,7 @@ func createDebugContainer(ctx context.Context, client *kubeutil.Client, podName,
 			VolumeMounts: []v1.VolumeMount{
 				{
 					ReadOnly:  true,
-					Name:      fmt.Sprintf("/%s", spiffeSocketVolumeName),
+					Name:      spiffeSocketVolumeName,
 					MountPath: "/spiffe-workload-api",
 				}},
 		},
