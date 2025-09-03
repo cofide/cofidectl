@@ -178,7 +178,7 @@ func (w *WorkloadCommand) status(ctx context.Context, ds datasource.DataSource, 
 		return err
 	}
 
-	statusCh, dataCh := getWorkloadStatus(ctx, client, opts.podName, opts.namespace, opts.spiffeSocketVolumeMount, opts.spiffeSocketPath)
+	statusCh, dataCh := getWorkloadStatus(ctx, client, opts.podName, opts.namespace, opts.spiffeSocketPath, opts.spiffeSocketVolumeMount)
 
 	// Create a spinner to display whilst the debug container is created and executed and logs retrieved
 	if err := statusspinner.WatchProvisionStatus(ctx, statusCh, false); err != nil {
