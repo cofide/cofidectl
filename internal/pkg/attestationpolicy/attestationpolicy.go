@@ -48,6 +48,12 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 				clusterSPIFFEID["podSelector"] = selector
 			}
 		}
+		if kubernetes.DnsNameTemplates != nil {
+			dnsNameTemplates := getAPDNSNameTemplatesHelmConfig(kubernetes.DnsNameTemplates)
+			if dnsNameTemplates != nil {
+				clusterSPIFFEID["dnsNameTemplates"] = dnsNameTemplates
+			}
+		}
 	case *attestation_policy_proto.AttestationPolicy_Static:
 		trustZoneID := binding.GetTrustZoneId()
 
@@ -141,4 +147,13 @@ func formatSelectors(selectors []*types.Selector) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+func getAPDNSNameTemplatesHelmConfig(dnsNameTemplates []string) []string {
+	// TODO: Consider validation of each dnsNameTemplate entry
+	// here before adding to collection injected into Helm config
+	if len(dnsNameTemplates) == 0 {
+		return nil
+	}
+	return dnsNameTemplates
 }
