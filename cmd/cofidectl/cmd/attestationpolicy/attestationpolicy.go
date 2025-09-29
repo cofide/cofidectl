@@ -227,9 +227,8 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 				}
 				kubernetes.PodSelector = selector
 			}
-			if opts.dnsNameTemplates != nil {
-				kubernetes.DnsNameTemplates = opts.dnsNameTemplates
-			}
+
+			kubernetes.DnsNameTemplates = opts.dnsNameTemplates
 
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
 				Name: opts.name,
