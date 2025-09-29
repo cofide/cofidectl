@@ -251,7 +251,7 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 	f.StringVar(&opts.name, "name", "", "Name to use for the attestation policy")
 	f.StringVar(&opts.namespace, "namespace", "", "Namespace name selector")
 	f.StringVar(&opts.podLabel, "pod-label", "", "Pod label selector in Kubernetes label selector format")
-	f.StringSliceVar(&opts.dnsNameTemplates, "dnsNameTemplates", []string{}, "Additional DNS SAN entries for SVIDs issued by this AP. Must conform to the SPIRE DNS Name Template format")
+	f.StringSliceVar(&opts.dnsNameTemplates, "dnsNameTemplates", []string{}, "Additional DNS SAN entries for SVIDs issued by this AP. Must conform to the SPIRE controller manager DNS Name Template format")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("name"))
 
