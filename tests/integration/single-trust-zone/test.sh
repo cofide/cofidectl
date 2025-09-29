@@ -34,7 +34,7 @@ function init() {
 function configure() {
   ./cofidectl trust-zone add $TRUST_ZONE --trust-domain $TRUST_DOMAIN --kubernetes-context $K8S_CLUSTER_CONTEXT --kubernetes-cluster $K8S_CLUSTER_NAME --profile kubernetes
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
-  ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL
+  ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL --dnsNameTemplates example.namespace.svc.cluster.local
   ./cofidectl attestation-policy add static --name static-namespace --spiffeid spiffe://$TRUST_DOMAIN/ns/$NAMESPACE_POLICY_NAMESPACE/sa/ping-pong-client --selectors k8s:ns:$NAMESPACE_POLICY_NAMESPACE --yes
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy namespace
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy pod-label
@@ -136,6 +136,15 @@ function check_overridden_value() {
   fi
 }
 
+function check_dns_name_templates() {
+  expected="- example.namespace.svc.cluster.local" 
+  value=$(kubectl get clusterspiffeids.spire.spiffe.io spire-mgmt-spire-pod-label -o yaml | yq '.spec.dnsNameTemplates')
+  if [[ $value != $expected ]]; then
+    echo "Error: Did not find expected DNS name templates value: expected $expected, actual $value"
+    return 1
+  fi
+}
+
 function down() {
   ./cofidectl down
 }
@@ -162,6 +171,7 @@ function main() {
   run_tests
   show_workload_status
   check_overridden_values
+  check_dns_name_templates
   # Check for idempotence of up
   up
   down
