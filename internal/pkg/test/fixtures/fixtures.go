@@ -257,6 +257,20 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 			},
 		},
 	},
+	"ap5": {
+		Id:   StringPtr("ap5-id"),
+		Name: "ap5",
+		Policy: &attestation_policy_proto.AttestationPolicy_Kubernetes{
+			Kubernetes: &attestation_policy_proto.APKubernetes{
+				NamespaceSelector: &attestation_policy_proto.APLabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": "ns5"},
+				},
+				DnsNameTemplates: []string{
+					"example.namespace.svc.cluster.local",
+				},
+			},
+		},
+	},
 }
 
 var apBindingFixtures map[string]*ap_binding_proto.APBinding = map[string]*ap_binding_proto.APBinding{

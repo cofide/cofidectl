@@ -71,6 +71,7 @@
 	kubernetes?: {
 		namespace_selector?: #APLabelSelector
 		pod_selector?: #APLabelSelector
+		dns_name_templates?: [...string]
 	}
 }
 

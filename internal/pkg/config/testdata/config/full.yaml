@@ -102,6 +102,14 @@ attestation_policies:
         selectors:
             - type: k8s
               value: ns:foo
+    - id: ap5-id
+      name: ap5
+      kubernetes:
+        namespace_selector:
+            match_labels:
+                kubernetes.io/metadata.name: ns5
+        dns_name_templates:
+            - example.namespace.svc.cluster.local
 plugin_config:
     plugin1:
         list-cfg:
