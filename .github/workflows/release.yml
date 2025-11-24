@@ -20,7 +20,7 @@ jobs:
         goarch: [amd64, arm64]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       # There is a race condition in the gh CLI that means that this can fail if the file already exists, even with --clobber.
       # Upload as a separate step in only one of the matrix jobs.
       - name: Upload artifacts
