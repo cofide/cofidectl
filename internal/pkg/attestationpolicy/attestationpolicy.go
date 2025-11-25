@@ -48,6 +48,9 @@ func (ap *AttestationPolicy) GetHelmConfig(source datasource.DataSource, binding
 				clusterSPIFFEID["podSelector"] = selector
 			}
 		}
+		if kubernetes.GetSpiffeIdPathTemplate() != "" {
+			clusterSPIFFEID["spiffeIDTemplate"] = "spiffe://{{ .TrustDomain }}/" + kubernetes.GetSpiffeIdPathTemplate()
+		}
 		if kubernetes.DnsNameTemplates != nil {
 			dnsNameTemplates := getAPDNSNameTemplatesHelmConfig(kubernetes.DnsNameTemplates)
 			if dnsNameTemplates != nil {

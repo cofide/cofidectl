@@ -67,6 +67,8 @@ github.com/cockroachdb/apd/v3 v3.2.1 h1:U+8j7t0axsIgvQUqthuNm82HIrYXodOV2iWLWtEa
 github.com/cockroachdb/apd/v3 v3.2.1/go.mod h1:klXJcjp+FffLTHlhIG69tezTDvdP065naDsHzKhYSqc=
 github.com/cofide/cofide-api-sdk v0.32.0 h1:imZUf+kqx+IKkg48p/TtSqKTCu5baw8fcO4YfcMivm0=
 github.com/cofide/cofide-api-sdk v0.32.0/go.mod h1:ibKyC0+83kdBEWgHi5ZWQOhagblAdpnLtc/uERp3wMI=
+github.com/cofide/cofide-api-sdk v0.33.0 h1:N+V82BxA4uIOvOJe0AprtozujoX7aYKNY4+gCE7JxpM=
+github.com/cofide/cofide-api-sdk v0.33.0/go.mod h1:NfN6jHTJFU/gCVfKpF4R5brhFKgCK/kyzteUja8NV8Q=
 github.com/containerd/containerd v1.7.29 h1:90fWABQsaN9mJhGkoVnuzEY+o1XDPbg9BTC9QTAHnuE=
 github.com/containerd/containerd v1.7.29/go.mod h1:azUkWcOvHrWvaiUjSQH0fjzuHIwSPg1WL5PshGP4Szs=
 github.com/containerd/errdefs v0.3.0 h1:FSZgGOeK4yuT/+DnF07/Olde/q4KBoMsaamhXxIMDp4=

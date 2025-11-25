@@ -71,6 +71,7 @@
 	kubernetes?: {
 		namespace_selector?: #APLabelSelector
 		pod_selector?: #APLabelSelector
+		spiffe_id_path_template?: string
 		dns_name_templates?: [...string]
 	}
 }
