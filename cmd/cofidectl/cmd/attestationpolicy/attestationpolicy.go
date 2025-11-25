@@ -195,10 +195,11 @@ This command will add a new Kubernetes attestation policy to the Cofide configur
 `
 
 type AddK8sOpts struct {
-	name             string
-	namespace        string
-	podLabel         string
-	dnsNameTemplates []string
+	name                 string
+	namespace            string
+	podLabel             string
+	spiffeIDPathTemplate string
+	dnsNameTemplates     []string
 }
 
 func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
@@ -228,6 +229,7 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 				kubernetes.PodSelector = selector
 			}
 
+			kubernetes.SpiffeIdPathTemplate = &opts.spiffeIDPathTemplate
 			kubernetes.DnsNameTemplates = opts.dnsNameTemplates
 
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
@@ -251,6 +253,7 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 	f.StringVar(&opts.name, "name", "", "Name to use for the attestation policy")
 	f.StringVar(&opts.namespace, "namespace", "", "Namespace name selector")
 	f.StringVar(&opts.podLabel, "pod-label", "", "Pod label selector in Kubernetes label selector format")
+	f.StringVar(&opts.spiffeIDPathTemplate, "spiffeid-path-template", "", "Custom SPIFFE ID path template for SVIDs issued by this AP")
 	f.StringSliceVar(&opts.dnsNameTemplates, "dnsNameTemplates", []string{}, "Additional DNS SAN entries for SVIDs issued by this AP. Must conform to the SPIRE controller manager DNS Name Template format")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("name"))
