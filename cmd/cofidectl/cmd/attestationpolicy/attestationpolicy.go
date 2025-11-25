@@ -229,10 +229,7 @@ func (c *AttestationPolicyCommand) GetAddK8sCommand() *cobra.Command {
 				kubernetes.PodSelector = selector
 			}
 
-			if opts.spiffeIDPathTemplate != "" {
-				kubernetes.SpiffeIdPathTemplate = &opts.spiffeIDPathTemplate
-			}
-
+			kubernetes.SpiffeIdPathTemplate = &opts.spiffeIDPathTemplate
 			kubernetes.DnsNameTemplates = opts.dnsNameTemplates
 
 			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
