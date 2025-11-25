@@ -34,7 +34,7 @@ function init() {
 function configure() {
   ./cofidectl trust-zone add $TRUST_ZONE --trust-domain $TRUST_DOMAIN --no-cluster
   ./cofidectl cluster add $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE --kubernetes-context $K8S_CLUSTER_CONTEXT --profile kubernetes
-  ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE
+  ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE --spiffeid-path-template 'ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}'
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL --dnsNameTemplates example.namespace.svc.cluster.local
   ./cofidectl attestation-policy add static --name static-namespace --spiffeid spiffe://$TRUST_DOMAIN/ns/$NAMESPACE_POLICY_NAMESPACE/sa/ping-pong-client --selectors k8s:ns:$NAMESPACE_POLICY_NAMESPACE --yes
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy namespace
