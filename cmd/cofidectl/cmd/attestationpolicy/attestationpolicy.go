@@ -365,10 +365,6 @@ func parseSelectors(selectorStrings []string) ([]*types.Selector, error) {
 	selectors := make([]*types.Selector, len(selectorStrings))
 
 	for i, s := range selectorStrings {
-		if strings.Count(s, ":") > 2 {
-			return nil, fmt.Errorf("invalid selector format %q, too many ':' characters, expected 'type:key:value'", s)
-		}
-
 		selectorParts := strings.SplitN(s, ":", 3)
 		if len(selectorParts) != 3 {
 			return nil, fmt.Errorf("invalid selector format %q, expected 'type:key:value'", s)

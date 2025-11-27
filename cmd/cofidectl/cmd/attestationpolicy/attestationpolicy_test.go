@@ -242,12 +242,6 @@ func Test_parseSelectors(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:            "invalid selector format - too many colons",
-			selectorStrings: []string{"k8s:ns:foo:bar:baz"},
-			wantErr:         true,
-			wantErrString:   "invalid selector format \"k8s:ns:foo:bar:baz\", too many ':' characters, expected 'type:key:value'",
-		},
-		{
 			name:            "invalid selector format - too few parts",
 			selectorStrings: []string{"k8s:ns"},
 			wantErr:         true,
