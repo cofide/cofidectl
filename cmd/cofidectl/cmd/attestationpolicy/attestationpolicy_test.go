@@ -242,6 +242,17 @@ func Test_parseSelectors(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:            "colons are fine also in value",
+			selectorStrings: []string{"k8s:ns:foo:bar:baz"},
+			want: []*types.Selector{
+				{
+					Type:  "k8s",
+					Value: "ns:foo:bar:baz",
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name:            "invalid selector format - too few parts",
 			selectorStrings: []string{"k8s:ns"},
 			wantErr:         true,
