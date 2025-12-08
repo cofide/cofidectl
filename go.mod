@@ -15,7 +15,7 @@ require (
 	github.com/hashicorp/go-plugin v1.7.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spiffe/go-spiffe/v2 v2.6.0
 	github.com/spiffe/spire-api-sdk v1.13.3
 	github.com/stretchr/testify v1.11.1
