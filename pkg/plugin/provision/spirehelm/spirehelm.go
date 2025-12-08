@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
@@ -96,8 +97,12 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 		return err
 	}
 
-	if err := h.AddSPIRERepository(ctx, opts.KubeCfgFile, statusCh); err != nil {
-		return err
+	if repo, ok := os.LookupEnv("HELM_CHART_REPO"); ok && repo != "" {
+		statusCh <- provision.StatusOk("Deploying", fmt.Sprintf("Found HELM_CHART_REPO value, using local chart: %s", repo))
+	} else {
+		if err := h.AddSPIRERepository(ctx, opts.KubeCfgFile, statusCh); err != nil {
+			return err
+		}
 	}
 
 	if err := h.InstallSPIREStack(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
