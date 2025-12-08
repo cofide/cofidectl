@@ -97,8 +97,8 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 		return err
 	}
 
-	if repo, ok := os.LookupEnv("HELM_CHART_REPO"); ok && repo != "" {
-		statusCh <- provision.StatusOk("Deploying", fmt.Sprintf("Found HELM_CHART_REPO value, using local chart: %s", repo))
+	if repo, ok := os.LookupEnv("HELM_REPO_PATH"); ok && repo != "" {
+		statusCh <- provision.StatusOk("Deploying", fmt.Sprintf("Found HELM_REPO_PATH value, using local chart: %s", repo))
 	} else {
 		if err := h.AddSPIRERepository(ctx, opts.KubeCfgFile, statusCh); err != nil {
 			return err
