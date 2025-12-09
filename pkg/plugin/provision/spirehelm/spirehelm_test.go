@@ -5,6 +5,8 @@ package spirehelm
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
@@ -110,6 +112,35 @@ func TestSpireHelm_Deploy_specificTrustZone(t *testing.T) {
 	want := []*provisionpb.Status{
 		provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
 		provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
+		provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
+		provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
+		provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
+		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
+		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
+		provision.StatusOk("Configuring", "Applying post-installation configuration for local2 in tz2"),
+		provision.StatusDone("Configured", "Post-installation configuration completed for local2 in tz2"),
+		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
+		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
+	}
+	assert.EqualExportedValues(t, want, statuses)
+}
+
+func TestSpireHelm_Deploy_with_env_HELM_REPO_PATH(t *testing.T) {
+	providerFactory := newFakeHelmSPIREProviderFactory()
+	spireAPIFactory := newFakeSPIREAPIFactory()
+	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
+	ds := newFakeDataSource(t, defaultConfig())
+
+	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZoneIDs: []string{"tz2-id"}}
+	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
+	require.NoError(t, err, err)
+
+	dummyPath := "/some/non/zero/path"
+	os.Setenv("HELM_REPO_PATH", dummyPath)
+
+	statuses := collectStatuses(statusCh)
+	want := []*provisionpb.Status{
+		provision.StatusOk("Deploying", fmt.Sprintf("Found HELM_REPO_PATH value, using local chart: %s", dummyPath)),
 		provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
 		provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
 		provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
