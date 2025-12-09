@@ -6,7 +6,6 @@ package spirehelm
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
@@ -136,7 +135,7 @@ func TestSpireHelm_Deploy_with_env_HELM_REPO_PATH(t *testing.T) {
 	require.NoError(t, err, err)
 
 	dummyPath := "/some/non/zero/path"
-	os.Setenv("HELM_REPO_PATH", dummyPath)
+	t.Setenv("HELM_REPO_PATH", dummyPath)
 
 	statuses := collectStatuses(statusCh)
 	want := []*provisionpb.Status{
