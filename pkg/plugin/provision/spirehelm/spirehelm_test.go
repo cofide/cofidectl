@@ -139,7 +139,7 @@ func TestSpireHelm_Deploy_with_env_HELM_REPO_PATH(t *testing.T) {
 
 	statuses := collectStatuses(statusCh)
 	want := []*provisionpb.Status{
-		provision.StatusOk("Deploying", fmt.Sprintf("Found HELM_REPO_PATH value, using local chart: %s", dummyPath)),
+		provision.StatusOk("Preparing", fmt.Sprintf("Found HELM_REPO_PATH value, using local chart: %s", dummyPath)),
 		provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
 		provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
 		provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
