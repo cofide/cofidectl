@@ -13,5 +13,5 @@ cofide.yaml
 cofidectl-connect
 cofidectl-test-plugin
 
-# cofide-demos repository
-demos/cofide-demos/
+# Generated config files.
+tests/integration/external-agent/conf/

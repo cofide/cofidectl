@@ -24,10 +24,8 @@ function configure() {
   ./cofidectl cluster add $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE --kubernetes-context $K8S_CLUSTER_CONTEXT --profile kubernetes
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE --spiffeid-path-template 'ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}'
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL --dnsNameTemplates example.namespace.svc.cluster.local
-  ./cofidectl attestation-policy add static --name static-namespace --spiffe-id-path ns/$NAMESPACE_POLICY_NAMESPACE/sa/ping-pong-client --parent-id-path cluster/$K8S_CLUSTER_NAME/spire/agents --selectors k8s:ns:$NAMESPACE_POLICY_NAMESPACE
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy namespace
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy pod-label
-  ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE --attestation-policy static-namespace
   override_helm_values
 }
 
@@ -104,10 +102,8 @@ function check_dns_name_templates() {
 function delete() {
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy namespace
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy pod-label
-  ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy static-namespace
   ./cofidectl attestation-policy del namespace
   ./cofidectl attestation-policy del pod-label
-  ./cofidectl attestation-policy del static-namespace
   ./cofidectl cluster del $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE
   ./cofidectl trust-zone del $TRUST_ZONE
 }
