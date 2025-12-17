@@ -78,8 +78,10 @@
 
 #APStatic: {
 	static?: {
-		spiffe_id!: string
+		spiffe_id_path!: string
+		parent_id_path!: string
 		selectors!: [...#APSelector]
+		dns_names?: [...string]
 	}
 }
 

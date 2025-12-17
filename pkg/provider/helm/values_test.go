@@ -501,18 +501,18 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							},
 							"clusterStaticEntries": Values{
 								"ap4": Values{
-									"parentID":  "spiffe://td6/cluster/local6/spire/agents",
-									"spiffeID":  "spiffe://example.com/foo",
+									"parentID":  "spiffe://td6/spire/agent/bar",
+									"spiffeID":  "spiffe://td6/foo",
 									"selectors": []string{"k8s:ns:foo"},
+									"dnsNames":  []string{"fake.example.org"},
 								},
-								"spire-agents": Values{
+								"ap6": Values{
 									"parentID": "spiffe://td6/spire/server",
+									"spiffeID": "spiffe://td6/agents/alias1",
 									"selectors": []string{
 										"k8s_psat:agent_ns:spire-system",
 										"k8s_psat:agent_sa:spire-agent",
-										"k8s_psat:cluster:local6",
 									},
-									"spiffeID": "spiffe://td6/cluster/local6/spire/agents",
 								},
 							},
 						},
@@ -1823,11 +1823,13 @@ func defaultConfig() *config.Config {
 			fixtures.AttestationPolicy("ap1"),
 			fixtures.AttestationPolicy("ap2"),
 			fixtures.AttestationPolicy("ap4"),
+			fixtures.AttestationPolicy("ap6"),
 		},
 		APBindings: []*ap_binding_proto.APBinding{
 			fixtures.APBinding("apb1"),
 			fixtures.APBinding("apb2"),
 			fixtures.APBinding("apb3"),
+			fixtures.APBinding("apb4"),
 		},
 		Federations: []*federation_proto.Federation{
 			fixtures.Federation("fed1"),

@@ -101,7 +101,7 @@ func TestValidator_ValidateInvalid(t *testing.T) {
 		{
 			name:    "missing attestation policy field",
 			data:    string(readTestConfig(t, "missing_attestation_policy_field.yaml")),
-			wantErr: "attestation_policies.0: incomplete value {name:\"ap1\",id?:string,kubernetes?:{namespace_selector?:~(#APLabelSelector),pod_selector?:~(#APLabelSelector),spiffe_id_path_template?:string,dns_name_templates?:[]}} | {name:\"ap1\",id?:string,static?:{spiffe_id!:string,selectors!:[]}}",
+			wantErr: "attestation_policies.0: incomplete value {name:\"ap1\",id?:string,kubernetes?:{namespace_selector?:~(#APLabelSelector),pod_selector?:~(#APLabelSelector),spiffe_id_path_template?:string,dns_name_templates?:[]}} | {name:\"ap1\",id?:string,static?:{spiffe_id_path!:string,parent_id_path!:string,selectors!:[],dns_names?:[]}}",
 		},
 		{
 			name:    "plugins not a map",

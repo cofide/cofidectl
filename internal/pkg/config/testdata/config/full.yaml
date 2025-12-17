@@ -98,10 +98,13 @@ attestation_policies:
     - id: ap4-id
       name: ap4
       static:
-        spiffe_id: spiffe://example.com/foo
+        spiffe_id_path: foo
+        parent_id_path: spire/agent/bar
         selectors:
             - type: k8s
               value: ns:foo
+        dns_names:
+            - fake.example.org
     - id: ap5-id
       name: ap5
       kubernetes:
@@ -110,6 +113,16 @@ attestation_policies:
                 kubernetes.io/metadata.name: ns5
         dns_name_templates:
             - example.namespace.svc.cluster.local
+    - id: ap6-id
+      name: ap6
+      static:
+        spiffe_id_path: agents/alias1
+        parent_id_path: spire/server
+        selectors:
+            - type: k8s_psat
+              value: agent_ns:spire-system
+            - type: k8s_psat
+              value: agent_sa:spire-agent
 plugin_config:
     plugin1:
         list-cfg:
@@ -145,3 +158,6 @@ ap_bindings:
     - id: apb3-id
       trust_zone_id: tz6-id
       policy_id: ap4-id
+    - id: apb4-id
+      trust_zone_id: tz6-id
+      policy_id: ap6-id

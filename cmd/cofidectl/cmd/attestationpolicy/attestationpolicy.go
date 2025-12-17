@@ -92,11 +92,10 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				podSelector,
 				"",
 				"",
+				"",
 			}
 		case *attestation_policy_proto.AttestationPolicy_Static:
 			static := p.Static
-
-			spiffeID := static.GetSpiffeId()
 			selectors, err := formatSelectors(static.GetSelectors())
 			if err != nil {
 				return err
@@ -107,7 +106,8 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				"static",
 				"",
 				"",
-				spiffeID,
+				static.GetSpiffeIdPath(),
+				static.GetParentIdPath(),
 				selectors,
 			}
 		default:
@@ -116,7 +116,7 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Kind", "Namespace Labels", "Pod Labels", "SPIFFE ID", "Selectors"})
+	table.SetHeader([]string{"Name", "Kind", "Namespace Labels", "Pod Labels", "SPIFFE ID", "Parent ID", "Selectors"})
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
@@ -266,10 +266,11 @@ This command will add a new static attestation policy to the Cofide configuratio
 `
 
 type AddStaticOpts struct {
-	name      string
-	spiffeID  string
-	selectors []string
-	yes       bool
+	name         string
+	spiffeIDPath string
+	parentIDPath string
+	selectors    []string
+	dnsNames     []string
 }
 
 func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
@@ -280,18 +281,6 @@ func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
 		Long:  attestationPolicyAddStaticCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !opts.yes {
-				fmt.Fprintf(os.Stderr, "Warning: Creating a static attestation policy necessitates the creation of an additional alias registration entry for SPIRE agent(s).\n")
-				fmt.Fprintf(os.Stderr, "This means that each SPIRE agent will receive the same SPIFFE ID.\n")
-				fmt.Fprintf(os.Stderr, "Do you want to continue? [y/N]: ")
-
-				var response string
-				_, err := fmt.Scanln(&response)
-				if err != nil || (strings.ToLower(response) != "y" && strings.ToLower(response) != "yes") {
-					return fmt.Errorf("operation cancelled")
-				}
-			}
-
 			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
 			if err != nil {
 				return err
@@ -306,8 +295,10 @@ func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
 				Name: opts.name,
 				Policy: &attestation_policy_proto.AttestationPolicy_Static{
 					Static: &attestation_policy_proto.APStatic{
-						SpiffeId:  &opts.spiffeID,
-						Selectors: selectors,
+						SpiffeIdPath: &opts.spiffeIDPath,
+						ParentIdPath: &opts.parentIDPath,
+						Selectors:    selectors,
+						DnsNames:     opts.dnsNames,
 					},
 				},
 			}
@@ -321,12 +312,14 @@ func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.name, "name", "", "Name to use for the attestation policy")
-	f.StringVar(&opts.spiffeID, "spiffeid", "", "SPIFFE ID to use for the attestation policy")
+	f.StringVar(&opts.spiffeIDPath, "spiffe-id-path", "", "SPIFFE ID path to use for the attestation policy")
+	f.StringVar(&opts.parentIDPath, "parent-id-path", "", "Parent ID path to use for the attestation policy")
 	f.StringSliceVar(&opts.selectors, "selectors", []string{}, "Workload selectors to use for the attestation policy")
-	f.BoolVarP(&opts.yes, "yes", "y", false, "Skip confirmation prompt")
+	f.StringSliceVar(&opts.dnsNames, "dns-names", []string{}, "DNS names to use for the attestation policy")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("name"))
-	cobra.CheckErr(cmd.MarkFlagRequired("spiffeid"))
+	cobra.CheckErr(cmd.MarkFlagRequired("spiffe-id-path"))
+	cobra.CheckErr(cmd.MarkFlagRequired("parent-id-path"))
 	cobra.CheckErr(cmd.MarkFlagRequired("selectors"))
 
 	return cmd

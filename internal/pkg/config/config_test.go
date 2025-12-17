@@ -50,11 +50,13 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap3"),
 					fixtures.AttestationPolicy("ap4"),
 					fixtures.AttestationPolicy("ap5"),
+					fixtures.AttestationPolicy("ap6"),
 				},
 				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
 					fixtures.APBinding("apb2"),
 					fixtures.APBinding("apb3"),
+					fixtures.APBinding("apb4"),
 				},
 				Federations: []*federation_proto.Federation{
 					fixtures.Federation("fed1"),
@@ -120,11 +122,13 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap3"),
 					fixtures.AttestationPolicy("ap4"),
 					fixtures.AttestationPolicy("ap5"),
+					fixtures.AttestationPolicy("ap6"),
 				},
 				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
 					fixtures.APBinding("apb2"),
 					fixtures.APBinding("apb3"),
+					fixtures.APBinding("apb4"),
 				},
 				Federations: []*federation_proto.Federation{
 					fixtures.Federation("fed1"),

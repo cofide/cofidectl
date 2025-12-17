@@ -247,12 +247,16 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 		Name: "ap4",
 		Policy: &attestation_policy_proto.AttestationPolicy_Static{
 			Static: &attestation_policy_proto.APStatic{
-				SpiffeId: StringPtr("spiffe://example.com/foo"),
+				SpiffeIdPath: StringPtr("foo"),
+				ParentIdPath: StringPtr("spire/agent/bar"),
 				Selectors: []*spiretypes.Selector{
 					{
 						Type:  "k8s",
 						Value: "ns:foo",
 					},
+				},
+				DnsNames: []string{
+					"fake.example.org",
 				},
 			},
 		},
@@ -267,6 +271,27 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 				},
 				DnsNameTemplates: []string{
 					"example.namespace.svc.cluster.local",
+				},
+			},
+		},
+	},
+	// A static attestation policy for a node alias entry.
+	"ap6": {
+		Id:   StringPtr("ap6-id"),
+		Name: "ap6",
+		Policy: &attestation_policy_proto.AttestationPolicy_Static{
+			Static: &attestation_policy_proto.APStatic{
+				SpiffeIdPath: StringPtr("agents/alias1"),
+				ParentIdPath: StringPtr("spire/server"),
+				Selectors: []*spiretypes.Selector{
+					{
+						Type:  "k8s_psat",
+						Value: "agent_ns:spire-system",
+					},
+					{
+						Type:  "k8s_psat",
+						Value: "agent_sa:spire-agent",
+					},
 				},
 			},
 		},
@@ -298,6 +323,12 @@ var apBindingFixtures map[string]*ap_binding_proto.APBinding = map[string]*ap_bi
 		Id:          StringPtr("apb3-id"),
 		TrustZoneId: StringPtr("tz6-id"),
 		PolicyId:    StringPtr("ap4-id"),
+		Federations: []*ap_binding_proto.APBindingFederation{},
+	},
+	"apb4": {
+		Id:          StringPtr("apb4-id"),
+		TrustZoneId: StringPtr("tz6-id"),
+		PolicyId:    StringPtr("ap6-id"),
 		Federations: []*ap_binding_proto.APBindingFederation{},
 	},
 }
