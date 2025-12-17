@@ -102,7 +102,8 @@ function show_status() {
 }
 
 function run_tests() {
-  just -f demos/Justfile prompt_namespace=no deploy-ping-pong $K8S_CLUSTER_1_CONTEXT $K8S_CLUSTER_2_CONTEXT
+  local client_spiffe_id="spiffe://$TRUST_DOMAIN_1/ns/demo/sa/ping-pong-client"
+  just -f demos/Justfile prompt_namespace=no deploy-ping-pong $K8S_CLUSTER_1_CONTEXT $client_spiffe_id $K8S_CLUSTER_2_CONTEXT
   kubectl --context $K8S_CLUSTER_1_CONTEXT wait -n demo --for=condition=Available --timeout 60s deployments/ping-pong-client
   if ! wait_for_pong; then
     echo "Timed out waiting for pong from server"
