@@ -31,6 +31,6 @@ ensure-namespace context:
         fi \
     fi
 
-# Deploy ping-pong server and client
-deploy-ping-pong client_context server_context="": (ensure-namespace client_context) (ensure-namespace server_context)
-    ping-pong/deploy.sh {{namespace}} {{client_context}} {{server_context}}
+# Deploy ping-pong server and client in Kubernetes
+deploy-ping-pong client_context client_spiffe_id server_context="": (ensure-namespace client_context) (ensure-namespace server_context)
+    ping-pong/deploy.sh {{namespace}} {{client_context}} {{client_spiffe_id}} {{server_context}}
