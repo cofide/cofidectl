@@ -9,6 +9,11 @@ jobs:
   single-trust-zone:
     name: single trust zone
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test:
+          - single-trust-zone
+          - external-agent
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -36,7 +41,7 @@ jobs:
         run: just create-kind-cluster
 
       - name: Test
-        run: just integration-test single-trust-zone
+        run: just integration-test ${{ matrix.test }}
 
   federation:
     name: federation
