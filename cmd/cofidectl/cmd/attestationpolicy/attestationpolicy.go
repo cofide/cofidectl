@@ -78,22 +78,21 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 
 // renderPolicies writes a table showing information about a list of attestation policies.
 func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) error {
-	data := make([][]string, len(policies))
-	for i, policy := range policies {
+	k8sData := make([][]string, 0, len(policies))
+	staticData := make([][]string, 0, len(policies))
+	for _, policy := range policies {
 		switch p := policy.Policy.(type) {
 		case *attestation_policy_proto.AttestationPolicy_Kubernetes:
 			kubernetes := p.Kubernetes
 			namespaceSelector := formatLabelSelector(kubernetes.NamespaceSelector)
 			podSelector := formatLabelSelector(kubernetes.PodSelector)
-			data[i] = []string{
+			k8sData = append(k8sData, []string{
 				policy.Name,
-				"kubernetes",
+				kubernetes.GetSpiffeIdPathTemplate(),
 				namespaceSelector,
 				podSelector,
-				"",
-				"",
-				"",
-			}
+				strings.Join(kubernetes.GetDnsNameTemplates(), ","),
+			})
 		case *attestation_policy_proto.AttestationPolicy_Static:
 			static := p.Static
 			selectors, err := formatSelectors(static.GetSelectors())
@@ -101,26 +100,41 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				return err
 			}
 
-			data[i] = []string{
+			staticData = append(staticData, []string{
 				policy.Name,
-				"static",
-				"",
-				"",
 				static.GetSpiffeIdPath(),
 				static.GetParentIdPath(),
 				selectors,
-			}
+				strings.Join(static.GetDnsNames(), ","),
+			})
 		default:
 			return fmt.Errorf("unexpected attestation policy type %T", policy)
 		}
 	}
 
+	k8sHeader := []string{"Name", "SPIFFE ID Path Template", "Namespace Labels", "Pod Labels", "DNS Name Templates"}
+	renderTable("Kubernetes attestation policies", k8sHeader, k8sData)
+	if len(k8sData) > 0 && len(staticData) > 0 {
+		fmt.Println()
+	}
+	staticHeader := []string{"Name", "SPIFFE ID Path", "Parent ID Path", "Selectors", "DNS Names"}
+	renderTable("Static attestation policies", staticHeader, staticData)
+	return nil
+}
+
+func renderTable(title string, header []string, data [][]string) {
+	if len(data) == 0 {
+		return
+	}
+	if title != "" {
+		fmt.Println(title)
+		fmt.Println()
+	}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Kind", "Namespace Labels", "Pod Labels", "SPIFFE ID", "Parent ID", "Selectors"})
+	table.SetHeader(header)
 	table.SetBorder(false)
 	table.AppendBulk(data)
 	table.Render()
-	return nil
 }
 
 // formatLabelSelector formats a Kubernetes label selector as a string.
