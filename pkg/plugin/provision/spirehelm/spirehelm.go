@@ -107,17 +107,21 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 		return err
 	}
 
-	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
-		return err
+	if !opts.SkipWait {
+		if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
+			return err
+		}
 	}
 
 	if err := h.ApplyPostInstallHelmConfig(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
-	// Wait for spire-server to be ready again.
-	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
-		return err
+	if !opts.SkipWait {
+		// Wait for spire-server to be ready again.
+		if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
+			return err
+		}
 	}
 
 	return nil

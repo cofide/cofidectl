@@ -28,6 +28,7 @@ This command installs a Cofide configuration
 
 type UpOpts struct {
 	quiet      bool
+	skipWait   bool
 	trustZones []string
 }
 
@@ -72,6 +73,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			deployOpts := provisionplugin.DeployOpts{
 				KubeCfgFile:  kubeCfgFile,
 				TrustZoneIDs: trustZoneIDs,
+				SkipWait:     opts.skipWait,
 			}
 			statusCh, err := provision.Deploy(cmd.Context(), ds, &deployOpts)
 			if err != nil {
@@ -88,6 +90,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from installation")
+	f.BoolVar(&opts.skipWait, "skip-wait", false, "Skip waits for services to become available")
 	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to install, or all if none is specified")
 
 	return cmd
