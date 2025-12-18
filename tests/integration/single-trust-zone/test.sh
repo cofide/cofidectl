@@ -19,18 +19,6 @@ TRUST_DOMAIN=${TRUST_DOMAIN:-td1}
 NAMESPACE_POLICY_NAMESPACE=${NAMESPACE_POLICY_NAMESPACE:-demo}
 POD_POLICY_POD_LABEL=${POD_POLICY_POD_LABEL:-"foo=bar"}
 
-function init() {
-  rm -f cofide.yaml
-  args=""
-  if [[ -n "$DATA_SOURCE_PLUGIN" ]]; then
-    args="$args --data-source-plugin $DATA_SOURCE_PLUGIN"
-  fi
-  if [[ -n "$PROVISION_PLUGIN" ]]; then
-    args="$args --provision-plugin $PROVISION_PLUGIN"
-  fi
-  ./cofidectl init $args
-}
-
 function configure() {
   ./cofidectl trust-zone add $TRUST_ZONE --trust-domain $TRUST_DOMAIN --no-cluster
   ./cofidectl cluster add $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE --kubernetes-context $K8S_CLUSTER_CONTEXT --profile kubernetes
@@ -54,25 +42,10 @@ EOF
   rm -f values.yaml
 }
 
-function up() {
-  ./cofidectl up --quiet
-}
-
 function check_spire() {
   check_spire_server $K8S_CLUSTER_CONTEXT
   check_spire_agents $K8S_CLUSTER_CONTEXT
   check_spire_csi_driver $K8S_CLUSTER_CONTEXT
-}
-
-function list_resources() {
-  ./cofidectl trust-zone list
-  ./cofidectl cluster list
-  ./cofidectl attestation-policy list
-  ./cofidectl attestation-policy-binding list
-}
-
-function show_config() {
-  cat cofide.yaml
 }
 
 function show_status() {
@@ -83,26 +56,7 @@ function show_status() {
 
 function run_tests() {
   local client_spiffe_id="spiffe://$TRUST_DOMAIN/ns/demo/sa/ping-pong-client"
-  just -f demos/Justfile prompt_namespace=no deploy-ping-pong $K8S_CLUSTER_CONTEXT $client_spiffe_id
-  kubectl --context $K8S_CLUSTER_CONTEXT wait -n demo --for=condition=Available --timeout 60s deployments/ping-pong-client
-  if ! wait_for_pong; then
-    echo "Timed out waiting for pong from server"
-    echo "Client logs:"
-    kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client
-    echo "Server logs:"
-    kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-server
-    exit 1
-  fi
-}
-
-function wait_for_pong() {
-  for i in $(seq 30); do
-    if kubectl --context $K8S_CLUSTER_CONTEXT logs -n demo deployments/ping-pong-client | grep '\.\.\.pong'; then
-      return 0
-    fi
-    sleep 2
-  done
-  return 1
+  run_ping_pong_test $K8S_CLUSTER_CONTEXT $client_spiffe_id $K8S_CLUSTER_CONTEXT
 }
 
 function show_workload_status() {
@@ -147,10 +101,6 @@ function check_dns_name_templates() {
   fi
 }
 
-function down() {
-  ./cofidectl down
-}
-
 function delete() {
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy namespace
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE --attestation-policy pod-label
@@ -163,7 +113,7 @@ function delete() {
 }
 
 function main() {
-  init
+  init $DATA_SOURCE_PLUGIN $PROVISION_PLUGIN
   configure
   up
   check_spire

@@ -25,18 +25,6 @@ TRUST_DOMAIN_2=${TRUST_DOMAIN_2:-td2}
 NAMESPACE_POLICY_NAMESPACE=${NAMESPACE_POLICY_NAMESPACE:-demo}
 POD_POLICY_POD_LABEL=${POD_POLICY_POD_LABEL:-"foo=bar"}
 
-function init() {
-  rm -f cofide.yaml
-  args=""
-  if [[ -n "$DATA_SOURCE_PLUGIN" ]]; then
-    args="$args --data-source-plugin $DATA_SOURCE_PLUGIN"
-  fi
-  if [[ -n "$PROVISION_PLUGIN" ]]; then
-    args="$args --provision-plugin $PROVISION_PLUGIN"
-  fi
-  ./cofidectl init $args
-}
-
 function check_init() {
   data_source_plugin="$(yq '.plugins.data_source' cofide.yaml -r)"
   provision_plugin="$(yq '.plugins.provision' cofide.yaml -r)"
@@ -66,10 +54,6 @@ function configure_federations() {
   ./cofidectl attestation-policy-binding add --trust-zone $TRUST_ZONE_2 --attestation-policy pod-label --federates-with $TRUST_ZONE_1
 }
 
-function up() {
-  ./cofidectl up --trust-zone $TRUST_ZONE_1 --trust-zone $TRUST_ZONE_2
-}
-
 function check_spire() {
   for context in $K8S_CLUSTER_1_CONTEXT $K8S_CLUSTER_2_CONTEXT; do
     check_spire_server $context
@@ -78,19 +62,9 @@ function check_spire() {
   done
 }
 
-function list_resources() {
-  ./cofidectl trust-zone list
-  ./cofidectl attestation-policy list
-  ./cofidectl attestation-policy-binding list
-}
-
 function show_helm_values() {
   ./cofidectl trust-zone helm values $TRUST_ZONE_1 --output-file -
   ./cofidectl trust-zone helm values $TRUST_ZONE_2 --output-file -
-}
-
-function show_config() {
-  cat cofide.yaml
 }
 
 function show_status() {
@@ -103,26 +77,7 @@ function show_status() {
 
 function run_tests() {
   local client_spiffe_id="spiffe://$TRUST_DOMAIN_1/ns/demo/sa/ping-pong-client"
-  just -f demos/Justfile prompt_namespace=no deploy-ping-pong $K8S_CLUSTER_1_CONTEXT $client_spiffe_id $K8S_CLUSTER_2_CONTEXT
-  kubectl --context $K8S_CLUSTER_1_CONTEXT wait -n demo --for=condition=Available --timeout 60s deployments/ping-pong-client
-  if ! wait_for_pong; then
-    echo "Timed out waiting for pong from server"
-    echo "Client logs:"
-    kubectl --context $K8S_CLUSTER_1_CONTEXT logs -n demo deployments/ping-pong-client
-    echo "Server logs:"
-    kubectl --context $K8S_CLUSTER_2_CONTEXT logs -n demo deployments/ping-pong-server
-    exit 1
-  fi
-}
-
-function wait_for_pong() {
-  for i in $(seq 30); do
-    if kubectl --context $K8S_CLUSTER_1_CONTEXT logs -n demo deployments/ping-pong-client | grep '\.\.\.pong'; then
-      return 0
-    fi
-    sleep 2
-  done
-  return 1
+  run_ping_pong_test $K8S_CLUSTER_1_CONTEXT $client_spiffe_id $K8S_CLUSTER_2_CONTEXT
 }
 
 function post_deploy() {
@@ -159,10 +114,6 @@ function teardown_federation_and_verify() {
   fi
 }
 
-function down() {
-  ./cofidectl down --trust-zone $TRUST_ZONE_1 --trust-zone $TRUST_ZONE_2
-}
-
 function delete() {
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE_1 --attestation-policy namespace
   ./cofidectl attestation-policy-binding del --trust-zone $TRUST_ZONE_1 --attestation-policy pod-label
@@ -178,12 +129,11 @@ function delete() {
 }
 
 function main() {
-  init
+  init $DATA_SOURCE_PLUGIN $PROVISION_PLUGIN
   check_init
   configure_trust_zones
-  up
   configure_federations
-  up
+  up $TRUST_ZONE_1 $TRUST_ZONE_2
   check_spire
   list_resources
   show_helm_values
@@ -193,7 +143,7 @@ function main() {
   post_deploy
   show_workload_status
   teardown_federation_and_verify
-  down
+  down $TRUST_ZONE_1 $TRUST_ZONE_2
   delete
   check_delete
   echo "Success!"
