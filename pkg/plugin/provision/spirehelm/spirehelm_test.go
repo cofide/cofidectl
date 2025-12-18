@@ -130,12 +130,12 @@ func TestSpireHelm_Deploy_with_env_HELM_REPO_PATH(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
+	dummyPath := "/some/non/zero/path"
+	t.Setenv("HELM_REPO_PATH", dummyPath)
+
 	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", TrustZoneIDs: []string{"tz2-id"}}
 	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
 	require.NoError(t, err, err)
-
-	dummyPath := "/some/non/zero/path"
-	t.Setenv("HELM_REPO_PATH", dummyPath)
 
 	statuses := collectStatuses(statusCh)
 	want := []*provisionpb.Status{
