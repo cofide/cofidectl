@@ -29,35 +29,59 @@ func TestSpireHelm_Deploy(t *testing.T) {
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
 	ds := newFakeDataSource(t, defaultConfig())
 
-	opts := provision.DeployOpts{KubeCfgFile: "fake-kube.cfg"}
-	statusCh, err := spireHelm.Deploy(context.Background(), ds, &opts)
-	require.NoError(t, err, err)
-
-	statuses := collectStatuses(statusCh)
-	want := []*provisionpb.Status{
-		provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
-		provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
-		provision.StatusOk("Installing", "Installing SPIRE CRDs for local1 in tz1"),
-		provision.StatusOk("Installing", "Installing SPIRE chart for local1 in tz1"),
-		provision.StatusDone("Installed", "Installation completed for local1 in tz1"),
-		provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
-		provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
-		provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
-		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local1 in tz1"),
-		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local1 in tz1"),
-		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
-		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
-		provision.StatusOk("Configuring", "Applying post-installation configuration for local1 in tz1"),
-		provision.StatusDone("Configured", "Post-installation configuration completed for local1 in tz1"),
-		provision.StatusOk("Configuring", "Applying post-installation configuration for local2 in tz2"),
-		provision.StatusDone("Configured", "Post-installation configuration completed for local2 in tz2"),
-		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local1 in tz1"),
-		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local1 in tz1"),
-		provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
-		provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
+	tests := []struct {
+		name string
+		opts provision.DeployOpts
+		want []*provisionpb.Status
+	}{
+		{
+			name: "basic",
+			opts: provision.DeployOpts{KubeCfgFile: "fake-kube.cfg"},
+			want: []*provisionpb.Status{
+				provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
+				provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
+				provision.StatusOk("Installing", "Installing SPIRE CRDs for local1 in tz1"),
+				provision.StatusOk("Installing", "Installing SPIRE chart for local1 in tz1"),
+				provision.StatusDone("Installed", "Installation completed for local1 in tz1"),
+				provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
+				provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
+				provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
+				provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local1 in tz1"),
+				provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local1 in tz1"),
+				provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
+				provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
+				provision.StatusOk("Configuring", "Applying post-installation configuration for local1 in tz1"),
+				provision.StatusDone("Configured", "Post-installation configuration completed for local1 in tz1"),
+				provision.StatusOk("Configuring", "Applying post-installation configuration for local2 in tz2"),
+				provision.StatusDone("Configured", "Post-installation configuration completed for local2 in tz2"),
+				provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local1 in tz1"),
+				provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local1 in tz1"),
+				provision.StatusOk("Waiting", "Waiting for SPIRE server pod and service for local2 in tz2"),
+				provision.StatusDone("Ready", "All SPIRE server pods and services are ready for local2 in tz2"),
+			},
+		},
+		{
+			name: "skip wait",
+			opts: provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", SkipWait: true},
+			want: []*provisionpb.Status{
+				provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
+				provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
+				provision.StatusOk("Installing", "Installing SPIRE CRDs for local1 in tz1"),
+				provision.StatusOk("Installing", "Installing SPIRE chart for local1 in tz1"),
+				provision.StatusDone("Installed", "Installation completed for local1 in tz1"),
+				provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
+				provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
+				provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
+			},
+		},
 	}
 
-	assert.EqualExportedValues(t, want, statuses)
+	for _, tt := range tests {
+		statusCh, err := spireHelm.Deploy(context.Background(), ds, &tt.opts)
+		require.NoError(t, err, err)
+		statuses := collectStatuses(statusCh)
+		assert.EqualExportedValues(t, tt.want, statuses)
+	}
 }
 
 func TestSpireHelm_Deploy_ExternalServer(t *testing.T) {

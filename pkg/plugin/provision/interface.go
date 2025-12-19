@@ -32,6 +32,7 @@ type Provision interface {
 type DeployOpts struct {
 	KubeCfgFile  string
 	TrustZoneIDs []string
+	SkipWait     bool
 }
 
 type TearDownOpts struct {

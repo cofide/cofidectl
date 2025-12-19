@@ -107,17 +107,22 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 		return err
 	}
 
-	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
-		return err
-	}
+	// SkipWait is used to avoid awaiting an external IP to be assigned to the SPIRE Server, and can be used
+	// in scenarios where federations are not defined (e.g. a standalone SPIRE installation). It will skip
+	// the entire federation bootstrap orchestration flow and return early if activated
+	if !opts.SkipWait {
+		if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
+			return err
+		}
 
-	if err := h.ApplyPostInstallHelmConfig(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
-		return err
-	}
+		if err := h.ApplyPostInstallHelmConfig(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
+			return err
+		}
 
-	// Wait for spire-server to be ready again.
-	if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
-		return err
+		// Wait for spire-server to be ready again.
+		if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
+			return err
+		}
 	}
 
 	return nil
