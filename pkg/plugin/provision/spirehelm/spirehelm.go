@@ -10,6 +10,7 @@ import (
 	"os"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	"github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 
@@ -97,6 +98,19 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 		return err
 	}
 
+	// SkipWait is used to avoid awaiting an external IP to be assigned to the SPIRE Server, and can be used
+	// in scenarios where federations are not defined (e.g. a standalone SPIRE installation). It will skip
+	// the entire federation bootstrap orchestration flow and return early if activated
+	feds, err := ds.ListFederations(&v1alpha2.ListFederationsRequest_Filter{})
+	if err != nil {
+		return err
+	}
+	if len(feds) != 0 && opts.SkipWait {
+		err = errors.New("cannot use --skip-wait with federations defined")
+		statusCh <- provision.StatusError("Deploying", "Cannot use --skip-wait with federations defined", err)
+		return err
+	}
+
 	if repo, ok := os.LookupEnv("HELM_REPO_PATH"); ok && repo != "" {
 		statusCh <- provision.StatusOk("Preparing", fmt.Sprintf("Found HELM_REPO_PATH value, using local chart: %s", repo))
 	} else if err := h.AddSPIRERepository(ctx, opts.KubeCfgFile, statusCh); err != nil {
@@ -107,9 +121,6 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 		return err
 	}
 
-	// SkipWait is used to avoid awaiting an external IP to be assigned to the SPIRE Server, and can be used
-	// in scenarios where federations are not defined (e.g. a standalone SPIRE installation). It will skip
-	// the entire federation bootstrap orchestration flow and return early if activated
 	if !opts.SkipWait {
 		if err := h.WatchAndConfigure(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 			return err
