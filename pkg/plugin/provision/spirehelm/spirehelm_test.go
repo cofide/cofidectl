@@ -72,10 +72,6 @@ func TestSpireHelm_Deploy(t *testing.T) {
 				provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
 				provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
 				provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
-				provision.StatusOk("Configuring", "Applying post-installation configuration for local1 in tz1"),
-				provision.StatusDone("Configured", "Post-installation configuration completed for local1 in tz1"),
-				provision.StatusOk("Configuring", "Applying post-installation configuration for local2 in tz2"),
-				provision.StatusDone("Configured", "Post-installation configuration completed for local2 in tz2"),
 			},
 		},
 	}

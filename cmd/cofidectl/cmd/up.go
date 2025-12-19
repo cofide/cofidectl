@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	provisionplugin "github.com/cofide/cofidectl/pkg/plugin/provision"
@@ -55,6 +56,14 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 				return err
 			}
 
+			feds, err := ds.ListFederations(&v1alpha2.ListFederationsRequest_Filter{})
+			if err != nil {
+				return err
+			}
+			if len(feds) != 0 && opts.skipWait {
+				return fmt.Errorf("cannot use --skip-wait with federations defined")
+			}
+
 			trustZoneIDs := []string{}
 			for _, tzName := range opts.trustZones {
 				var trustZoneID string
@@ -90,7 +99,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from installation")
-	f.BoolVar(&opts.skipWait, "skip-wait", false, "Skip waiting for services to become available")
+	f.BoolVar(&opts.skipWait, "skip-wait", false, "Skip waiting for services to become available. Not available when federations are defined")
 	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to install, or all if none is specified")
 
 	return cmd
