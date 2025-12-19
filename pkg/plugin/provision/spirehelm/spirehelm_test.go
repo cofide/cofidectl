@@ -5,6 +5,7 @@ package spirehelm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -27,16 +28,17 @@ func TestSpireHelm_Deploy(t *testing.T) {
 	providerFactory := newFakeHelmSPIREProviderFactory()
 	spireAPIFactory := newFakeSPIREAPIFactory()
 	spireHelm := NewSpireHelm(providerFactory, spireAPIFactory)
-	ds := newFakeDataSource(t, defaultConfig())
 
 	tests := []struct {
 		name string
 		opts provision.DeployOpts
+		ds   datasource.DataSource
 		want []*provisionpb.Status
 	}{
 		{
 			name: "basic",
 			opts: provision.DeployOpts{KubeCfgFile: "fake-kube.cfg"},
+			ds:   newFakeDataSource(t, defaultConfig()),
 			want: []*provisionpb.Status{
 				provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
 				provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
@@ -63,6 +65,7 @@ func TestSpireHelm_Deploy(t *testing.T) {
 		{
 			name: "skip wait",
 			opts: provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", SkipWait: true},
+			ds:   newFakeDataSource(t, defaultConfig()),
 			want: []*provisionpb.Status{
 				provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
 				provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
@@ -74,10 +77,26 @@ func TestSpireHelm_Deploy(t *testing.T) {
 				provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
 			},
 		},
+		{
+			name: "try skip wait, but has federations",
+			opts: provision.DeployOpts{KubeCfgFile: "fake-kube.cfg", SkipWait: true},
+			ds:   newFakeDataSource(t, defaultConfigWithFederation()),
+			want: []*provisionpb.Status{
+				provision.StatusOk("Preparing", "Adding SPIRE Helm repo"),
+				provision.StatusDone("Prepared", "Added SPIRE Helm repo"),
+				provision.StatusOk("Installing", "Installing SPIRE CRDs for local1 in tz1"),
+				provision.StatusOk("Installing", "Installing SPIRE chart for local1 in tz1"),
+				provision.StatusDone("Installed", "Installation completed for local1 in tz1"),
+				provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
+				provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
+				provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
+				provision.StatusError("Deploying", "Cannot use --skip-wait with federations defined", errors.New("Cannot use --skip-wait with federations defined")),
+			},
+		},
 	}
 
 	for _, tt := range tests {
-		statusCh, err := spireHelm.Deploy(context.Background(), ds, &tt.opts)
+		statusCh, err := spireHelm.Deploy(context.Background(), tt.ds, &tt.opts)
 		require.NoError(t, err, err)
 		statuses := collectStatuses(statusCh)
 		assert.EqualExportedValues(t, tt.want, statuses)
@@ -360,4 +379,10 @@ func defaultConfig() *config.Config {
 		},
 		Plugins: fixtures.Plugins("plugins1"),
 	}
+}
+
+func defaultConfigWithFederation() *config.Config {
+	config := defaultConfig()
+	config.Federations = append(config.Federations, fixtures.Federation("fed1"))
+	return config
 }

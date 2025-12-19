@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	provisionplugin "github.com/cofide/cofidectl/pkg/plugin/provision"
@@ -54,14 +53,6 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 			tzs, err := ds.ListTrustZones()
 			if err != nil {
 				return err
-			}
-
-			feds, err := ds.ListFederations(&v1alpha2.ListFederationsRequest_Filter{})
-			if err != nil {
-				return err
-			}
-			if len(feds) != 0 && opts.skipWait {
-				return fmt.Errorf("cannot use --skip-wait with federations defined")
 			}
 
 			trustZoneIDs := []string{}
