@@ -90,7 +90,7 @@ func (u *UpCommand) UpCmd() *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVar(&opts.quiet, "quiet", false, "Minimise logging from installation")
-f.BoolVar(&opts.skipWait, "skip-wait", false, "Skip waiting for services to become available")
+	f.BoolVar(&opts.skipWait, "skip-wait", false, "Skip waiting for services to become available")
 	f.StringSliceVar(&opts.trustZones, "trust-zone", []string{}, "Trust zones to install, or all if none is specified")
 
 	return cmd
