@@ -98,16 +98,6 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 		return err
 	}
 
-	if repo, ok := os.LookupEnv("HELM_REPO_PATH"); ok && repo != "" {
-		statusCh <- provision.StatusOk("Preparing", fmt.Sprintf("Found HELM_REPO_PATH value, using local chart: %s", repo))
-	} else if err := h.AddSPIRERepository(ctx, opts.KubeCfgFile, statusCh); err != nil {
-		return err
-	}
-
-	if err := h.InstallSPIREStack(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
-		return err
-	}
-
 	// SkipWait is used to avoid awaiting an external IP to be assigned to the SPIRE Server, and can be used
 	// in scenarios where federations are not defined (e.g. a standalone SPIRE installation). It will skip
 	// the entire federation bootstrap orchestration flow and return early if activated
@@ -118,6 +108,16 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 	if len(feds) != 0 && opts.SkipWait {
 		err = errors.New("cannot use --skip-wait with federations defined")
 		statusCh <- provision.StatusError("Deploying", "Cannot use --skip-wait with federations defined", err)
+		return err
+	}
+
+	if repo, ok := os.LookupEnv("HELM_REPO_PATH"); ok && repo != "" {
+		statusCh <- provision.StatusOk("Preparing", fmt.Sprintf("Found HELM_REPO_PATH value, using local chart: %s", repo))
+	} else if err := h.AddSPIRERepository(ctx, opts.KubeCfgFile, statusCh); err != nil {
+		return err
+	}
+
+	if err := h.InstallSPIREStack(ctx, ds, trustZoneClusters, opts.KubeCfgFile, statusCh); err != nil {
 		return err
 	}
 
