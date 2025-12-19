@@ -116,7 +116,7 @@ func (h *SpireHelm) deploy(ctx context.Context, ds datasource.DataSource, opts *
 		return err
 	}
 	if len(feds) != 0 && opts.SkipWait {
-		err = errors.New("Cannot use --skip-wait with federations defined")
+		err = errors.New("cannot use --skip-wait with federations defined")
 		statusCh <- provision.StatusError("Deploying", "Cannot use --skip-wait with federations defined", err)
 		return err
 	}

@@ -90,7 +90,7 @@ func TestSpireHelm_Deploy(t *testing.T) {
 				provision.StatusOk("Installing", "Installing SPIRE CRDs for local2 in tz2"),
 				provision.StatusOk("Installing", "Installing SPIRE chart for local2 in tz2"),
 				provision.StatusDone("Installed", "Installation completed for local2 in tz2"),
-				provision.StatusError("Deploying", "Cannot use --skip-wait with federations defined", errors.New("Cannot use --skip-wait with federations defined")),
+				provision.StatusError("Deploying", "Cannot use --skip-wait with federations defined", errors.New("cannot use --skip-wait with federations defined")),
 			},
 		},
 	}
