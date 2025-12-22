@@ -87,3 +87,19 @@ jobs:
         env:
           DATA_SOURCE_PLUGIN: ${{ matrix.plugin }}
           PROVISION_PLUGIN: ${{ matrix.plugin }}
+
+  # Dummy job to satisfy the github PR checks (the name must match - broken above because of the matrix)
+  integration-check:
+    name: Integration tests
+    if: always()
+    needs:
+      - single-trust-zone
+      - federation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          # If some jobs can fail, use allowed-failures
+          # If some jobs can be skipped, use allowed-skips
+          jobs: ${{ toJSON(needs) }}
