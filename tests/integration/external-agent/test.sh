@@ -8,7 +8,7 @@ set -euxo pipefail
 source $(dirname $(dirname $BASH_SOURCE))/lib.sh
 
 TEST_DIR=$(dirname $BASH_SOURCE)
-CONF_DIR=$TEST_DIR/conf
+CONF_DIR=$TEST_DIR/generated-conf
 
 DATA_SOURCE_PLUGIN=${DATA_SOURCE_PLUGIN:-}
 PROVISION_PLUGIN=${PROVISION_PLUGIN:-}
