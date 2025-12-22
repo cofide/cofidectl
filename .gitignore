@@ -14,4 +14,4 @@ cofidectl-connect
 cofidectl-test-plugin
 
 # Generated config files.
-tests/integration/external-agent/conf/
+tests/integration/external-agent/generated-conf/
