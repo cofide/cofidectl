@@ -108,6 +108,19 @@ function teardown_federation_and_verify() {
   kubectl --context $K8S_CLUSTER_2_CONTEXT delete clusterspiffeids.spire.spiffe.io spire-mgmt-spire-namespace
   kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server federation delete -id td1
   kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server bundle delete -id td1
+  # wait until federation shows as unhealthy (with no bundle found)
+  for i in {1..10}; do
+    if teardown_federation_check; then
+      echo "Federation teardown verified"
+      return 0
+    fi
+    sleep 1
+  done
+  echo "Timed out waiting for federation to show as unhealthy"
+  return 1
+}
+
+function teardown_federation_check() {
   federations=$(./cofidectl federation list)
   if ! echo "$federations" | grep "Unhealthy | No bundle found" >/dev/null; then
     return 1
