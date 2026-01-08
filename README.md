@@ -74,7 +74,7 @@ Now let's deploy an application and see how to seamlessly obtain a SPIFFE identi
 We've a simple `ping-pong` application with a client that 'pings' and server that responds with 'pong'. For example purposes, the server and client will both reside in a `demo` namespace. The `Justfile` recipes make it quick and easy to apply both:
 
 ```sh
-just -f demos/Justfile deploy-ping-pong kind-kind
+just -f demos/Justfile deploy-ping-pong kind-kind "spiffe://cofide-a.test/ns/demo/sa/ping-pong-client"
 ```
 
 Take a look at the logs of the client pod and see the mTLS-enabled ping-pong 🔐:
