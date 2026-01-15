@@ -44,7 +44,7 @@ jobs:
       - name: Build
         run: |
           mkdir -p dist
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} just build-release-version dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }} ${{ github.ref_name }}
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} just build-release-version ${{ github.ref_name }} dist/cofidectl-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }}
       - name: Upload artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
