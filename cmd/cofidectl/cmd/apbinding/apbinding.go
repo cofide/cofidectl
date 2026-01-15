@@ -147,8 +147,8 @@ func renderList(source datasource.DataSource, bindings []*ap_binding_proto.APBin
 		Header: []string{"Trust Zone", "Attestation Policy", "Federates With"},
 		Data:   data,
 	}
-	tr.RenderTable(table)
-	return nil
+	_, err = tr.RenderTables(table)
+	return err
 }
 
 var apBindingAddCmdDesc = `
