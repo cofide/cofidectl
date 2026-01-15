@@ -51,6 +51,7 @@ func TestConfig_YAMLMarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap4"),
 					fixtures.AttestationPolicy("ap5"),
 					fixtures.AttestationPolicy("ap6"),
+					fixtures.AttestationPolicy("ap7"),
 				},
 				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),
@@ -123,6 +124,7 @@ func TestConfig_YAMLUnmarshall(t *testing.T) {
 					fixtures.AttestationPolicy("ap4"),
 					fixtures.AttestationPolicy("ap5"),
 					fixtures.AttestationPolicy("ap6"),
+					fixtures.AttestationPolicy("ap7"),
 				},
 				APBindings: []*ap_binding_proto.APBinding{
 					fixtures.APBinding("apb1"),

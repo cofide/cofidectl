@@ -64,7 +64,7 @@
 #AttestationPolicy: {
 	id?: string
 	name!: string
-	#APKubernetes | #APStatic
+	#APKubernetes | #APStatic | #APTPMNode
 }
 
 #APKubernetes: {
@@ -83,6 +83,17 @@
 		selectors!: [...#APSelector]
 		dns_names?: [...string]
 	}
+}
+
+#APTPMNode: {
+	tpm_node?: {
+		attestation!: #TPMAttestation
+		selector_values!: [...string]
+	}
+}
+
+#TPMAttestation: {
+	ek_hash?: string
 }
 
 #APSelector: {
