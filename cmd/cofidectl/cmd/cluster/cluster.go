@@ -16,8 +16,8 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -159,10 +159,7 @@ func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to list trust zones: %v", err)
 	}
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Trust Zone", "Profile"})
-	table.SetBorder(false)
-
+	data := make([][]string, 0)
 	for _, zone := range zones {
 		clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
 			TrustZoneId: zone.Id,
@@ -174,7 +171,7 @@ func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 			continue
 		}
 		for _, cluster := range clusters {
-			table.Append([]string{
+			data = append(data, []string{
 				cluster.GetName(),
 				zone.GetName(),
 				cluster.GetProfile(),
@@ -182,7 +179,12 @@ func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 		}
 	}
 
-	table.Render()
+	tr := renderer.NewTableRenderer(os.Stdout)
+	table := renderer.Table{
+		Header: []string{"Name", "Trust Zone", "Profile"},
+		Data:   data,
+	}
+	tr.RenderTable(table)
 	return nil
 }
 

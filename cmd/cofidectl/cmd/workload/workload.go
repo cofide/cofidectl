@@ -12,6 +12,7 @@ import (
 
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/internal/pkg/workload"
@@ -19,7 +20,6 @@ import (
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -230,11 +230,12 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 		}
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Trust Zone", "Type", "Status", "Namespace", "Workload ID"})
-	table.SetBorder(false)
-	table.AppendBulk(data)
-	table.Render()
+	tr := renderer.NewTableRenderer(os.Stdout)
+	table := renderer.Table{
+		Header: []string{"Name", "Trust Zone", "Type", "Status", "Namespace", "Workload ID"},
+		Data:   data,
+	}
+	tr.RenderTable(table)
 
 	return nil
 }
@@ -356,15 +357,16 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 		}
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
+	tr := renderer.NewTableRenderer(os.Stdout)
 	headers := []string{"Name", "Trust Zone", "Type", "Status", "Namespace"}
 	if includeSecrets {
 		headers = append(headers, "Secrets")
 	}
-	table.SetHeader(headers)
-	table.SetBorder(false)
-	table.AppendBulk(data)
-	table.Render()
+	table := renderer.Table{
+		Header: headers,
+		Data:   data,
+	}
+	tr.RenderTable(table)
 
 	return nil
 }
