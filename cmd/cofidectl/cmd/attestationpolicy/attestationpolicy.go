@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,6 +80,7 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) error {
 	k8sData := make([][]string, 0, len(policies))
 	staticData := make([][]string, 0, len(policies))
+	tpmNodeData := make([][]string, 0, len(policies))
 	for _, policy := range policies {
 		switch p := policy.Policy.(type) {
 		case *attestation_policy_proto.AttestationPolicy_Kubernetes:
@@ -107,34 +108,40 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				selectors,
 				strings.Join(static.GetDnsNames(), ","),
 			})
+		case *attestation_policy_proto.AttestationPolicy_TpmNode:
+			tpmNode := p.TpmNode
+			tpmNodeData = append(tpmNodeData, []string{
+				policy.Name,
+				tpmNode.GetAttestation().GetEkHash(),
+				strings.Join(tpmNode.GetSelectorValues(), ","),
+			})
 		default:
 			return fmt.Errorf("unexpected attestation policy type %T", policy)
 		}
 	}
-
 	k8sHeader := []string{"Name", "SPIFFE ID Path Template", "Namespace Labels", "Pod Labels", "DNS Name Templates"}
-	renderTable("Kubernetes attestation policies", k8sHeader, k8sData)
-	if len(k8sData) > 0 && len(staticData) > 0 {
-		fmt.Println()
-	}
 	staticHeader := []string{"Name", "SPIFFE ID Path", "Parent ID Path", "Selectors", "DNS Names"}
-	renderTable("Static attestation policies", staticHeader, staticData)
+	tpmNodeHeader := []string{"Name", "EK Hash", "Selector Values"}
+	tables := []renderer.Table{
+		{
+			Title:  "Kubernetes attestation policies",
+			Header: k8sHeader,
+			Data:   k8sData,
+		},
+		{
+			Title:  "Static attestation policies",
+			Header: staticHeader,
+			Data:   staticData,
+		},
+		{
+			Title:  "TPM Node attestation policies",
+			Header: tpmNodeHeader,
+			Data:   tpmNodeData,
+		},
+	}
+	tr := renderer.NewTableRenderer(os.Stdout)
+	tr.RenderTables(tables...)
 	return nil
-}
-
-func renderTable(title string, header []string, data [][]string) {
-	if len(data) == 0 {
-		return
-	}
-	if title != "" {
-		fmt.Println(title)
-		fmt.Println()
-	}
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader(header)
-	table.SetBorder(false)
-	table.AppendBulk(data)
-	table.Render()
 }
 
 // formatLabelSelector formats a Kubernetes label selector as a string.
@@ -191,7 +198,7 @@ This command consists of multiple sub-commands to add new attestation policies t
 
 func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add kubernetes [ARGS]",
+		Use:   "add [subcommand]",
 		Short: "Add attestation policies",
 		Long:  attestationPolicyAddCmdDesc,
 		Args:  cobra.NoArgs,
@@ -200,6 +207,7 @@ func (c *AttestationPolicyCommand) GetAddCommand() *cobra.Command {
 	cmd.AddCommand(
 		c.GetAddK8sCommand(),
 		c.GetAddStaticCommand(),
+		c.GetAddTPMNodeCommand(),
 	)
 	return cmd
 }
@@ -335,6 +343,61 @@ func (c *AttestationPolicyCommand) GetAddStaticCommand() *cobra.Command {
 	cobra.CheckErr(cmd.MarkFlagRequired("spiffe-id-path"))
 	cobra.CheckErr(cmd.MarkFlagRequired("parent-id-path"))
 	cobra.CheckErr(cmd.MarkFlagRequired("selectors"))
+
+	return cmd
+}
+
+var attestationPolicyAddTPMNodeCmdDesc = `
+This command will add a new TPM Node attestation policy to the Cofide configuration state.
+`
+
+type AddTPMNodeOpts struct {
+	name           string
+	ekHash         string
+	selectorValues []string
+}
+
+func (c *AttestationPolicyCommand) GetAddTPMNodeCommand() *cobra.Command {
+	opts := AddTPMNodeOpts{}
+	cmd := &cobra.Command{
+		Use:   "tpm-node [ARGS]",
+		Short: "Add a new TPM Node attestation policy",
+		Long:  attestationPolicyAddTPMNodeCmdDesc,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			tpmNode := &attestation_policy_proto.APTPMNode{
+				Attestation: &attestation_policy_proto.TPMAttestation{
+					EkHash: &opts.ekHash,
+				},
+				SelectorValues: opts.selectorValues,
+			}
+
+			newAttestationPolicy := &attestation_policy_proto.AttestationPolicy{
+				Name: opts.name,
+				Policy: &attestation_policy_proto.AttestationPolicy_TpmNode{
+					TpmNode: tpmNode,
+				},
+			}
+			_, err = ds.AddAttestationPolicy(newAttestationPolicy)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.name, "name", "", "Name to use for the attestation policy")
+	f.StringVar(&opts.ekHash, "ek-hash", "", "SHA256 hash of the TPM's Endorsement Key (EK)")
+	f.StringSliceVar(&opts.selectorValues, "selector-value", []string{}, "Selector values to use for the attestation policy")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("name"))
+	cobra.CheckErr(cmd.MarkFlagRequired("ek-hash"))
 
 	return cmd
 }

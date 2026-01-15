@@ -123,6 +123,14 @@ attestation_policies:
               value: agent_ns:spire-system
             - type: k8s_psat
               value: agent_sa:spire-agent
+    - id: ap7-id
+      name: ap7
+      tpm_node:
+        attestation:
+            ek_hash: fake-ek-hash
+        selector_values:
+            - selector1
+            - selector2
 plugin_config:
     plugin1:
         list-cfg:

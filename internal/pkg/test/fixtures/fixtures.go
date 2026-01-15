@@ -296,6 +296,18 @@ var attestationPolicyFixtures map[string]*attestation_policy_proto.AttestationPo
 			},
 		},
 	},
+	"ap7": {
+		Id:   StringPtr("ap7-id"),
+		Name: "ap7",
+		Policy: &attestation_policy_proto.AttestationPolicy_TpmNode{
+			TpmNode: &attestation_policy_proto.APTPMNode{
+				Attestation: &attestation_policy_proto.TPMAttestation{
+					EkHash: StringPtr("fake-ek-hash"),
+				},
+				SelectorValues: []string{"selector1", "selector2"},
+			},
+		},
+	},
 }
 
 var apBindingFixtures map[string]*ap_binding_proto.APBinding = map[string]*ap_binding_proto.APBinding{
