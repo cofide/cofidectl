@@ -1,10 +1,10 @@
 build: build-only test
 
 build-only:
-    go build -o cofidectl ./cmd/cofidectl/main.go
+    CGO_ENABLED=0 go build -ldflags="-s -w" -o cofidectl ./cmd/cofidectl/main.go
 
 build-test-plugin:
-    go build -o cofidectl-test-plugin ./cmd/cofidectl-test-plugin/main.go
+    CGO_ENABLED=0 go build -ldflags="-s -w" -o cofidectl-test-plugin ./cmd/cofidectl-test-plugin/main.go
 
 install-test-plugin: build-test-plugin
     mkdir -p ~/.cofide/plugins
