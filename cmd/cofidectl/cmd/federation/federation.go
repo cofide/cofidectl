@@ -16,10 +16,10 @@ import (
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
-	kubeutil "github.com/cofide/cofidectl/pkg/kube"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/spire"
-	"github.com/olekukonko/tablewriter"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/spf13/cobra"
 )
 
@@ -113,11 +113,12 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				}
 			}
 
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Trust Zone", "Remote Trust Zone", "Status", "Reason"})
-			table.SetBorder(false)
-			table.AppendBulk(data)
-			table.Render()
+			tr := renderer.NewTableRenderer(os.Stdout)
+			table := renderer.Table{
+				Header: []string{"Trust Zone", "Remote Trust Zone", "Status", "Reason"},
+				Data:   data,
+			}
+			tr.RenderTable(table)
 			return nil
 		},
 	}

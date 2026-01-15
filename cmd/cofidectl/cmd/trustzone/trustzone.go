@@ -24,11 +24,11 @@ import (
 
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/spire"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 )
@@ -108,11 +108,12 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 				}
 			}
 
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Trust Domain", "Cluster"})
-			table.SetBorder(false)
-			table.AppendBulk(data)
-			table.Render()
+			tr := renderer.NewTableRenderer(os.Stdout)
+			table := renderer.Table{
+				Header: []string{"Name", "Trust Domain", "Cluster"},
+				Data:   data,
+			}
+			tr.RenderTable(table)
 			return nil
 		},
 	}
@@ -459,41 +460,34 @@ func renderStatus(trustZone *trust_zone_proto.TrustZone, server *spire.ServerSta
 		})
 	}
 
-	fmt.Printf("Trust Zone\n\n")
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Item", "Value"})
-	table.SetBorder(false)
-	table.AppendBulk(trustZoneData)
-	table.Render()
-
-	fmt.Printf("\nSPIRE Servers\n\n")
-	table = tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Pod", "Ready"})
-	table.SetBorder(false)
-	table.AppendBulk(serverData)
-	table.Render()
-
-	fmt.Printf("\nSPIRE Controller Managers\n\n")
-	table = tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Pod", "Ready"})
-	table.SetBorder(false)
-	table.AppendBulk(scmData)
-	table.Render()
-
-	fmt.Printf("\nSPIRE Agents\n\n")
-	table = tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Pod", "Status", "Attestation type", "Expiration time", "Can re-attest"})
-	table.SetBorder(false)
-	table.AppendBulk(agentData)
-	table.Render()
-
-	fmt.Printf("\nSPIRE Agents SPIFFE IDs\n\n")
-	table = tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Pod", "SPIFFE ID"})
-	table.SetBorder(false)
-	table.AppendBulk(agentIdData)
-	table.Render()
-
+	tr := renderer.NewTableRenderer(os.Stdout)
+	tr.RenderTables(
+		renderer.Table{
+			Title:  "Trust Zone",
+			Header: []string{"Item", "Value"},
+			Data:   trustZoneData,
+		},
+		renderer.Table{
+			Title:  "SPIRE Servers",
+			Header: []string{"Pod", "Ready"},
+			Data:   serverData,
+		},
+		renderer.Table{
+			Title:  "SPIRE Controller Managers",
+			Header: []string{"Pod", "Ready"},
+			Data:   scmData,
+		},
+		renderer.Table{
+			Title:  "SPIRE Agents",
+			Header: []string{"Pod", "Status", "Attestation type", "Expiration time", "Can re-attest"},
+			Data:   agentData,
+		},
+		renderer.Table{
+			Title:  "SPIRE Agents SPIFFE IDs",
+			Header: []string{"Pod", "SPIFFE ID"},
+			Data:   agentIdData,
+		},
+	)
 	return nil
 }
 

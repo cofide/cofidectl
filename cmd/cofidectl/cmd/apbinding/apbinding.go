@@ -12,11 +12,10 @@ import (
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	trustzonepb "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
+	"github.com/spf13/cobra"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
-
-	"github.com/olekukonko/tablewriter"
-	"github.com/spf13/cobra"
 )
 
 type APBindingCommand struct {
@@ -143,11 +142,12 @@ func renderList(source datasource.DataSource, bindings []*ap_binding_proto.APBin
 		}
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Trust Zone", "Attestation Policy", "Federates With"})
-	table.SetBorder(false)
-	table.AppendBulk(data)
-	table.Render()
+	tr := renderer.NewTableRenderer(os.Stdout)
+	table := renderer.Table{
+		Header: []string{"Trust Zone", "Attestation Policy", "Federates With"},
+		Data:   data,
+	}
+	tr.RenderTable(table)
 	return nil
 }
 
