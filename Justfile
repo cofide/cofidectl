@@ -24,7 +24,6 @@ install-test-plugin: build-test-plugin
 test *args:
     CGO_ENABLED=0 go run gotest.tools/gotestsum@latest --format github-actions ./... {{args}}
 
-
 test-race: (test "--" "-race")
 
 lint *args:
