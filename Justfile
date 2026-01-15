@@ -1,17 +1,21 @@
 bin := "cofidectl"
 pkg := "./cmd/cofidectl/main.go"
 
+# Internal build target without defaults
+_build *args:
+    CGO_ENABLED=0 go build {{args}} {{pkg}}
+
 # Build without testing
 build-only *args:
-    CGO_ENABLED=0 go build -o {{bin}} {{args}} {{pkg}}
+    just _build -o {{bin}} {{args}}
 
 # Test and build
 build *args: test
     just build-only {{args}}
 
 # Release build with version injection
-release-version output=bin version:
-    CGO_ENABLED=0 go build -ldflags="-s -w -X main.version={{version}}" -o {{output}} {{pkg}}
+build-release-version version output=bin:
+    just _build '-ldflags="-s -w -X main.version={{version}}"' -o {{output}}
 
 # Build test plugin without testing
 build-test-plugin-only:
