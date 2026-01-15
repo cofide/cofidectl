@@ -17,9 +17,9 @@ import (
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
+	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/spire"
-	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/spf13/cobra"
 )
 
@@ -118,8 +118,8 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 				Header: []string{"Trust Zone", "Remote Trust Zone", "Status", "Reason"},
 				Data:   data,
 			}
-			tr.RenderTable(table)
-			return nil
+			_, err = tr.RenderTables(table)
+			return err
 		},
 	}
 

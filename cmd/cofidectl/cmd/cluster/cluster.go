@@ -13,10 +13,10 @@ import (
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
+	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
-	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/spf13/cobra"
 )
@@ -184,8 +184,8 @@ func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 		Header: []string{"Name", "Trust Zone", "Profile"},
 		Data:   data,
 	}
-	tr.RenderTable(table)
-	return nil
+	_, err = tr.RenderTables(table)
+	return err
 }
 
 var clusterDelCmdDesc = `

@@ -235,9 +235,8 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 		Header: []string{"Name", "Trust Zone", "Type", "Status", "Namespace", "Workload ID"},
 		Data:   data,
 	}
-	tr.RenderTable(table)
-
-	return nil
+	_, err := tr.RenderTables(table)
+	return err
 }
 
 func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, podName string, namespace string) (<-chan *provisionpb.Status, chan string) {
@@ -366,7 +365,6 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 		Header: headers,
 		Data:   data,
 	}
-	tr.RenderTable(table)
-
-	return nil
+	_, err := tr.RenderTables(table)
+	return err
 }

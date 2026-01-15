@@ -113,8 +113,8 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 				Header: []string{"Name", "Trust Domain", "Cluster"},
 				Data:   data,
 			}
-			tr.RenderTable(table)
-			return nil
+			_, err = tr.RenderTables(table)
+			return err
 		},
 	}
 
@@ -461,7 +461,7 @@ func renderStatus(trustZone *trust_zone_proto.TrustZone, server *spire.ServerSta
 	}
 
 	tr := renderer.NewTableRenderer(os.Stdout)
-	tr.RenderTables(
+	_, err := tr.RenderTables(
 		renderer.Table{
 			Title:  "Trust Zone",
 			Header: []string{"Item", "Value"},
@@ -488,7 +488,7 @@ func renderStatus(trustZone *trust_zone_proto.TrustZone, server *spire.ServerSta
 			Data:   agentIdData,
 		},
 	)
-	return nil
+	return err
 }
 
 func (c *TrustZoneCommand) getKubernetesContext(cmd *cobra.Command, opts *addOpts) error {

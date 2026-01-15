@@ -8,11 +8,15 @@ import (
 	"io"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 )
+
+var _ Renderer = (*TableRenderer)(nil)
 
 // Renderer provides an interface for rendering columnar data.
 type Renderer interface {
-	Render(tables ...Table)
+	RenderTables(tables ...Table) (bool, error)
 }
 
 // TableRenderer provides a Renderer implementation to render to an io.Writer as a set of tables.
@@ -35,37 +39,53 @@ func NewTableRenderer(writer io.Writer) *TableRenderer {
 	}
 }
 
-// Render renders the specified tables to the table renderer's writer.
+// RenderTables renders the specified tables to the table renderer's writer.
 // It returns whether any tables were rendered.
-func (tr *TableRenderer) RenderTables(tables ...Table) bool {
+func (tr *TableRenderer) RenderTables(tables ...Table) (bool, error) {
 	rendered := false
 	for _, table := range tables {
 		if !table.IsEmpty() && rendered {
 			_, _ = fmt.Fprintln(tr.writer)
 		}
-		if tr.RenderTable(table) {
+		if r, err := tr.renderTable(table); err != nil {
+			return false, err
+		} else if r {
 			rendered = true
 		}
 	}
-	return rendered
+	return rendered, nil
 }
 
-// Render renders the specified table to the renderer's writer.
+// renderTable renders the specified table to the renderer's writer.
 // It returns whether the table was rendered.
-func (tr *TableRenderer) RenderTable(table Table) bool {
+func (tr *TableRenderer) renderTable(table Table) (bool, error) {
 	if table.IsEmpty() {
-		return false
+		return false, nil
 	}
-	tw := tablewriter.NewWriter(tr.writer)
+	tw := tablewriter.NewTable(
+		tr.writer,
+		tablewriter.WithRenderer(
+			renderer.NewBlueprint(
+				tw.Rendition{
+					Borders: tw.BorderNone,
+					Symbols: tw.NewSymbols(tw.StyleASCII),
+				},
+			),
+		),
+		tablewriter.WithHeader(table.Header),
+	)
 	if table.Title != "" {
-		_, _ = fmt.Fprintln(tr.writer, table.Title)
-		_, _ = fmt.Fprintln(tr.writer)
+		if _, err := fmt.Fprintf(tr.writer, "%s\n\n", table.Title); err != nil {
+			return false, err
+		}
 	}
-	tw.SetHeader(table.Header)
-	tw.SetBorder(false)
-	tw.AppendBulk(table.Data)
-	tw.Render()
-	return true
+	if err := tw.Bulk(table.Data); err != nil {
+		return false, err
+	}
+	if err := tw.Render(); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // IsEmpty returns true if the table has no data.

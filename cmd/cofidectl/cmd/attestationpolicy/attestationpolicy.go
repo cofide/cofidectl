@@ -140,8 +140,8 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 		},
 	}
 	tr := renderer.NewTableRenderer(os.Stdout)
-	tr.RenderTables(tables...)
-	return nil
+	_, err := tr.RenderTables(tables...)
+	return err
 }
 
 // formatLabelSelector formats a Kubernetes label selector as a string.
