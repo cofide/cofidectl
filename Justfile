@@ -5,6 +5,9 @@ pkg := "./cmd/cofidectl/main.go"
 _build *args:
     CGO_ENABLED=0 go build {{args}} {{pkg}}
 
+build-test-plugin:
+    CGO_ENABLED=0 go build -o cofidectl-test-plugin ./cmd/cofidectl-test-plugin/main.go
+
 # Build without testing
 build-only *args:
     just _build -o {{bin}} {{args}}
