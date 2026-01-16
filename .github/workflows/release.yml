@@ -2,8 +2,8 @@ name: release-binaries
 on:
   release:
     types:
-    - released
-    - prereleased
+      - released
+      - prereleased
 permissions:
   contents: write
   id-token: write
@@ -41,6 +41,11 @@ jobs:
           cache-dependency-path: |
             ${{ env.GO_CACHE_INFO_FILE }}
             go.sum
+      - name: Install just
+        # v2.66.5
+        uses: taiki-e/install-action@2e9d707ef49c9b094d45955b60c7e5c0dfedeb14
+        with:
+          tool: just@1.46.0
       - name: Build
         run: |
           mkdir -p dist
