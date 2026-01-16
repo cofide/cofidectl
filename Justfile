@@ -1,17 +1,31 @@
-build: build-only test
+bin := "cofidectl"
+pkg := "./cmd/cofidectl/main.go"
 
-build-only:
-    go build -o cofidectl ./cmd/cofidectl/main.go
+# Internal build target without defaults
+_build *args:
+    CGO_ENABLED=0 go build {{args}} {{pkg}}
 
 build-test-plugin:
-    go build -o cofidectl-test-plugin ./cmd/cofidectl-test-plugin/main.go
+    CGO_ENABLED=0 go build -o cofidectl-test-plugin ./cmd/cofidectl-test-plugin/main.go
+
+# Build without testing
+build-only *args:
+    just _build -o {{bin}} {{args}}
+
+# Test and build
+build *args: test
+    just build-only {{args}}
+
+# Release build with version injection
+build-release-version version output=bin:
+    just _build '-ldflags="-s -w -X main.version={{version}}"' -o {{output}}
 
 install-test-plugin: build-test-plugin
     mkdir -p ~/.cofide/plugins
     cp cofidectl-test-plugin ~/.cofide/plugins
 
 test *args:
-    go run gotest.tools/gotestsum@latest --format github-actions ./... {{args}}
+    CGO_ENABLED=0 go run gotest.tools/gotestsum@latest --format github-actions ./... {{args}}
 
 test-race: (test "--" "-race")
 
