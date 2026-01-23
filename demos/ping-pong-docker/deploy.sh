@@ -6,11 +6,11 @@
 set -euxo pipefail
 
 CLIENT_NAME="${1?Client name is required}"
-CLIENT_SPIFFE_ID="${2?Client SPIFFE ID is required}"
+CLIENT_SPIFFE_IDS="${2?Client SPIFFE IDs is required}"
 SERVER_NAME="${3?Server name is required}"
 WORKLOAD_API_PATH="${4?Workload API path is required}"
 
-export IMAGE_TAG=v0.3.1
+export IMAGE_TAG=v0.4.3
 
 # Wait for a Docker container to be up.
 function wait_until_up() {
@@ -38,7 +38,7 @@ function deploy_server() {
     --network kind \
     --publish 8443:8443 \
     --restart unless-stopped \
-    --env CLIENT_SPIFFE_ID=$CLIENT_SPIFFE_ID \
+    --env "CLIENT_SPIFFE_IDS=$CLIENT_SPIFFE_IDS" \
     --volume $WORKLOAD_API_PATH:/spiffe-workload-api/spire-agent.sock \
     ghcr.io/cofide/cofide-demos/ping-pong-server:$IMAGE_TAG
   wait_until_up $SERVER_NAME

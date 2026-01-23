@@ -85,9 +85,9 @@ function check_delete() {
 
 function run_ping_pong_test() {
   local client_context=${1:?Client Kubernetes context}
-  local client_spiffe_id=${2:?Client SPIFFE ID}
+  local client_spiffe_ids="${2:?Client SPIFFE IDs}"
   local server_context=${3:?Server Kubernetes context}
-  just -f demos/Justfile prompt_namespace=no deploy-ping-pong $client_context $client_spiffe_id $server_context
+  just -f demos/Justfile prompt_namespace=no deploy-ping-pong $client_context "$client_spiffe_ids" $server_context
   kubectl --context $client_context wait -n demo --for=condition=Available --timeout 60s deployments/ping-pong-client
   if ! wait_for_pong $client_context; then
     echo "Timed out waiting for pong from server"

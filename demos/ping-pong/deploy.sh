@@ -4,15 +4,15 @@ set -euxo pipefail
 
 NAMESPACE="$1"
 CLIENT_CTX="$2"
-CLIENT_SPIFFE_ID="$3"
+CLIENT_SPIFFE_IDS="$3"
 SERVER_CTX="${4:-$CLIENT_CTX}"
 
-export IMAGE_TAG=v0.3.1
+export IMAGE_TAG=v0.4.3
 COFIDE_DEMOS_BRANCH="https://raw.githubusercontent.com/cofide/cofide-demos/refs/tags/$IMAGE_TAG"
 
 SERVER_MANIFEST="$COFIDE_DEMOS_BRANCH/workloads/ping-pong/ping-pong-server/deploy.yaml"
 export PING_PONG_SERVER_SERVICE_PORT=8443
-export CLIENT_SPIFFE_ID
+export CLIENT_SPIFFE_IDS
 echo "Deploying pong server to: $SERVER_CTX"
 if [[ $SERVER_CTX == kind-* ]]; then
     export KIND_CLUSTER_NAME="${SERVER_CTX#kind-}"
