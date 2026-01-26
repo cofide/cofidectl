@@ -27,14 +27,15 @@ type CommandContext struct {
 }
 
 // NewCommandContext returns a command context wired up with a config loader and plugin manager.
-func NewCommandContext(cofideConfigFile string) *CommandContext {
+// If customLoader is non-nil, it may be used to load custom in-process plugins.
+func NewCommandContext(cofideConfigFile string, customLoader manager.PluginLoader) *CommandContext {
 	logLevel := &slog.LevelVar{}
 	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 	ctx, cancel := context.WithCancelCause(context.Background())
 	configLoader := config.NewFileLoader(cofideConfigFile)
-	pluginManager := manager.NewManager(configLoader)
+	pluginManager := manager.NewManager(configLoader, customLoader)
 	return &CommandContext{Ctx: ctx, cancel: cancel, PluginManager: pluginManager, logLevel: logLevel}
 }
 

@@ -35,11 +35,26 @@ const (
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
 type PluginManager struct {
 	configLoader     config.Loader
+	loaders          []PluginLoader
 	grpcPluginLoader grpcPluginLoader
 	source           datasource.DataSource
 	provision        provision.Provision
 	clients          map[string]*go_plugin.Client
 	logLevel         hclog.Level
+}
+
+// PluginLoader is an interface that allows loading custom in-process plugins.
+type PluginLoader interface {
+	// LoadDataSource returns (nil, nil) if the named plugin is not a supported in-process plugin.
+	LoadDataSource(ctx context.Context, name string) (datasource.DataSource, error)
+	// LoadProvision returns (nil, nil) if the named plugin is not a supported in-process plugin.
+	LoadProvision(ctx context.Context, name string) (provision.Provision, error)
+}
+
+// defaultPluginLoader is an implementation of PluginLoader that loads the default cofidectl
+// in-process plugins.
+type defaultPluginLoader struct {
+	configLoader config.Loader
 }
 
 // grpcPluginLoader is a function that loads a gRPC plugin. The function should load a single
@@ -57,9 +72,17 @@ type grpcPlugin struct {
 	provision provision.Provision
 }
 
-func NewManager(configLoader config.Loader) *PluginManager {
+// NewManager returns a new plugin manager.
+// If customLoader is non-nil, it may be used to load custom in-process plugins.
+func NewManager(configLoader config.Loader, customLoader PluginLoader) *PluginManager {
+	var loaders []PluginLoader
+	if customLoader != nil {
+		loaders = append(loaders, customLoader)
+	}
+	loaders = append(loaders, newDefaultPluginLoader(configLoader))
 	return &PluginManager{
 		configLoader:     configLoader,
+		loaders:          loaders,
 		grpcPluginLoader: loadGRPCPlugin,
 		clients:          map[string]*go_plugin.Client{},
 	}
@@ -132,16 +155,18 @@ func (pm *PluginManager) loadDataSource(ctx context.Context) (datasource.DataSou
 	}
 
 	// Check if an in-process data source implementation has been requested.
-	if dsName == LocalDSPluginName {
-		ds, err := local.NewLocalDataSource(pm.configLoader)
+	for _, loader := range pm.loaders {
+		ds, err := loader.LoadDataSource(ctx, dsName)
 		if err != nil {
 			return nil, err
 		}
-		if err := ds.Validate(ctx); err != nil {
-			return nil, err
+		if ds != nil {
+			if err := ds.Validate(ctx); err != nil {
+				return nil, err
+			}
+			pm.source = ds
+			return pm.source, nil
 		}
-		pm.source = ds
-		return pm.source, nil
 	}
 
 	if err := pm.loadGRPCPlugin(ctx, dsName, cfg.Plugins); err != nil {
@@ -175,13 +200,18 @@ func (pm *PluginManager) loadProvision(ctx context.Context) (provision.Provision
 	}
 
 	// Check if an in-process provision implementation has been requested.
-	if provisionName == SpireHelmProvisionPluginName {
-		spireHelm := spirehelm.NewSpireHelm(nil, nil)
-		if err := spireHelm.Validate(ctx); err != nil {
+	for _, loader := range pm.loaders {
+		provision, err := loader.LoadProvision(ctx, provisionName)
+		if err != nil {
 			return nil, err
 		}
-		pm.provision = spireHelm
-		return pm.provision, nil
+		if provision != nil {
+			if err := provision.Validate(ctx); err != nil {
+				return nil, err
+			}
+			pm.provision = provision
+			return pm.provision, nil
+		}
 	}
 
 	if err := pm.loadGRPCPlugin(ctx, provisionName, cfg.Plugins); err != nil {
@@ -214,6 +244,33 @@ func (pm *PluginManager) loadGRPCPlugin(ctx context.Context, pluginName string, 
 	}
 	pm.clients[pluginName] = grpcPlugin.client
 	return nil
+}
+
+func newDefaultPluginLoader(configLoader config.Loader) PluginLoader {
+	return &defaultPluginLoader{configLoader: configLoader}
+}
+
+// LoadDataSource implements PluginLoader.
+// It loads the local data source if requested.
+func (dpl *defaultPluginLoader) LoadDataSource(_ context.Context, name string) (datasource.DataSource, error) {
+	if name == LocalDSPluginName {
+		ds, err := local.NewLocalDataSource(dpl.configLoader)
+		if err != nil {
+			return nil, err
+		}
+		return ds, nil
+	}
+	return nil, nil
+}
+
+// LoadProvision implements PluginLoader.
+// It loads the spire-helm provision plugin if requested.
+func (dpl *defaultPluginLoader) LoadProvision(_ context.Context, name string) (provision.Provision, error) {
+	if name == SpireHelmProvisionPluginName {
+		spireHelm := spirehelm.NewSpireHelm(nil, nil)
+		return spireHelm, nil
+	}
+	return nil, nil
 }
 
 // loadGRPCPlugin is the default grpcPluginLoader.
