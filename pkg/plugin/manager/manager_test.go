@@ -11,6 +11,7 @@ import (
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
+	"github.com/cofide/cofidectl/internal/pkg/utils"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
@@ -40,6 +41,33 @@ type fakeGRPCProvision struct {
 
 func newFakeGRPCProvision() *fakeGRPCProvision {
 	return &fakeGRPCProvision{}
+}
+
+type fakePluginLoader struct {
+	configLoader config.Loader
+}
+
+func newFakePluginLoader(configLoader config.Loader) *fakePluginLoader {
+	return &fakePluginLoader{configLoader: configLoader}
+}
+
+func (fpl *fakePluginLoader) LoadDataSource(_ context.Context, name string) (datasource.DataSource, error) {
+	if name == "fake-local" {
+		ds, err := local.NewLocalDataSource(fpl.configLoader)
+		if err != nil {
+			return nil, err
+		}
+		return ds, nil
+	}
+	return nil, nil
+}
+
+func (dpl *fakePluginLoader) LoadProvision(_ context.Context, name string) (provision.Provision, error) {
+	if name == "fake-spire-helm" {
+		spireHelm := spirehelm.NewSpireHelm(nil, nil)
+		return spireHelm, nil
+	}
+	return nil, nil
 }
 
 func TestManager_Init_success(t *testing.T) {
@@ -92,7 +120,7 @@ func TestManager_Init_success(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 			// Mock out the gRPC plugin loader function.
 			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
 				return &grpcPlugin{nil, newFakeGRPCDataSource(t, configLoader), newFakeGRPCProvision()}, nil
@@ -163,7 +191,7 @@ func TestManager_Init_failure(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 
 			plugins := &pluginspb.Plugins{DataSource: &tt.dsName, Provision: &tt.provisionName}
 			err = m.Init(context.Background(), plugins, tt.pluginConfig)
@@ -219,7 +247,7 @@ func TestManager_GetDataSource_success(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 
 			// Mock out the gRPC plugin loader function.
 			var client *go_plugin.Client
@@ -257,6 +285,46 @@ func TestManager_GetDataSource_success(t *testing.T) {
 	}
 }
 
+func TestManager_GetDataSource_withPluginLoader(t *testing.T) {
+	tests := []struct {
+		name   string
+		config config.Config
+		want   func(config.Loader) datasource.DataSource
+	}{
+		{
+			name:   "defaults",
+			config: config.Config{Plugins: &pluginspb.Plugins{DataSource: utils.PtrOf("fake-local")}},
+			want: func(cl config.Loader) datasource.DataSource {
+				lds, err := local.NewLocalDataSource(cl)
+				assert.Nil(t, err)
+				return lds
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configLoader, err := config.NewMemoryLoader(&tt.config)
+			require.Nil(t, err)
+
+			pluginLoader := newFakePluginLoader(configLoader)
+			m := NewManager(configLoader, pluginLoader)
+
+			m.grpcPluginLoader = nil
+			got, err := m.GetDataSource(context.Background())
+			require.Nil(t, err)
+
+			want := tt.want(configLoader)
+			assert.Equal(t, want, got)
+			assert.Equal(t, want, m.source)
+			assert.Empty(t, m.clients)
+
+			got2, err := m.GetDataSource(context.Background())
+			require.Nil(t, err)
+			assert.Same(t, got, got2, "second GetDataSource() should return a cached copy")
+		})
+	}
+}
+
 func TestManager_GetDataSource_failure(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -279,7 +347,7 @@ func TestManager_GetDataSource_failure(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 			// Mock out the gRPC plugin loader function, and inject a load failure.
 			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
 				return nil, errors.New("failed to create plugin")
@@ -322,7 +390,7 @@ func TestManager_GetProvision_success(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 
 			// Mock out the gRPC plugin loader function.
 			var client *go_plugin.Client
@@ -359,6 +427,41 @@ func TestManager_GetProvision_success(t *testing.T) {
 	}
 }
 
+func TestManager_GetProvision_withPluginLoader(t *testing.T) {
+	tests := []struct {
+		name   string
+		config config.Config
+		want   provision.Provision
+	}{
+		{
+			name:   "defaults",
+			config: config.Config{Plugins: &pluginspb.Plugins{Provision: utils.PtrOf("fake-spire-helm")}},
+			want:   spirehelm.NewSpireHelm(nil, nil),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configLoader, err := config.NewMemoryLoader(&tt.config)
+			require.Nil(t, err)
+
+			pluginLoader := newFakePluginLoader(configLoader)
+			m := NewManager(configLoader, pluginLoader)
+
+			m.grpcPluginLoader = nil
+			got, err := m.GetProvision(context.Background())
+			require.Nil(t, err)
+
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, m.provision)
+			assert.Empty(t, m.clients)
+
+			got2, err := m.GetProvision(context.Background())
+			require.Nil(t, err)
+			assert.Same(t, got, got2, "second GetProvision() should return a cached copy")
+		})
+	}
+}
+
 func TestManager_GetProvision_failure(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -381,7 +484,7 @@ func TestManager_GetProvision_failure(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 			// Mock out the gRPC plugin loader function, and inject a load failure.
 			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
 				return nil, errors.New("failed to create plugin")
@@ -417,7 +520,7 @@ func TestManager_Shutdown(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(&tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 			// Mock out the gRPC plugin loader function.
 			client := &go_plugin.Client{}
 			m.grpcPluginLoader = func(_ context.Context, _ hclog.Logger, _ string, _ *pluginspb.Plugins) (*grpcPlugin, error) {
@@ -472,7 +575,7 @@ func TestManager_GetPluginConfig(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 			got, err := m.GetPluginConfig(tt.pluginName)
 
 			if tt.wantErr {
@@ -517,7 +620,7 @@ func TestManager_SetPluginConfig(t *testing.T) {
 			configLoader, err := config.NewMemoryLoader(tt.config)
 			require.Nil(t, err)
 
-			m := NewManager(configLoader)
+			m := NewManager(configLoader, nil)
 			err = m.SetPluginConfig(tt.pluginName, tt.pluginConfig)
 
 			require.Nil(t, err, err)

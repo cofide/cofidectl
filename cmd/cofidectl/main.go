@@ -35,7 +35,7 @@ func main() {
 }
 
 func run() error {
-	cmdCtx := cmdcontext.NewCommandContext(cofideConfigFile)
+	cmdCtx := cmdcontext.NewCommandContext(cofideConfigFile, nil)
 	defer cmdCtx.Shutdown()
 	go cmdCtx.HandleSignals()
 
