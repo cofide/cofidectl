@@ -39,8 +39,10 @@ function check_init() {
 }
 
 function configure_trust_zones() {
-  ./cofidectl trust-zone add $TRUST_ZONE_1 --trust-domain $TRUST_DOMAIN_1 --kubernetes-context $K8S_CLUSTER_1_CONTEXT --kubernetes-cluster $K8S_CLUSTER_1_NAME --profile kubernetes
-  ./cofidectl trust-zone add $TRUST_ZONE_2 --trust-domain $TRUST_DOMAIN_2 --kubernetes-context $K8S_CLUSTER_2_CONTEXT --kubernetes-cluster $K8S_CLUSTER_2_NAME --profile kubernetes
+  ./cofidectl trust-zone add $TRUST_ZONE_1 --trust-domain $TRUST_DOMAIN_1
+  ./cofidectl cluster add $K8S_CLUSTER_1_NAME --trust-zone $TRUST_ZONE_1 --kubernetes-context $K8S_CLUSTER_1_CONTEXT --profile kubernetes
+  ./cofidectl trust-zone add $TRUST_ZONE_2 --trust-domain $TRUST_DOMAIN_2
+  ./cofidectl cluster add $K8S_CLUSTER_2_NAME --trust-zone $TRUST_ZONE_2 --kubernetes-context $K8S_CLUSTER_2_CONTEXT --profile kubernetes
  }
 
 function configure_federations() {

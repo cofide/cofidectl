@@ -20,7 +20,7 @@ NAMESPACE_POLICY_NAMESPACE=${NAMESPACE_POLICY_NAMESPACE:-demo}
 POD_POLICY_POD_LABEL=${POD_POLICY_POD_LABEL:-"foo=bar"}
 
 function configure() {
-  ./cofidectl trust-zone add $TRUST_ZONE --trust-domain $TRUST_DOMAIN --no-cluster
+  ./cofidectl trust-zone add $TRUST_ZONE --trust-domain $TRUST_DOMAIN
   ./cofidectl cluster add $K8S_CLUSTER_NAME --trust-zone $TRUST_ZONE --kubernetes-context $K8S_CLUSTER_CONTEXT --profile kubernetes
   ./cofidectl attestation-policy add kubernetes --name namespace --namespace $NAMESPACE_POLICY_NAMESPACE --spiffeid-path-template 'ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}'
   ./cofidectl attestation-policy add kubernetes --name pod-label --pod-label $POD_POLICY_POD_LABEL --dnsNameTemplates example.namespace.svc.cluster.local

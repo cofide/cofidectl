@@ -34,8 +34,7 @@ PING_PONG_SERVER_DNS_NAME=ping-pong-server.example.org
 
 function configure() {
   ./cofidectl trust-zone add $TRUST_ZONE \
-    --trust-domain $TRUST_DOMAIN \
-    --no-cluster
+    --trust-domain $TRUST_DOMAIN
   ./cofidectl cluster add $K8S_CLUSTER_NAME \
     --trust-zone $TRUST_ZONE \
     --kubernetes-context $K8S_CLUSTER_CONTEXT \
