@@ -9,7 +9,8 @@ In this example, the workloads will instead be in separate trust zones, with dis
 Let's add an additional trust-zone (`cofide-b`) in a new `kind` cluster (in this case, `kind2`) and a Cofide federation between them:
 
 ```sh
-./cofidectl trust-zone add cofide-b --trust-domain cofide-b.test --kubernetes-cluster kind2 --profile kubernetes --kubernetes-context kind-kind2
+./cofidectl trust-zone add cofide-b --trust-domain cofide-b.test
+./cofidectl cluster add kind2 --trust-zone cofide-b --profile kubernetes --kubernetes-context kind-kind2
 ./cofidectl federation add --from cofide-a --to cofide-b
 ./cofidectl federation add --from cofide-b --to cofide-a
 ```

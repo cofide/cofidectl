@@ -41,7 +41,8 @@ Deploying to a Kubernetes cluster is as simple as a few commands. This example a
 ```sh
 rm -f cofide.yaml
 ./cofidectl init
-./cofidectl trust-zone add cofide-a --trust-domain cofide-a.test --kubernetes-cluster kind --profile kubernetes --kubernetes-context kind-kind
+./cofidectl trust-zone add cofide-a --trust-domain cofide-a.test
+./cofidectl cluster add kind --trust-zone cofide-a --profile kubernetes --kubernetes-context kind-kind
 ```
 
 Next up is to add an 'attestation policy' - these are `cofidectl` rules which are used to describe the properties of a workload and it's environment to determine workload identity issuance. In this example, we will create a policy (`namespace-demo`) that will enable SPIFFE identities for workloads in the `demo` namespace.
