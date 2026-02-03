@@ -26,13 +26,13 @@ import (
 )
 
 const (
-	SPIRERepositoryName = "spire"
-	SPIRERepositoryURL  = "https://spiffe.github.io/helm-charts-hardened/"
+	SPIRERepositoryName = "cofide"
+	SPIRERepositoryURL  = "https://charts.cofide.dev"
 
 	SPIREChartName       = "spire"
-	SPIREChartVersion    = "0.24.5"
+	SPIREChartVersion    = "0.26.0-cofide.10"
 	SPIRECRDChartName    = "spire-crds"
-	SPIRECRDChartVersion = "0.5.0"
+	SPIRECRDChartVersion = "0.5.0-cofide.1"
 
 	// Kubernetes namespace in which Helm charts and CRDs will be installed.
 	SPIREManagementNamespace = "spire-mgmt"
