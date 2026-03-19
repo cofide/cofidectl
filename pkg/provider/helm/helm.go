@@ -30,7 +30,7 @@ const (
 	SPIRERepositoryURL  = "https://charts.cofide.dev"
 
 	SPIREChartName       = "spire"
-	SPIREChartVersion    = "0.26.0-cofide.10"
+	SPIREChartVersion    = "0.27.1-cofide.0"
 	SPIRECRDChartName    = "spire-crds"
 	SPIRECRDChartVersion = "0.5.0-cofide.1"
 

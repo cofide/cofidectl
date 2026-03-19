@@ -22,7 +22,7 @@ func TestHelmSPIREProvider(t *testing.T) {
 
 	p, err := NewHelmSPIREProvider(context.Background(), "fake-trust-zone", cluster, spireValues, spireCRDsValues, WithKubeConfig(kubeConfig))
 	assert.Nil(t, err)
-	assert.Equal(t, p.spireChartVersion, "0.26.0-cofide.10")
+	assert.Equal(t, p.spireChartVersion, "0.27.1-cofide.0")
 	assert.Equal(t, p.spireCRDChartVersion, "0.5.0-cofide.1")
 	assert.Equal(t, cluster.GetName(), p.cluster.GetName())
 	assert.Equal(t, kubeConfig, p.settings.KubeConfig)
