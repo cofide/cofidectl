@@ -7,8 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
-	"os"
 	"strconv"
 
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
@@ -24,6 +24,7 @@ import (
 	"github.com/cofide/cofidectl/pkg/spire"
 	"github.com/spf13/cobra"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
+	"google.golang.org/protobuf/proto"
 )
 
 type TrustZoneCommand struct {
@@ -83,6 +84,7 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 			}
 
 			data := make([][]string, len(trustZones))
+			objects := make([]proto.Message, len(trustZones))
 			for i, trustZone := range trustZones {
 				cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
 				if err != nil && !errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
@@ -99,12 +101,17 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 					trustZone.TrustDomain,
 					clusterName,
 				}
+				objects[i] = trustZone
 			}
 
-			tr := renderer.NewTableRenderer(os.Stdout)
+			tr, err := renderer.New(c.cmdCtx.GetOutputFormat(), cmd.OutOrStdout())
+			if err != nil {
+				return err
+			}
 			table := renderer.Table{
-				Header: []string{"Name", "Trust Domain", "Cluster"},
-				Data:   data,
+				Header:  []string{"Name", "Trust Domain", "Cluster"},
+				Data:    data,
+				Objects: objects,
 			}
 			_, err = tr.RenderTables(table)
 			return err
@@ -280,14 +287,14 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
-			return c.status(cmd.Context(), ds, kubeConfig, args[0])
+			return c.status(cmd.Context(), ds, kubeConfig, args[0], cmd.OutOrStdout())
 		},
 	}
 
 	return cmd
 }
 
-func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string) error {
+func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string, w io.Writer) error {
 	trustZone, err := source.GetTrustZoneByName(tzName)
 	if err != nil {
 		return err
@@ -325,10 +332,10 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 		return err
 	}
 
-	return renderStatus(trustZone, server, agents)
+	return renderStatus(w, trustZone, server, agents)
 }
 
-func renderStatus(trustZone *trust_zone_proto.TrustZone, server *spire.ServerStatus, agents *spire.AgentStatus) error {
+func renderStatus(w io.Writer, trustZone *trust_zone_proto.TrustZone, server *spire.ServerStatus, agents *spire.AgentStatus) error {
 	trustZoneData := [][]string{
 		{
 			"Trust Zone",
@@ -383,7 +390,7 @@ func renderStatus(trustZone *trust_zone_proto.TrustZone, server *spire.ServerSta
 		})
 	}
 
-	tr := renderer.NewTableRenderer(os.Stdout)
+	tr := renderer.NewTableRenderer(w)
 	_, err := tr.RenderTables(
 		renderer.Table{
 			Title:  "Trust Zone",

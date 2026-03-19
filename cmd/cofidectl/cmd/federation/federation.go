@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
@@ -21,6 +20,7 @@ import (
 	"github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/cofide/cofidectl/pkg/spire"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -89,6 +89,7 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 			}
 
 			data := make([][]string, len(federations))
+			objects := make([]proto.Message, len(federations))
 			for i, federation := range federations {
 				trustZone, err := ds.GetTrustZone(federation.GetTrustZoneId())
 				if err != nil {
@@ -111,12 +112,17 @@ func (c *FederationCommand) GetListCommand() *cobra.Command {
 					status,
 					reason,
 				}
+				objects[i] = federation
 			}
 
-			tr := renderer.NewTableRenderer(os.Stdout)
+			tr, err := renderer.New(c.cmdCtx.GetOutputFormat(), cmd.OutOrStdout())
+			if err != nil {
+				return err
+			}
 			table := renderer.Table{
-				Header: []string{"Trust Zone", "Remote Trust Zone", "Status", "Reason"},
-				Data:   data,
+				Header:  []string{"Trust Zone", "Remote Trust Zone", "Status", "Reason"},
+				Data:    data,
+				Objects: objects,
 			}
 			_, err = tr.RenderTables(table)
 			return err

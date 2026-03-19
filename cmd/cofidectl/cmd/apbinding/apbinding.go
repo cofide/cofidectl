@@ -6,7 +6,6 @@ package apbinding
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
@@ -16,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+	"google.golang.org/protobuf/proto"
 )
 
 type APBindingCommand struct {
@@ -75,7 +75,11 @@ func (c *APBindingCommand) GetListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return renderList(ds, bindings)
+			r, err := renderer.New(c.cmdCtx.GetOutputFormat(), cmd.OutOrStdout())
+			if err != nil {
+				return err
+			}
+			return renderList(r, ds, bindings)
 		},
 	}
 
@@ -114,7 +118,7 @@ func renderFederations(bindings []*ap_binding_proto.APBindingFederation, tzMap m
 	return strings.Join(federations, ", ")
 }
 
-func renderList(source datasource.DataSource, bindings []*ap_binding_proto.APBinding) error {
+func renderList(r renderer.Renderer, source datasource.DataSource, bindings []*ap_binding_proto.APBinding) error {
 	tzs, err := source.ListTrustZones()
 	if err != nil {
 		return err
@@ -134,20 +138,22 @@ func renderList(source datasource.DataSource, bindings []*ap_binding_proto.APBin
 	}
 
 	data := make([][]string, len(bindings))
+	objects := make([]proto.Message, len(bindings))
 	for i, binding := range bindings {
 		data[i] = []string{
 			tzMap[binding.GetTrustZoneId()],
 			policyMap[binding.GetPolicyId()],
 			renderFederations(binding.GetFederations(), tzMap),
 		}
+		objects[i] = binding
 	}
 
-	tr := renderer.NewTableRenderer(os.Stdout)
 	table := renderer.Table{
-		Header: []string{"Trust Zone", "Attestation Policy", "Federates With"},
-		Data:   data,
+		Header:  []string{"Trust Zone", "Attestation Policy", "Federates With"},
+		Data:    data,
+		Objects: objects,
 	}
-	_, err = tr.RenderTables(table)
+	_, err = r.RenderTables(table)
 	return err
 }
 

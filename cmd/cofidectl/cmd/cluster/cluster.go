@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 var clusterListCmdDesc = `
@@ -143,14 +145,14 @@ func (c *ClusterCommand) getListClustersCommand() *cobra.Command {
 		Long:  clusterListCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.ListClusters(cmd.Context())
+			return c.ListClusters(cmd.Context(), cmd.OutOrStdout())
 		},
 	}
 
 	return cmd
 }
 
-func (c *ClusterCommand) ListClusters(ctx context.Context) error {
+func (c *ClusterCommand) ListClusters(ctx context.Context, w io.Writer) error {
 	ds, err := c.cmdCtx.PluginManager.GetDataSource(ctx)
 	if err != nil {
 		return err
@@ -160,6 +162,7 @@ func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 		return fmt.Errorf("failed to list trust zones: %v", err)
 	}
 	data := make([][]string, 0)
+	objects := make([]proto.Message, 0)
 	for _, zone := range zones {
 		clusters, err := ds.ListClusters(&datasourcepb.ListClustersRequest_Filter{
 			TrustZoneId: zone.Id,
@@ -176,13 +179,18 @@ func (c *ClusterCommand) ListClusters(ctx context.Context) error {
 				zone.GetName(),
 				cluster.GetProfile(),
 			})
+			objects = append(objects, cluster)
 		}
 	}
 
-	tr := renderer.NewTableRenderer(os.Stdout)
+	tr, err := renderer.New(c.cmdCtx.GetOutputFormat(), w)
+	if err != nil {
+		return err
+	}
 	table := renderer.Table{
-		Header: []string{"Name", "Trust Zone", "Profile"},
-		Data:   data,
+		Header:  []string{"Name", "Trust Zone", "Profile"},
+		Data:    data,
+		Objects: objects,
 	}
 	_, err = tr.RenderTables(table)
 	return err

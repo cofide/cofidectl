@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -99,7 +98,12 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderRegisteredWorkloads(cmd.Context(), ds, kubeConfig, trustZones)
+			r, err := renderer.New(w.cmdCtx.GetOutputFormat(), cmd.OutOrStdout()) //nolint:govet
+			if err != nil {
+				return err
+			}
+
+			err = renderRegisteredWorkloads(r, cmd.Context(), ds, kubeConfig, trustZones)
 			if err != nil {
 				return err
 			}
@@ -190,7 +194,7 @@ func (w *WorkloadCommand) status(ctx context.Context, ds datasource.DataSource, 
 	return nil
 }
 
-func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
+func renderRegisteredWorkloads(r renderer.Renderer, ctx context.Context, ds datasource.DataSource, kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
@@ -230,12 +234,11 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 		}
 	}
 
-	tr := renderer.NewTableRenderer(os.Stdout)
 	table := renderer.Table{
 		Header: []string{"Name", "Trust Zone", "Type", "Status", "Namespace", "Workload ID"},
 		Data:   data,
 	}
-	_, err := tr.RenderTables(table)
+	_, err := r.RenderTables(table)
 	return err
 }
 
@@ -298,7 +301,12 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
 
-			err = renderUnregisteredWorkloads(cmd.Context(), ds, kubeConfig, trustZones, opts.includeSecrets)
+			r, err := renderer.New(w.cmdCtx.GetOutputFormat(), cmd.OutOrStdout()) //nolint:govet
+			if err != nil {
+				return err
+			}
+
+			err = renderUnregisteredWorkloads(r, cmd.Context(), ds, kubeConfig, trustZones, opts.includeSecrets)
 			if err != nil {
 				return err
 			}
@@ -314,7 +322,7 @@ func (w *WorkloadCommand) GetDiscoverCommand() *cobra.Command {
 	return cmd
 }
 
-func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
+func renderUnregisteredWorkloads(r renderer.Renderer, ctx context.Context, ds datasource.DataSource, kubeConfig string, trustZones []*trust_zone_proto.TrustZone, includeSecrets bool) error {
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
@@ -356,7 +364,6 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 		}
 	}
 
-	tr := renderer.NewTableRenderer(os.Stdout)
 	headers := []string{"Name", "Trust Zone", "Type", "Status", "Namespace"}
 	if includeSecrets {
 		headers = append(headers, "Secrets")
@@ -365,6 +372,6 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 		Header: headers,
 		Data:   data,
 	}
-	_, err := tr.RenderTables(table)
+	_, err := r.RenderTables(table)
 	return err
 }

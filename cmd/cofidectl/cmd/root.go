@@ -18,6 +18,7 @@ import (
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/workload"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
+	"github.com/cofide/cofidectl/pkg/output"
 
 	"github.com/spf13/cobra"
 )
@@ -29,6 +30,7 @@ type RootCommand struct {
 }
 
 var kubeCfgFile string
+var outputFormat string
 
 func NewRootCommand(name string, version string, cmdCtx *cmdcontext.CommandContext) *RootCommand {
 	return &RootCommand{
@@ -57,6 +59,11 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 
 			r.cmdCtx.SetLogLevel(slogLevel)
 			slog.Debug("Set slog level", slog.String("level", slogLevel.String()))
+
+			if err := validateOutputFormat(outputFormat); err != nil {
+				return err
+			}
+			r.cmdCtx.SetOutputFormat(output.Format(outputFormat))
 			return nil
 		},
 	}
@@ -69,6 +76,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	pf := cmd.PersistentFlags()
 	pf.StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 	pf.StringVar(&logLevel, "log-level", "ERROR", "log level")
+	pf.StringVarP(&outputFormat, "output", "o", "table", "output format (table, json)")
 
 	versionCmd := NewVersionCommand(r.name, r.version, r.cmdCtx)
 	initCmd := NewInitCommand(r.cmdCtx)
@@ -95,6 +103,20 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	)
 
 	return cmd, nil
+}
+
+// validateOutputFormat returns an error if the format string is not a recognised output format.
+func validateOutputFormat(format string) error {
+	for _, f := range output.ValidFormats {
+		if output.Format(format) == f {
+			return nil
+		}
+	}
+	formats := make([]string, len(output.ValidFormats))
+	for i, f := range output.ValidFormats {
+		formats[i] = string(f)
+	}
+	return fmt.Errorf("unrecognised output format %q, valid formats: %s", format, strings.Join(formats, ", "))
 }
 
 // slogLevelFromString returns an slog.Level from a string log level.

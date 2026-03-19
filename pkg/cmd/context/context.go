@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cofide/cofidectl/internal/pkg/config"
+	"github.com/cofide/cofidectl/pkg/output"
 	"github.com/cofide/cofidectl/pkg/plugin/manager"
 )
 
@@ -24,6 +25,7 @@ type CommandContext struct {
 	cancel        context.CancelCauseFunc
 	PluginManager *manager.PluginManager
 	logLevel      *slog.LevelVar
+	outputFormat  output.Format
 }
 
 // NewCommandContext returns a command context wired up with a config loader and plugin manager.
@@ -66,4 +68,17 @@ func (cc *CommandContext) HandleSignals() {
 func (cc *CommandContext) SetLogLevel(level slog.Level) {
 	cc.logLevel.Set(level)
 	cc.PluginManager.SetLogLevel(level)
+}
+
+// SetOutputFormat sets the output format.
+func (cc *CommandContext) SetOutputFormat(f output.Format) {
+	cc.outputFormat = f
+}
+
+// GetOutputFormat returns the output format. Defaults to TableFormat if not set.
+func (cc *CommandContext) GetOutputFormat() output.Format {
+	if cc.outputFormat == "" {
+		return output.TableFormat
+	}
+	return cc.outputFormat
 }

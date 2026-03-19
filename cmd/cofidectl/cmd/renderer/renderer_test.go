@@ -5,10 +5,13 @@ package renderer
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestTableRenderer_RenderTables(t *testing.T) {
@@ -163,6 +166,126 @@ func TestTableRenderer_renderTable(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantOutput, buf.String())
 			assert.Equal(t, tt.wantRendered, rendered)
+		})
+	}
+}
+
+func TestJSONRenderer_RenderTables(t *testing.T) {
+	tz1 := &trust_zone_proto.TrustZone{Name: "tz1", TrustDomain: "example.org"}
+	tz2 := &trust_zone_proto.TrustZone{Name: "tz2", TrustDomain: "other.org"}
+
+	tableWithObjects := Table{
+		Title:   "Trust Zones",
+		Header:  []string{"Name", "Trust Domain"},
+		Data:    [][]string{{"tz1", "example.org"}},
+		Objects: []proto.Message{tz1},
+	}
+	tableWithTwoObjects := Table{
+		Title:   "Trust Zones",
+		Header:  []string{"Name", "Trust Domain"},
+		Data:    [][]string{{"tz1", "example.org"}, {"tz2", "other.org"}},
+		Objects: []proto.Message{tz1, tz2},
+	}
+	tableNoObjects := Table{
+		Title:  "Empty",
+		Header: []string{"Name"},
+		Data:   [][]string{},
+	}
+	tableNoData := Table{
+		Title:  "No data",
+		Header: []string{"Name"},
+	}
+	tableWithTitle := Table{
+		Title:   "Zone A",
+		Header:  []string{"Name"},
+		Data:    [][]string{{"a"}},
+		Objects: []proto.Message{tz1},
+	}
+	tableWithTitle2 := Table{
+		Title:   "Zone B",
+		Header:  []string{"Name"},
+		Data:    [][]string{{"b"}},
+		Objects: []proto.Message{tz2},
+	}
+
+	tests := []struct {
+		name         string
+		tables       []Table
+		wantRendered bool
+		checkOutput  func(t *testing.T, output string)
+	}{
+		{
+			name:         "No tables",
+			tables:       []Table{},
+			wantRendered: false,
+			checkOutput: func(t *testing.T, output string) {
+				assert.Empty(t, output)
+			},
+		},
+		{
+			name:         "All empty tables",
+			tables:       []Table{tableNoObjects, tableNoData},
+			wantRendered: false,
+			checkOutput: func(t *testing.T, output string) {
+				assert.Empty(t, output)
+			},
+		},
+		{
+			name:         "Single table with one object",
+			tables:       []Table{tableWithObjects},
+			wantRendered: true,
+			checkOutput: func(t *testing.T, output string) {
+				var arr []json.RawMessage
+				require.NoError(t, json.Unmarshal([]byte(output), &arr))
+				assert.Len(t, arr, 1)
+				var obj map[string]any
+				require.NoError(t, json.Unmarshal(arr[0], &obj))
+				assert.Equal(t, "tz1", obj["name"])
+				assert.Equal(t, "example.org", obj["trustDomain"])
+			},
+		},
+		{
+			name:         "Single table with two objects",
+			tables:       []Table{tableWithTwoObjects},
+			wantRendered: true,
+			checkOutput: func(t *testing.T, output string) {
+				var arr []json.RawMessage
+				require.NoError(t, json.Unmarshal([]byte(output), &arr))
+				assert.Len(t, arr, 2)
+			},
+		},
+		{
+			name:         "Empty table skipped",
+			tables:       []Table{tableNoObjects, tableWithObjects},
+			wantRendered: true,
+			checkOutput: func(t *testing.T, output string) {
+				var arr []json.RawMessage
+				require.NoError(t, json.Unmarshal([]byte(output), &arr))
+				assert.Len(t, arr, 1)
+			},
+		},
+		{
+			name:         "Multiple non-empty tables keyed by title",
+			tables:       []Table{tableWithTitle, tableWithTitle2},
+			wantRendered: true,
+			checkOutput: func(t *testing.T, output string) {
+				var obj map[string][]json.RawMessage
+				require.NoError(t, json.Unmarshal([]byte(output), &obj))
+				assert.Contains(t, obj, "Zone A")
+				assert.Contains(t, obj, "Zone B")
+				assert.Len(t, obj["Zone A"], 1)
+				assert.Len(t, obj["Zone B"], 1)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			jr := NewJSONRenderer(&buf)
+			rendered, err := jr.RenderTables(tt.tables...)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantRendered, rendered)
+			tt.checkOutput(t, buf.String())
 		})
 	}
 }

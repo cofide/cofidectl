@@ -6,7 +6,6 @@ package attestationpolicy
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
@@ -14,6 +13,7 @@ import (
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/spf13/cobra"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"
+	"google.golang.org/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -69,7 +69,11 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 				return err
 			}
 
-			return renderPolicies(attestationPolicies)
+			r, err := renderer.New(c.cmdCtx.GetOutputFormat(), cmd.OutOrStdout())
+			if err != nil {
+				return err
+			}
+			return renderPolicies(r, attestationPolicies)
 		},
 	}
 
@@ -77,10 +81,13 @@ func (c *AttestationPolicyCommand) GetListCommand() *cobra.Command {
 }
 
 // renderPolicies writes a table showing information about a list of attestation policies.
-func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) error {
+func renderPolicies(r renderer.Renderer, policies []*attestation_policy_proto.AttestationPolicy) error {
 	k8sData := make([][]string, 0, len(policies))
 	staticData := make([][]string, 0, len(policies))
 	tpmNodeData := make([][]string, 0, len(policies))
+	k8sObjects := make([]proto.Message, 0, len(policies))
+	staticObjects := make([]proto.Message, 0, len(policies))
+	tpmNodeObjects := make([]proto.Message, 0, len(policies))
 	for _, policy := range policies {
 		switch p := policy.Policy.(type) {
 		case *attestation_policy_proto.AttestationPolicy_Kubernetes:
@@ -94,6 +101,7 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				podSelector,
 				strings.Join(kubernetes.GetDnsNameTemplates(), ","),
 			})
+			k8sObjects = append(k8sObjects, policy)
 		case *attestation_policy_proto.AttestationPolicy_Static:
 			static := p.Static
 			selectors, err := formatSelectors(static.GetSelectors())
@@ -108,6 +116,7 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				selectors,
 				strings.Join(static.GetDnsNames(), ","),
 			})
+			staticObjects = append(staticObjects, policy)
 		case *attestation_policy_proto.AttestationPolicy_TpmNode:
 			tpmNode := p.TpmNode
 			tpmNodeData = append(tpmNodeData, []string{
@@ -115,6 +124,7 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 				tpmNode.GetAttestation().GetEkHash(),
 				strings.Join(tpmNode.GetSelectorValues(), ","),
 			})
+			tpmNodeObjects = append(tpmNodeObjects, policy)
 		default:
 			return fmt.Errorf("unexpected attestation policy type %T", policy)
 		}
@@ -124,23 +134,25 @@ func renderPolicies(policies []*attestation_policy_proto.AttestationPolicy) erro
 	tpmNodeHeader := []string{"Name", "EK Hash", "Selector Values"}
 	tables := []renderer.Table{
 		{
-			Title:  "Kubernetes attestation policies",
-			Header: k8sHeader,
-			Data:   k8sData,
+			Title:   "Kubernetes attestation policies",
+			Header:  k8sHeader,
+			Data:    k8sData,
+			Objects: k8sObjects,
 		},
 		{
-			Title:  "Static attestation policies",
-			Header: staticHeader,
-			Data:   staticData,
+			Title:   "Static attestation policies",
+			Header:  staticHeader,
+			Data:    staticData,
+			Objects: staticObjects,
 		},
 		{
-			Title:  "TPM Node attestation policies",
-			Header: tpmNodeHeader,
-			Data:   tpmNodeData,
+			Title:   "TPM Node attestation policies",
+			Header:  tpmNodeHeader,
+			Data:    tpmNodeData,
+			Objects: tpmNodeObjects,
 		},
 	}
-	tr := renderer.NewTableRenderer(os.Stdout)
-	_, err := tr.RenderTables(tables...)
+	_, err := r.RenderTables(tables...)
 	return err
 }
 
