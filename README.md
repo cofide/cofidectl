@@ -1,10 +1,22 @@
 # cofidectl: a CLI for Kubernetes workload identity
 
+<div style="float: left; margin-right: 10px;">
+    <a href="https://www.cofide.io">
+        <img src="docs/img/cofide-colour.svg" width="40" alt="Cofide">
+    </a>
+</div>
+
 [![CI](https://github.com/cofide/cofidectl/workflows/ci/badge.svg)](https://github.com/cofide/cofidectl/actions?query=workflow%3Aci+branch%3Amain)
 
 `cofidectl` is a command-line tool that makes it easy to install and manage workload identity providers for Kubernetes, and provide seamless and secure mTLS for applications. It builds on [SPIFFE](https://spiffe.io/docs/latest/spiffe-about/overview/)/[SPIRE](https://spiffe.io/docs/latest/spire-about/) and provides a set of abstractions that make it easy to configure. `cofidectl` can be used to deploy single cluster instances, or handle federation across multiple clusters.
 
-*Note: `cofidectl` is an early-stage project under active development, so please be aware that it is subject to breaking changes.*
+_Note: `cofidectl` is an early-stage project under active development, so please be aware that it is subject to breaking changes._
+
+## Background
+
+At [Cofide](https://www.cofide.io), we're building a workload identity platform that is seamless and secure for multi and hybrid cloud environments. Feel free to browse our [public documentation](https://docs.cofide.dev) for more info.
+
+If you have a production use case for a workload identity platform with enterprise-level support, please [speak with us](mailto:hello@cofide.io) to find out more about our platform.
 
 ## Install
 
@@ -15,8 +27,8 @@ Alternatively, `cofidectl` may be built from source code.
 
 Building a `cofidectl` binary requires:
 
-* [Go 1.24 toolchain](https://golang.org/doc/install)
-* [`just`](https://github.com/casey/just) as a command runner
+- [Go 1.24 toolchain](https://golang.org/doc/install)
+- [`just`](https://github.com/casey/just) as a command runner
 
 To run the unit tests and build the `cofidectl` binary:
 
@@ -28,11 +40,11 @@ just build
 
 To exercise the quickstart requires:
 
-* [`Docker`](https://docs.docker.com/engine/install/)
-* [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start)
-* [`kubectl`](https://kubernetes.io/docs/tasks/tools/)
-* [Cloud provider Kind](https://github.com/kubernetes-sigs/cloud-provider-kind) to expose SPIRE federation endpoints
-  * `docker run -d --name cloud-provider-kind --network kind --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.6.0`
+- [`Docker`](https://docs.docker.com/engine/install/)
+- [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start)
+- [`kubectl`](https://kubernetes.io/docs/tasks/tools/)
+- [Cloud provider Kind](https://github.com/kubernetes-sigs/cloud-provider-kind) to expose SPIRE federation endpoints
+  - `docker run -d --name cloud-provider-kind --network kind --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.6.0`
 
 ### Deploy a single trust zone Cofide instance
 
@@ -66,7 +78,7 @@ Finally, deploy the changes to the cluster:
 
 And that's how easy it is to get started! 🚀
 
-*If your deployment is stuck on `Waiting for SPIRE server pod and service...`, it may be that you need to restart `cloud-provider-kind` in order for it to create an external IP for your SPIRE server.*
+_If your deployment is stuck on `Waiting for SPIRE server pod and service...`, it may be that you need to restart `cloud-provider-kind` in order for it to create an external IP for your SPIRE server._
 
 ### Deploy an application secured with mTLS
 
@@ -98,13 +110,3 @@ Follow [this guide](docs/multi-tz-federation.md) to see how to configure and dep
 ## Contributing
 
 Contributions are appreciated! See the [contributor guide](CONTRIBUTING.md).
-
-## Production use cases
-
-<div style="float: left; margin-right: 10px;">
-    <a href="https://www.cofide.io">
-        <img src="docs/img/cofide-colour-blue.svg" width="40" alt="Cofide">
-    </a>
-</div>
-
-`cofidectl` is a project developed and maintained by [Cofide](https://www.cofide.io). We're building a workload identity platform that is seamless and secure for multi and hybrid cloud environments. If you have a production use case with need for greater flexibility, control and visibility, with enterprise-level support, please [speak with us](mailto:hello@cofide.io) to find out more about the [Cofide](https://www.cofide.io) early access programme 👀.
