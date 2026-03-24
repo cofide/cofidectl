@@ -410,7 +410,6 @@ func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
 	upgrade := action.NewUpgrade(cfg)
 	upgrade.Namespace = SPIREManagementNamespace
 	upgrade.Version = version
-	upgrade.ReuseValues = true
 	return upgrade
 }
 
