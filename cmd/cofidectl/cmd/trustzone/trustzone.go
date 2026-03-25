@@ -233,7 +233,7 @@ func deleteTrustZone(ctx context.Context, name string, ds datasource.DataSource,
 			if deployed, err := helmprovider.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
 				return err
 			} else if deployed {
-				return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while it is up", cluster.GetName(), name)
+				return fmt.Errorf("cluster %s in trust zone %s cannot be deleted while SPIRE is deployed", cluster.GetName(), name)
 			}
 		}
 	}
@@ -303,7 +303,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 		return err
 	}
 
-	prov, err := helmprovider.NewHelmSPIREProvider(ctx, trustZone.GetName(), cluster, nil, nil, helmprovider.WithKubeConfig(kubeConfig))
+	prov, err := helmprovider.NewHelmSPIREProvider(cluster, helmprovider.WithKubeConfig(kubeConfig))
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSou
 		return err
 	} else if !installed {
 		//nolint:staticcheck // ST1005: error strings should not be capitalized
-		return errors.New("Cofide configuration has not been installed. Have you run cofidectl up?")
+		return errors.New("Cofide configuration has not been installed.")
 	}
 
 	server, err := spire.GetServerStatus(ctx, client)

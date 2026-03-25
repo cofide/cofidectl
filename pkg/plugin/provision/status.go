@@ -52,13 +52,13 @@ func StatusOk(stage, message string) *provisionpb.Status {
 	return &provisionpb.Status{Stage: &stage, Message: &message, Done: &done}
 }
 
-// StatusOk returns a Status message with Done set to true and no Error.
+// StatusDone returns a Status message with Done set to true and no Error.
 func StatusDone(stage, message string) *provisionpb.Status {
 	done := true
 	return &provisionpb.Status{Stage: &stage, Message: &message, Done: &done}
 }
 
-// StatusOk returns a Status message with Done set to true and an Error.
+// StatusError returns a Status message with Done set to true and an Error.
 func StatusError(stage, message string, err error) *provisionpb.Status {
 	done := true
 	errMsg := ""

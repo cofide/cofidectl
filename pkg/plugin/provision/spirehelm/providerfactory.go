@@ -16,18 +16,8 @@ import (
 // Type check that HelmSPIREProviderFactory implements the ProviderFactory interface.
 var _ ProviderFactory = &HelmSPIREProviderFactory{}
 
-// ProviderFactory is an interface that abstracts the construction of helm.Provider objects.
+// ProviderFactory is an interface that abstracts the retrieval of Helm values.
 type ProviderFactory interface {
-	// Build returns a helm.Provider configured with values for an install/upgrade.
-	Build(
-		ctx context.Context,
-		ds datasource.DataSource,
-		trustZone *trust_zone_proto.TrustZone,
-		cluster *clusterpb.Cluster,
-		genValues bool,
-		kubeConfig string,
-	) (helm.Provider, error)
-
 	GetHelmValues(
 		ctx context.Context,
 		ds datasource.DataSource,
@@ -36,29 +26,8 @@ type ProviderFactory interface {
 	) (map[string]any, error)
 }
 
-// HelmSPIREProviderFactory implements the ProviderFactory interface, building a HelmSPIREProvider
-// using the default values generator.
+// HelmSPIREProviderFactory implements the ProviderFactory interface.
 type HelmSPIREProviderFactory struct{}
-
-func (f *HelmSPIREProviderFactory) Build(
-	ctx context.Context,
-	ds datasource.DataSource,
-	trustZone *trust_zone_proto.TrustZone,
-	cluster *clusterpb.Cluster,
-	genValues bool,
-	kubeConfig string,
-) (helm.Provider, error) {
-	spireValues := map[string]any{}
-	var err error
-	if genValues {
-		spireValues, err = f.GetHelmValues(ctx, ds, trustZone, cluster)
-		if err != nil {
-			return nil, err
-		}
-	}
-	spireCRDsValues := map[string]any{}
-	return helm.NewHelmSPIREProvider(ctx, trustZone.GetName(), cluster, spireValues, spireCRDsValues, helm.WithKubeConfig(kubeConfig))
-}
 
 func (f *HelmSPIREProviderFactory) GetHelmValues(
 	ctx context.Context,

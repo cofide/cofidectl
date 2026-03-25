@@ -64,18 +64,6 @@ Next up is to add an 'attestation policy' - these are `cofidectl` rules which ar
 ./cofidectl attestation-policy-binding add --trust-zone cofide-a --attestation-policy namespace-demo
 ```
 
-Finally, deploy the changes to the cluster:
-
-```sh
-./cofidectl up
-```
-
-```sh
-✅ Installed: Installation completed for cofide-a on cluster kind
-✅ Ready: All SPIRE server pods and services are ready for cofide-a in cluster kind
-✅ Configured: Post-installation configuration completed for cofide-a on cluster kind
-```
-
 And that's how easy it is to get started! 🚀
 
 _If your deployment is stuck on `Waiting for SPIRE server pod and service...`, it may be that you need to restart `cloud-provider-kind` in order for it to create an external IP for your SPIRE server._

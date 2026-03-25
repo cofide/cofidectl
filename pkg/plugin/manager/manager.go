@@ -267,7 +267,7 @@ func (dpl *defaultPluginLoader) LoadDataSource(_ context.Context, name string) (
 // It loads the spire-helm provision plugin if requested.
 func (dpl *defaultPluginLoader) LoadProvision(_ context.Context, name string) (provision.Provision, error) {
 	if name == SpireHelmProvisionPluginName {
-		spireHelm := spirehelm.NewSpireHelm(nil, nil)
+		spireHelm := spirehelm.NewSpireHelm(nil)
 		return spireHelm, nil
 	}
 	return nil, nil

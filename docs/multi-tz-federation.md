@@ -23,12 +23,6 @@ We'll reuse the existing `namespace-demo` attestation policy for the `cofide-b` 
 ./cofidectl attestation-policy-binding add --attestation-policy namespace-demo --trust-zone cofide-b --federates-with cofide-a
 ```
 
-As before, we apply the configuration using the `up` command:
-
-```sh
-./cofidectl up
-```
-
 `cofidectl` will take care of the federation itself and initial exchange of trust roots. We can now deploy ping-pong, this time using a different `Justfile` recipe: this example will deploy the ping-pong server to `kind-kind` and the client to `kind-kind2` (in that order).
 
 ```sh

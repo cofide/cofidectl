@@ -5,66 +5,32 @@ package helm
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
-	"time"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
-	"github.com/cofide/cofidectl/pkg/plugin/provision"
 
-	"github.com/gofrs/flock"
 	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/repo"
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
 const (
-	SPIRERepositoryName = "cofide"
-	SPIRERepositoryURL  = "https://charts.cofide.dev"
-
-	SPIREChartName       = "spire"
-	SPIREChartVersion    = "0.27.1-cofide.0"
-	SPIRECRDChartName    = "spire-crds"
-	SPIRECRDChartVersion = "0.5.0-cofide.1"
+	SPIREChartName = "spire"
 
 	// Kubernetes namespace in which Helm charts and CRDs will be installed.
 	SPIREManagementNamespace = "spire-mgmt"
 )
 
-// Type assertion that HelmSPIREProvider implements the Provider interface.
-var _ Provider = &HelmSPIREProvider{}
-
-// HelmSPIREProvider implements a Helm-based installer for the Cofide stack. It uses the SPIFFE/SPIRE project's own
-// helm-charts-hardened Helm chart to install a SPIRE stack to a given Kubernetes context, making use of the Cofide
-// API concepts and abstractions
+// HelmSPIREProvider provides Helm-based checks against a SPIRE installation.
 type HelmSPIREProvider struct {
-	ctx                  context.Context
-	settings             *cli.EnvSettings
-	cfg                  *action.Configuration
-	spireChartName       string
-	spireCRDChartName    string
-	spireChartVersion    string
-	spireCRDChartVersion string
-	spireValues          map[string]any
-	spireCRDsValues      map[string]any
-	trustZoneName        string
-	cluster              *clusterpb.Cluster
-	spireRepositoryURL   string
-	spireRepositoryName  string
-	installCRDs          bool
+	settings *cli.EnvSettings
+	cfg      *action.Configuration
 }
 
 // HelmSPIREProviderOption is a function that configures a HelmSPIREProvider.
 type HelmSPIREProviderOption func(*HelmSPIREProvider)
 
-// WithKubeConfig sets the kubeconfig path
+// WithKubeConfig sets the kubeconfig path.
 func WithKubeConfig(kubeConfig string) HelmSPIREProviderOption {
 	return func(p *HelmSPIREProvider) {
 		if kubeConfig != "" {
@@ -73,86 +39,13 @@ func WithKubeConfig(kubeConfig string) HelmSPIREProviderOption {
 	}
 }
 
-// WithSPIRERepositoryURL sets the SPIRE Helm repository URL
-func WithSPIRERepositoryURL(url string) HelmSPIREProviderOption {
-	return func(p *HelmSPIREProvider) {
-		if url != "" {
-			p.spireRepositoryURL = url
-		}
-	}
-}
-
-// WithSPIRERepositoryName sets the name for the SPIRE Helm repository
-func WithSPIRERepositoryName(name string) HelmSPIREProviderOption {
-	return func(p *HelmSPIREProvider) {
-		if name != "" {
-			p.spireRepositoryName = name
-		}
-	}
-}
-
-// WithSPIREChartVersion sets the version for the SPIRE Helm chart
-func WithSPIREChartVersion(version string) HelmSPIREProviderOption {
-	return func(p *HelmSPIREProvider) {
-		if version != "" {
-			p.spireChartVersion = version
-		}
-	}
-}
-
-// WithSPIRECRDsChartVersion sets the version for the SPIRE CRDs Helm chart
-func WithSPIRECRDsChartVersion(version string) HelmSPIREProviderOption {
-	return func(p *HelmSPIREProvider) {
-		if version != "" {
-			p.spireCRDChartVersion = version
-		}
-	}
-}
-
-// WithSPIREChartName sets the name for the SPIRE Helm chart
-func WithSPIREChartName(name string) HelmSPIREProviderOption {
-	return func(p *HelmSPIREProvider) {
-		if name != "" {
-			p.spireChartName = name
-		}
-	}
-}
-
-// WithSPIRECRDChartName sets the name for the SPIRE CRDs Helm chart
-func WithSPIRECRDChartName(name string) HelmSPIREProviderOption {
-	return func(p *HelmSPIREProvider) {
-		if name != "" {
-			p.spireCRDChartName = name
-		}
-	}
-}
-
-// WithInstallSPIRECRDs sets whether the SPIRE CRDs Helm chart will be installed
-func WithInstallSPIRECRDs(install bool) HelmSPIREProviderOption {
-	return func(p *HelmSPIREProvider) {
-		p.installCRDs = install
-	}
-}
-
-func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *clusterpb.Cluster, spireValues, spireCRDsValues map[string]any, opts ...HelmSPIREProviderOption) (*HelmSPIREProvider, error) {
+func NewHelmSPIREProvider(cluster *clusterpb.Cluster, opts ...HelmSPIREProviderOption) (*HelmSPIREProvider, error) {
 	settings := cli.New()
 	settings.KubeContext = cluster.GetKubernetesContext()
 	settings.SetNamespace(SPIREManagementNamespace)
 
 	prov := &HelmSPIREProvider{
-		ctx:                  ctx,
-		settings:             settings,
-		spireChartName:       SPIREChartName,
-		spireCRDChartName:    SPIRECRDChartName,
-		spireChartVersion:    SPIREChartVersion,
-		spireCRDChartVersion: SPIRECRDChartVersion,
-		spireValues:          spireValues,
-		spireCRDsValues:      spireCRDsValues,
-		trustZoneName:        trustZoneName,
-		cluster:              cluster,
-		spireRepositoryURL:   SPIRERepositoryURL,
-		spireRepositoryName:  SPIRERepositoryName,
-		installCRDs:          true,
+		settings: settings,
 	}
 
 	for _, opt := range opts {
@@ -168,168 +61,6 @@ func NewHelmSPIREProvider(ctx context.Context, trustZoneName string, cluster *cl
 	return prov, nil
 }
 
-// AddRepository adds the SPIRE Helm repository to the local repositories.yaml.
-// The action is performed synchronously and status is streamed through the provided status channel.
-// This function should be called once, not per-trust zone.
-// The SPIRE Helm repository is added to the local repositories.yaml, locking the repositories.lock
-// file while making changes.
-func (h *HelmSPIREProvider) AddRepository(statusCh chan<- *provisionpb.Status) error {
-	statusCh <- provision.StatusOk("Preparing", "Adding SPIRE Helm repo")
-	lockCtx, cancel := context.WithTimeout(h.ctx, 30*time.Second)
-	defer cancel()
-	err := runWithFileLock(lockCtx, h.settings.RepositoryConfig, func() error {
-		f, err := repo.LoadFile(h.settings.RepositoryConfig)
-		if err != nil {
-			if err := repo.NewFile().WriteFile(h.settings.RepositoryConfig, 0600); err != nil {
-				return fmt.Errorf("failed to create repositories file: %w", err)
-			}
-
-			f, err = repo.LoadFile(h.settings.RepositoryConfig)
-			if err != nil {
-				return fmt.Errorf("failed to load repositories file: %w", err)
-			}
-		}
-
-		entry := &repo.Entry{
-			Name: h.spireRepositoryName,
-			URL:  h.spireRepositoryURL,
-		}
-
-		chartRepo, err := repo.NewChartRepository(entry, getter.All(h.settings))
-		if err != nil {
-			return fmt.Errorf("failed to create chart repo: %w", err)
-		}
-
-		chartRepo.CachePath = h.settings.RepositoryCache
-		if _, err = chartRepo.DownloadIndexFile(); err != nil {
-			return fmt.Errorf("failed to download index file: %w", err)
-		}
-
-		f.Update(entry)
-		if err = f.WriteFile(h.settings.RepositoryConfig, 0600); err != nil {
-			return fmt.Errorf("failed to write repositories file: %w", err)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		statusCh <- provision.StatusError("Preparing", "Failed to add SPIRE Helm repo", err)
-	} else {
-		statusCh <- provision.StatusDone("Prepared", "Added SPIRE Helm repo")
-	}
-	return err
-}
-
-// runWithFileLock attempts to lock a file, and if successful calls `f` with the lock held.
-func runWithFileLock(ctx context.Context, filePath string, f func() error) error {
-	err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
-	if err != nil && !os.IsExist(err) {
-		return fmt.Errorf("mkdirall: %w", err)
-	}
-
-	fileLock := flock.New(lockPath(filePath))
-
-	locked, err := fileLock.TryLockContext(ctx, time.Second)
-	if err == nil && locked {
-		defer func() {
-			_ = fileLock.Unlock()
-		}()
-	}
-	if err != nil {
-		return fmt.Errorf("try lock: %w", err)
-	}
-
-	return f()
-}
-
-func lockPath(filePath string) string {
-	repoFileExt := filepath.Ext(filePath)
-	if len(repoFileExt) > 0 && len(repoFileExt) < len(filePath) {
-		return strings.TrimSuffix(filePath, repoFileExt) + ".lock"
-	} else {
-		return filePath + ".lock"
-	}
-}
-
-// Execute installs the SPIRE Helm stack to the selected Kubernetes context.
-// The action is performed synchronously and status is streamed through the provided status channel.
-func (h *HelmSPIREProvider) Execute(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
-	if h.installCRDs {
-		statusCh <- sb.Ok("Installing", "Installing SPIRE CRDs")
-		_, err := h.installSPIRECRDs()
-		if err != nil {
-			statusCh <- sb.Error("Installing", "Failed to install SPIRE CRDs", err)
-			return err
-		}
-	}
-
-	statusCh <- sb.Ok("Installing", "Installing SPIRE chart")
-	_, err := h.installSPIRE()
-	if err != nil {
-		statusCh <- sb.Error("Installing", "Failed to install SPIRE chart", err)
-		return err
-	}
-
-	statusCh <- sb.Done("Installed", "Installation completed")
-	return nil
-}
-
-// ExecutePostInstallUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
-// The action is performed synchronously and status is streamed through the provided status channel.
-func (h *HelmSPIREProvider) ExecutePostInstallUpgrade(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
-	statusCh <- sb.Ok("Configuring", "Applying post-installation configuration")
-	_, err := h.upgradeSPIRE()
-	if err != nil {
-		statusCh <- sb.Error("Configuring", "Failed to apply post-installation configuration", err)
-		return err
-	}
-
-	statusCh <- sb.Done("Configured", "Post-installation configuration completed")
-	return nil
-}
-
-// ExecuteUpgrade upgrades the SPIRE stack to the selected Kubernetes context.
-// The action is performed synchronously and status is streamed through the provided status channel.
-func (h *HelmSPIREProvider) ExecuteUpgrade(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
-	statusCh <- sb.Ok("Upgrading", "Upgrading SPIRE chart")
-	_, err := h.upgradeSPIRE()
-	if err != nil {
-		statusCh <- sb.Error("Upgrading", "Failed to upgrade SPIRE chart", err)
-		return err
-	}
-
-	statusCh <- sb.Done("Upgraded", "Upgrade completed")
-	return nil
-}
-
-// ExecuteUninstall uninstalls the SPIRE stack from the selected Kubernetes context.
-// The action is performed synchronously and status is streamed through the provided status channel.
-func (h *HelmSPIREProvider) ExecuteUninstall(statusCh chan<- *provisionpb.Status) error {
-	sb := provision.NewStatusBuilder(h.trustZoneName, h.cluster.GetName())
-	statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE chart")
-	err := h.uninstallSPIRE()
-	if err != nil {
-		statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE chart", err)
-		return err
-	}
-
-	if h.installCRDs {
-		statusCh <- sb.Ok("Uninstalling", "Uninstalling SPIRE CRDs")
-		err := h.uninstallSPIRECRDs()
-		if err != nil {
-			statusCh <- sb.Error("Uninstalling", "Failed to uninstall SPIRE CRDs", err)
-			return err
-		}
-	}
-
-	statusCh <- sb.Done("Uninstalled", "Uninstallation completed")
-	return nil
-}
-
 // CheckIfReachable returns no error if a Kubernetes cluster is reachable.
 func (h *HelmSPIREProvider) CheckIfReachable() error {
 	return h.cfg.KubeClient.IsReachable()
@@ -337,7 +68,7 @@ func (h *HelmSPIREProvider) CheckIfReachable() error {
 
 // CheckIfAlreadyInstalled returns true if the SPIRE chart has previously been installed.
 func (h *HelmSPIREProvider) CheckIfAlreadyInstalled() (bool, error) {
-	return checkIfAlreadyInstalled(h.cfg, h.spireChartName)
+	return checkIfAlreadyInstalled(h.cfg, SPIREChartName)
 }
 
 func DiscardLogger(format string, v ...any) {}
@@ -357,150 +88,6 @@ func (h *HelmSPIREProvider) initActionConfig() (*action.Configuration, error) {
 	return cfg, nil
 }
 
-func newInstall(cfg *action.Configuration, chart string, version string) *action.Install {
-	install := action.NewInstall(cfg)
-	install.Version = version
-	install.ReleaseName = chart
-	install.Namespace = SPIREManagementNamespace
-	install.CreateNamespace = true
-	return install
-}
-
-func (h *HelmSPIREProvider) installSPIRE() (*release.Release, error) {
-	client := newInstall(h.cfg, h.spireChartName, h.spireChartVersion)
-	return installChart(h.ctx, h.cfg, client, h.spireRepositoryName, h.spireChartName, h.settings, h.spireValues)
-}
-
-func (h *HelmSPIREProvider) installSPIRECRDs() (*release.Release, error) {
-	client := newInstall(h.cfg, h.spireCRDChartName, h.spireCRDChartVersion)
-	return installChart(h.ctx, h.cfg, client, h.spireRepositoryName, h.spireCRDChartName, h.settings, h.spireCRDsValues)
-}
-
-func installChart(ctx context.Context, cfg *action.Configuration, client *action.Install, repoName string, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
-	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
-	if err != nil {
-		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
-	}
-	if alreadyInstalled {
-		return nil, nil
-	}
-
-	chartRef, err := getChartRef(repoName, chartName)
-	if err != nil {
-		return nil, err
-	}
-
-	options, err := client.LocateChart(
-		chartRef,
-		settings,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	cr, err := loader.Load(options)
-	if err != nil {
-		return nil, err
-	}
-
-	return client.RunWithContext(ctx, cr, values)
-}
-
-func newUpgrade(cfg *action.Configuration, version string) *action.Upgrade {
-	upgrade := action.NewUpgrade(cfg)
-	upgrade.Namespace = SPIREManagementNamespace
-	upgrade.Version = version
-	return upgrade
-}
-
-func (h *HelmSPIREProvider) upgradeSPIRE() (*release.Release, error) {
-	client := newUpgrade(h.cfg, h.spireChartVersion)
-	return upgradeChart(h.ctx, h.cfg, client, h.spireRepositoryName, h.spireChartName, h.settings, h.spireValues)
-}
-
-func upgradeChart(ctx context.Context, cfg *action.Configuration, client *action.Upgrade, repoName string, chartName string, settings *cli.EnvSettings, values map[string]any) (*release.Release, error) {
-	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
-	if err != nil {
-		return nil, fmt.Errorf("cannot determine chart installation status: %s", err)
-	}
-
-	if !alreadyInstalled {
-		return nil, fmt.Errorf("%v not installed", chartName)
-	}
-
-	chartRef, err := getChartRef(repoName, chartName)
-	if err != nil {
-		return nil, err
-	}
-
-	options, err := client.LocateChart(
-		chartRef,
-		settings,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	chart, err := loader.Load(options)
-	if err != nil {
-		return nil, err
-	}
-
-	return client.RunWithContext(ctx, chartName, chart, values)
-}
-
-// getChartRef returns the full chart reference using either a custom repository path
-// from HELM_REPO_PATH environment variable or the default SPIRE repository.
-func getChartRef(repoName string, chartName string) (string, error) {
-	if chartName == "" {
-		return "", fmt.Errorf("chart name cannot be empty")
-	}
-
-	repoPath, exists := os.LookupEnv("HELM_REPO_PATH")
-	if exists {
-		if repoPath == "" {
-			return "", fmt.Errorf("HELM_REPO_PATH environment variable is set but empty")
-		}
-		repoPath = strings.TrimRight(repoPath, "/")
-		return fmt.Sprintf("%s/%s", repoPath, chartName), nil
-	}
-
-	if repoName == "" {
-		return "", fmt.Errorf("repo name cannot be empty")
-	}
-
-	return fmt.Sprintf("%s/%s", repoName, chartName), nil
-}
-
-func newUninstall(cfg *action.Configuration) *action.Uninstall {
-	uninstall := action.NewUninstall(cfg)
-	return uninstall
-}
-
-func (h *HelmSPIREProvider) uninstallSPIRE() error {
-	client := newUninstall(h.cfg)
-	return uninstallChart(h.cfg, client, h.spireChartName)
-}
-
-func (h *HelmSPIREProvider) uninstallSPIRECRDs() error {
-	client := newUninstall(h.cfg)
-	return uninstallChart(h.cfg, client, h.spireCRDChartName)
-}
-
-func uninstallChart(cfg *action.Configuration, client *action.Uninstall, chartName string) error {
-	alreadyInstalled, err := checkIfAlreadyInstalled(cfg, chartName)
-	if err != nil {
-		return fmt.Errorf("cannot determine chart installation status: %s", err)
-	}
-
-	if !alreadyInstalled {
-		return nil
-	}
-
-	_, err = client.Run(chartName)
-	return err
-}
-
 func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool, error) {
 	history := action.NewHistory(cfg)
 	history.Max = 1
@@ -513,7 +100,7 @@ func checkIfAlreadyInstalled(cfg *action.Configuration, chartName string) (bool,
 
 // IsClusterReachable returns no error if a Kubernetes cluster is reachable.
 func IsClusterReachable(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) error {
-	prov, err := NewHelmSPIREProvider(ctx, "", cluster, nil, nil, WithKubeConfig(kubeConfig))
+	prov, err := NewHelmSPIREProvider(cluster, WithKubeConfig(kubeConfig))
 	if err != nil {
 		return err
 	}
@@ -522,7 +109,7 @@ func IsClusterReachable(ctx context.Context, cluster *clusterpb.Cluster, kubeCon
 
 // IsClusterDeployed returns whether a cluster has been deployed, i.e. whether a SPIRE Helm release has been installed.
 func IsClusterDeployed(ctx context.Context, cluster *clusterpb.Cluster, kubeConfig string) (bool, error) {
-	prov, err := NewHelmSPIREProvider(ctx, "", cluster, nil, nil, WithKubeConfig(kubeConfig))
+	prov, err := NewHelmSPIREProvider(cluster, WithKubeConfig(kubeConfig))
 	if err != nil {
 		return false, err
 	}

@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 
 	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
@@ -52,74 +51,6 @@ type ProvisionPluginClientGRPC struct {
 func (c *ProvisionPluginClientGRPC) Validate(ctx context.Context) error {
 	_, err := c.client.Validate(ctx, &provisionpb.ValidateRequest{})
 	return wrapError(err)
-}
-
-func (c *ProvisionPluginClientGRPC) Deploy(ctx context.Context, source datasource.DataSource, opts *DeployOpts) (<-chan *provisionpb.Status, error) {
-	server, brokerID := c.startDataSourceServer(source)
-
-	req := provisionpb.DeployRequest{
-		DataSource:   &brokerID,
-		KubeCfgFile:  &opts.KubeCfgFile,
-		TrustZoneIds: opts.TrustZoneIDs,
-	}
-	stream, err := c.client.Deploy(ctx, &req)
-	if err != nil {
-		err := wrapError(err)
-		return nil, err
-	}
-
-	statusCh := make(chan *provisionpb.Status)
-	go func() {
-		defer close(statusCh)
-		defer server.Stop()
-		for {
-			resp, err := stream.Recv()
-			if err != nil {
-				if err != io.EOF {
-					err := wrapError(err)
-					statusCh <- StatusError("Deploying", "Error", err)
-				}
-				return
-			}
-			statusCh <- resp.GetStatus()
-		}
-	}()
-
-	return statusCh, nil
-}
-
-func (c *ProvisionPluginClientGRPC) TearDown(ctx context.Context, source datasource.DataSource, opts *TearDownOpts) (<-chan *provisionpb.Status, error) {
-	server, brokerID := c.startDataSourceServer(source)
-
-	req := provisionpb.TearDownRequest{
-		DataSource:   &brokerID,
-		KubeCfgFile:  &opts.KubeCfgFile,
-		TrustZoneIds: opts.TrustZoneIDs,
-	}
-	stream, err := c.client.TearDown(ctx, &req)
-	if err != nil {
-		err := wrapError(err)
-		return nil, err
-	}
-
-	statusCh := make(chan *provisionpb.Status)
-	go func() {
-		defer close(statusCh)
-		defer server.Stop()
-		for {
-			resp, err := stream.Recv()
-			if err != nil {
-				if err != io.EOF {
-					err := wrapError(err)
-					statusCh <- StatusError("Tearing down", "Error", err)
-				}
-				return
-			}
-			statusCh <- resp.GetStatus()
-		}
-	}()
-
-	return statusCh, nil
 }
 
 func (c *ProvisionPluginClientGRPC) GetHelmValues(ctx context.Context, source datasource.DataSource, opts *GetHelmValuesOpts) (map[string]any, error) {
@@ -187,6 +118,7 @@ func (ce *clientError) Error() string {
 // GRPCServer implements provisionpb.ProvisionPluginServiceServer, translating gRPC calls to
 // impl, the Provision implementation.
 type GRPCServer struct {
+	provisionpb.UnimplementedProvisionPluginServiceServer
 	impl   Provision
 	broker *go_plugin.GRPCBroker
 }
@@ -197,62 +129,6 @@ func (s *GRPCServer) Validate(ctx context.Context, req *provisionpb.ValidateRequ
 		return nil, err
 	}
 	return &provisionpb.ValidateResponse{}, nil
-}
-
-func (s *GRPCServer) Deploy(req *provisionpb.DeployRequest, stream grpc.ServerStreamingServer[provisionpb.DeployResponse]) error {
-	client, conn, err := s.getDataSourceClient(stream.Context(), req.GetDataSource())
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	opts := DeployOpts{
-		KubeCfgFile:  req.GetKubeCfgFile(),
-		TrustZoneIDs: req.GetTrustZoneIds(),
-	}
-	statusCh, err := s.impl.Deploy(stream.Context(), client, &opts)
-	if err != nil {
-		return err
-	}
-
-	// Read Status messages from the channel and stream back to the client.
-	for status := range statusCh {
-		resp := provisionpb.DeployResponse{Status: status}
-		if err := stream.Send(&resp); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *GRPCServer) TearDown(req *provisionpb.TearDownRequest, stream grpc.ServerStreamingServer[provisionpb.TearDownResponse]) error {
-	client, conn, err := s.getDataSourceClient(stream.Context(), req.GetDataSource())
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	opts := TearDownOpts{
-		KubeCfgFile:  req.GetKubeCfgFile(),
-		TrustZoneIDs: req.GetTrustZoneIds(),
-	}
-	statusCh, err := s.impl.TearDown(stream.Context(), client, &opts)
-	if err != nil {
-		return err
-	}
-
-	// Read Status messages from the channel and stream back to the client.
-	for status := range statusCh {
-		resp := provisionpb.TearDownResponse{Status: status}
-		if err := stream.Send(&resp); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (s *GRPCServer) GetHelmValues(ctx context.Context, req *provisionpb.GetHelmValuesRequest) (*provisionpb.GetHelmValuesResponse, error) {

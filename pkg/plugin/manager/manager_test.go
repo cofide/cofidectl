@@ -64,7 +64,7 @@ func (fpl *fakePluginLoader) LoadDataSource(_ context.Context, name string) (dat
 
 func (dpl *fakePluginLoader) LoadProvision(_ context.Context, name string) (provision.Provision, error) {
 	if name == "fake-spire-helm" {
-		spireHelm := spirehelm.NewSpireHelm(nil, nil)
+		spireHelm := spirehelm.NewSpireHelm(nil)
 		return spireHelm, nil
 	}
 	return nil, nil
@@ -372,7 +372,7 @@ func TestManager_GetProvision_success(t *testing.T) {
 		{
 			name:   "defaults",
 			config: config.Config{Plugins: GetDefaultPlugins()},
-			want:   spirehelm.NewSpireHelm(nil, nil),
+			want:   spirehelm.NewSpireHelm(nil),
 		},
 		{
 			name:   "gRPC",
@@ -436,7 +436,7 @@ func TestManager_GetProvision_withPluginLoader(t *testing.T) {
 		{
 			name:   "defaults",
 			config: config.Config{Plugins: &pluginspb.Plugins{Provision: utils.PtrOf("fake-spire-helm")}},
-			want:   spirehelm.NewSpireHelm(nil, nil),
+			want:   spirehelm.NewSpireHelm(nil),
 		},
 	}
 	for _, tt := range tests {

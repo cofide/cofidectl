@@ -72,8 +72,6 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 
 	versionCmd := NewVersionCommand(r.name, r.version, r.cmdCtx)
 	initCmd := NewInitCommand(r.cmdCtx)
-	upCmd := NewUpCommand(r.cmdCtx)
-	downCmd := NewDownCommand(r.cmdCtx)
 	tzCmd := trustzone.NewTrustZoneCommand(r.cmdCtx)
 	apCmd := attestationpolicy.NewAttestationPolicyCommand(r.cmdCtx)
 	apbCmd := apbinding.NewAPBindingCommand(r.cmdCtx)
@@ -89,8 +87,6 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		apbCmd.GetRootCommand(),
 		fedCmd.GetRootCommand(),
 		wlCmd.GetRootCommand(),
-		upCmd.UpCmd(),
-		downCmd.DownCmd(),
 		clusterCmd.GetRootCommand(),
 	)
 
