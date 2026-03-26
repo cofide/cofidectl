@@ -62,6 +62,11 @@ func (cc *CommandContext) HandleSignals() {
 	os.Exit(1)
 }
 
+// UpdateConfigFile replaces the config file path used by the plugin manager.
+func (cc *CommandContext) UpdateConfigFile(path string) {
+	cc.PluginManager.UpdateConfigLoader(config.NewFileLoader(path))
+}
+
 // SetLogLevel sets the log level of the default handler and gRPC plugins.
 func (cc *CommandContext) SetLogLevel(level slog.Level) {
 	cc.logLevel.Set(level)

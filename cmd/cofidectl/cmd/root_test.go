@@ -7,9 +7,23 @@ import (
 	"log/slog"
 	"testing"
 
+	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRootCommand_configFlag(t *testing.T) {
+	cmdCtx := cmdcontext.NewCommandContext("cofide.yaml", nil)
+	defer cmdCtx.Shutdown()
+
+	rootCmd, err := NewRootCommand("cofidectl", "test", cmdCtx).GetRootCommand()
+	require.NoError(t, err)
+
+	flag := rootCmd.PersistentFlags().Lookup("config")
+	require.NotNil(t, flag, "--config flag should be registered")
+	assert.Equal(t, "cofide.yaml", flag.DefValue)
+	assert.Equal(t, "string", flag.Value.Type())
+}
 
 func Test_slogLevelFromString(t *testing.T) {
 	t.Parallel()

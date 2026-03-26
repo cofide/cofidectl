@@ -42,6 +42,7 @@ var rootCmdDesc = `cofidectl - Workload identity for hybrid and multi-cloud secu
 
 func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	var logLevel string
+	var configFile string
 
 	cmd := &cobra.Command{
 		Use:          "cofidectl",
@@ -50,6 +51,8 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 		SilenceUsage: true,
 		// This runs before any subcommand.
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			r.cmdCtx.UpdateConfigFile(configFile)
+
 			slogLevel, err := slogLevelFromString(logLevel)
 			if err != nil {
 				return err
@@ -67,6 +70,7 @@ func (r *RootCommand) GetRootCommand() (*cobra.Command, error) {
 	}
 
 	pf := cmd.PersistentFlags()
+	pf.StringVar(&configFile, "config", "cofide.yaml", "cofidectl config file")
 	pf.StringVar(&kubeCfgFile, "kube-config", path.Join(home, ".kube/config"), "kubeconfig file location")
 	pf.StringVar(&logLevel, "log-level", "ERROR", "log level")
 

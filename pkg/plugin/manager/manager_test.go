@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/config"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/cofide/cofidectl/internal/pkg/utils"
@@ -593,6 +594,31 @@ func TestManager_GetPluginConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestManager_UpdateConfigLoader(t *testing.T) {
+	loaderA, err := config.NewMemoryLoader(&config.Config{
+		Plugins:    GetDefaultPlugins(),
+		TrustZones: []*trust_zone_proto.TrustZone{fixtures.TrustZone("tz1")},
+	})
+	require.Nil(t, err)
+
+	loaderB, err := config.NewMemoryLoader(&config.Config{
+		Plugins:    GetDefaultPlugins(),
+		TrustZones: []*trust_zone_proto.TrustZone{fixtures.TrustZone("tz2")},
+	})
+	require.Nil(t, err)
+
+	m := NewManager(loaderA, nil)
+	m.UpdateConfigLoader(loaderB)
+
+	ds, err := m.GetDataSource(context.Background())
+	require.Nil(t, err)
+
+	trustZones, err := ds.ListTrustZones()
+	require.Nil(t, err)
+	require.Len(t, trustZones, 1)
+	assert.Equal(t, "tz2", trustZones[0].Name)
 }
 
 func TestManager_SetPluginConfig(t *testing.T) {

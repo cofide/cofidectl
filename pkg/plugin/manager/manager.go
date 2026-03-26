@@ -34,8 +34,9 @@ const (
 
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
 type PluginManager struct {
-	configLoader     config.Loader
-	loaders          []PluginLoader
+	configLoader  config.Loader
+	defaultLoader *defaultPluginLoader
+	loaders       []PluginLoader
 	grpcPluginLoader grpcPluginLoader
 	source           datasource.DataSource
 	provision        provision.Provision
@@ -75,17 +76,25 @@ type grpcPlugin struct {
 // NewManager returns a new plugin manager.
 // If customLoader is non-nil, it may be used to load custom in-process plugins.
 func NewManager(configLoader config.Loader, customLoader PluginLoader) *PluginManager {
+	defaultLoader := newDefaultPluginLoader(configLoader)
 	var loaders []PluginLoader
 	if customLoader != nil {
 		loaders = append(loaders, customLoader)
 	}
-	loaders = append(loaders, newDefaultPluginLoader(configLoader))
+	loaders = append(loaders, defaultLoader)
 	return &PluginManager{
 		configLoader:     configLoader,
+		defaultLoader:    defaultLoader,
 		loaders:          loaders,
 		grpcPluginLoader: loadGRPCPlugin,
 		clients:          map[string]*go_plugin.Client{},
 	}
+}
+
+// UpdateConfigLoader replaces the config loader used to read and write the config file.
+func (pm *PluginManager) UpdateConfigLoader(loader config.Loader) {
+	pm.configLoader = loader
+	pm.defaultLoader.configLoader = loader
 }
 
 // Init initialises the configuration for the specified plugins.
@@ -246,7 +255,7 @@ func (pm *PluginManager) loadGRPCPlugin(ctx context.Context, pluginName string, 
 	return nil
 }
 
-func newDefaultPluginLoader(configLoader config.Loader) PluginLoader {
+func newDefaultPluginLoader(configLoader config.Loader) *defaultPluginLoader {
 	return &defaultPluginLoader{configLoader: configLoader}
 }
 
