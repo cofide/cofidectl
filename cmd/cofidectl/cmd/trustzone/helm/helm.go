@@ -57,7 +57,8 @@ This command will override Helm values for a trust zone in the Cofide configurat
 `
 
 type overrideOpts struct {
-	inputPath string
+	inputPath   string
+	clusterName string
 }
 
 func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
@@ -91,18 +92,19 @@ func (c *HelmCommand) GetOverrideCommand() *cobra.Command {
 				return err
 			}
 
-			return c.overrideValues(cmd.Context(), ds, args[0], values)
+			return c.overrideValues(cmd.Context(), ds, args[0], opts.clusterName, values)
 		},
 	}
 
 	f := cmd.Flags()
 	f.StringVar(&opts.inputPath, "input-file", "values.yaml", "Path of a file to read YAML values from, or - for stdin")
+	f.StringVar(&opts.clusterName, "cluster", "", "Name of the cluster to override Helm values for (required if trust zone has multiple clusters)")
 
 	return cmd
 }
 
 // overrideValues overrides Helm values for a trust zone.
-func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSource, tzName string, values map[string]any) error {
+func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSource, tzName, clusterName string, values map[string]any) error {
 	provisionPlugin, err := c.cmdCtx.PluginManager.GetProvision(ctx)
 	if err != nil {
 		return err
@@ -113,7 +115,7 @@ func (c *HelmCommand) overrideValues(ctx context.Context, ds datasource.DataSour
 		return err
 	}
 
-	cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
+	cluster, err := trustzone.ResolveCluster(trustZone, clusterName, ds)
 	if err != nil {
 		return err
 	}
@@ -160,7 +162,8 @@ This command will generate Helm values for a trust zone in the Cofide configurat
 `
 
 type valuesOpts struct {
-	outputPath string
+	outputPath  string
+	clusterName string
 }
 
 func (c *HelmCommand) GetValuesCommand() *cobra.Command {
@@ -176,7 +179,7 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 				return err
 			}
 
-			values, err := c.getValues(cmd.Context(), ds, args[0])
+			values, err := c.getValues(cmd.Context(), ds, args[0], opts.clusterName)
 			if err != nil {
 				return err
 			}
@@ -213,18 +216,19 @@ func (c *HelmCommand) GetValuesCommand() *cobra.Command {
 
 	f := cmd.Flags()
 	f.StringVar(&opts.outputPath, "output-file", "values.yaml", "Path of a file to write YAML values to, or - for stdout")
+	f.StringVar(&opts.clusterName, "cluster", "", "Name of the cluster to generate Helm values for (required if trust zone has multiple clusters)")
 
 	return cmd
 }
 
 // getValues returns the Helm values for a trust zone.
-func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, tzName string) (map[string]any, error) {
+func (c *HelmCommand) getValues(ctx context.Context, ds datasource.DataSource, tzName, clusterName string) (map[string]any, error) {
 	trustZone, err := ds.GetTrustZoneByName(tzName)
 	if err != nil {
 		return nil, err
 	}
 
-	cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
+	cluster, err := trustzone.ResolveCluster(trustZone, clusterName, ds)
 	if err != nil {
 		return nil, err
 	}

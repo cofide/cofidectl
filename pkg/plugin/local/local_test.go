@@ -438,7 +438,7 @@ func TestLocalDataSource_AddCluster(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "one cluster per trust zone",
+			name: "two clusters in same trust zone",
 			config: &config.Config{
 				Clusters: []*clusterpb.Cluster{
 					fixtures.Cluster("local1"),
@@ -447,12 +447,11 @@ func TestLocalDataSource_AddCluster(t *testing.T) {
 			},
 			cluster: func() *clusterpb.Cluster {
 				cluster := fixtures.Cluster("local1")
-				name := "local2"
+				name := "local1-b"
 				cluster.Name = &name
 				return cluster
 			}(),
-			wantErr:       true,
-			wantErrString: "trust zone tz1-id already has a cluster",
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {

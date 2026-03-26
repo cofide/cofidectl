@@ -234,10 +234,6 @@ func (lds *LocalDataSource) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.C
 		return nil, fmt.Errorf("cluster %s already exists in trust zone %s in local config", name, trustZoneID)
 	}
 
-	if len(lds.config.GetClustersByTrustZone(trustZoneID)) != 0 {
-		return nil, fmt.Errorf("trust zone %s already has a cluster", trustZoneID)
-	}
-
 	lds.config.Clusters = append(lds.config.Clusters, cluster)
 	if err := lds.updateDataFile(); err != nil {
 		return nil, fmt.Errorf("failed to add cluster %s in trust zone %s to local config: %s", name, trustZoneID, err)
