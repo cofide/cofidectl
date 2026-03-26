@@ -92,9 +92,13 @@ func NewManager(configLoader config.Loader, customLoader PluginLoader) *PluginMa
 }
 
 // UpdateConfigLoader replaces the config loader used to read and write the config file.
+// Any cached plugin instances are cleared so that subsequent calls to GetDataSource and
+// GetProvision re-initialize with the new loader.
 func (pm *PluginManager) UpdateConfigLoader(loader config.Loader) {
 	pm.configLoader = loader
 	pm.defaultLoader.configLoader = loader
+	pm.source = nil
+	pm.provision = nil
 }
 
 // Init initialises the configuration for the specified plugins.

@@ -596,7 +596,7 @@ func TestManager_GetPluginConfig(t *testing.T) {
 	}
 }
 
-func TestManager_UpdateConfigLoader(t *testing.T) {
+func TestManager_UpdateConfigLoader_beforeFirstLoad(t *testing.T) {
 	loaderA, err := config.NewMemoryLoader(&config.Config{
 		Plugins:    GetDefaultPlugins(),
 		TrustZones: []*trust_zone_proto.TrustZone{fixtures.TrustZone("tz1")},
@@ -610,6 +610,37 @@ func TestManager_UpdateConfigLoader(t *testing.T) {
 	require.Nil(t, err)
 
 	m := NewManager(loaderA, nil)
+	m.UpdateConfigLoader(loaderB)
+
+	ds, err := m.GetDataSource(context.Background())
+	require.Nil(t, err)
+
+	trustZones, err := ds.ListTrustZones()
+	require.Nil(t, err)
+	require.Len(t, trustZones, 1)
+	assert.Equal(t, "tz2", trustZones[0].Name)
+}
+
+func TestManager_UpdateConfigLoader_invalidatesCache(t *testing.T) {
+	loaderA, err := config.NewMemoryLoader(&config.Config{
+		Plugins:    GetDefaultPlugins(),
+		TrustZones: []*trust_zone_proto.TrustZone{fixtures.TrustZone("tz1")},
+	})
+	require.Nil(t, err)
+
+	loaderB, err := config.NewMemoryLoader(&config.Config{
+		Plugins:    GetDefaultPlugins(),
+		TrustZones: []*trust_zone_proto.TrustZone{fixtures.TrustZone("tz2")},
+	})
+	require.Nil(t, err)
+
+	m := NewManager(loaderA, nil)
+
+	// Prime the cache with loaderA.
+	_, err = m.GetDataSource(context.Background())
+	require.Nil(t, err)
+
+	// Swap to loaderB — the cached instance must be invalidated.
 	m.UpdateConfigLoader(loaderB)
 
 	ds, err := m.GetDataSource(context.Background())
