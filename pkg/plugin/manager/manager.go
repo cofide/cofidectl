@@ -34,9 +34,9 @@ const (
 
 // PluginManager provides an interface for loading and managing `DataSource` plugins based on configuration.
 type PluginManager struct {
-	configLoader  config.Loader
-	defaultLoader *defaultPluginLoader
-	loaders       []PluginLoader
+	configLoader     config.Loader
+	defaultLoader    *defaultPluginLoader
+	loaders          []PluginLoader
 	grpcPluginLoader grpcPluginLoader
 	source           datasource.DataSource
 	provision        provision.Provision
