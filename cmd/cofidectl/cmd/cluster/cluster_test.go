@@ -25,6 +25,7 @@ import (
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/plugin/local"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -215,6 +216,186 @@ func getFakeKubeCACert() (string, error) {
 	return certPEM.String(), nil
 }
 
+func TestClusterCommand_updateCluster(t *testing.T) {
+	tests := []struct {
+		name                 string
+		clusterName          string
+		trustZoneName        string
+		flags                map[string]string
+		injectFailure        bool
+		wantErr              bool
+		wantErrMessage       string
+		nonExistentTrustZone bool
+		nonExistentCluster   bool
+		wantCheck            func(t *testing.T, cluster *clusterpb.Cluster)
+	}{
+		{
+			name:          "update kubernetes context",
+			clusterName:   "local1",
+			trustZoneName: "tz1",
+			flags:         map[string]string{"kubernetes-context": "new-context"},
+			wantCheck: func(t *testing.T, cluster *clusterpb.Cluster) {
+				assert.Equal(t, "new-context", cluster.GetKubernetesContext())
+			},
+		},
+		{
+			name:          "update OIDC issuer URL",
+			clusterName:   "local1",
+			trustZoneName: "tz1",
+			flags:         map[string]string{"kubernetes-oidc-issuer": fakeOIDCIssuerURL},
+			wantCheck: func(t *testing.T, cluster *clusterpb.Cluster) {
+				assert.Equal(t, fakeOIDCIssuerURL, cluster.GetOidcIssuerUrl())
+			},
+		},
+		{
+			name:          "update external server",
+			clusterName:   "local1",
+			trustZoneName: "tz1",
+			flags:         map[string]string{"external-server": "true"},
+			wantCheck: func(t *testing.T, cluster *clusterpb.Cluster) {
+				assert.True(t, cluster.GetExternalServer())
+			},
+		},
+		{
+			name:          "update multiple fields",
+			clusterName:   "local1",
+			trustZoneName: "tz1",
+			flags: map[string]string{
+				"kubernetes-context":    "new-context",
+				"kubernetes-oidc-issuer": fakeOIDCIssuerURL,
+			},
+			wantCheck: func(t *testing.T, cluster *clusterpb.Cluster) {
+				assert.Equal(t, "new-context", cluster.GetKubernetesContext())
+				assert.Equal(t, fakeOIDCIssuerURL, cluster.GetOidcIssuerUrl())
+			},
+		},
+		{
+			name:          "no flags set leaves cluster unchanged",
+			clusterName:   "local1",
+			trustZoneName: "tz1",
+			flags:         map[string]string{},
+			wantCheck: func(t *testing.T, cluster *clusterpb.Cluster) {
+				assert.Equal(t, "kind-local1", cluster.GetKubernetesContext())
+			},
+		},
+		{
+			name:                 "non-existent trust zone",
+			clusterName:          "local1",
+			trustZoneName:        "tz-missing",
+			flags:                map[string]string{"kubernetes-context": "new-context"},
+			wantErr:              true,
+			wantErrMessage:       "failed to get trust zone tz-missing",
+			nonExistentTrustZone: true,
+		},
+		{
+			name:               "non-existent cluster",
+			clusterName:        "missing-cluster",
+			trustZoneName:      "tz1",
+			flags:              map[string]string{"kubernetes-context": "new-context"},
+			wantErr:            true,
+			wantErrMessage:     "failed to find cluster missing-cluster",
+			nonExistentCluster: true,
+		},
+		{
+			name:           "datastore failure",
+			clusterName:    "local1",
+			trustZoneName:  "tz1",
+			flags:          map[string]string{"kubernetes-context": "new-context"},
+			injectFailure:  true,
+			wantErr:        true,
+			wantErrMessage: "fake update failure",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ds := newFakeDataSource(t, defaultConfig())
+			if tt.injectFailure {
+				ds = &failingUpdateDS{LocalDataSource: ds.(*local.LocalDataSource)}
+			}
+
+			cmd := buildUpdateCmd(tt.flags)
+
+			opts := updateOpts{trustZone: tt.trustZoneName}
+			for flagName, val := range tt.flags {
+				switch flagName {
+				case "kubernetes-context":
+					opts.context = val
+				case "kubernetes-oidc-issuer":
+					opts.kubernetesClusterOIDCIssuerURL = val
+				case "external-server":
+					opts.externalServer = val == "true"
+				}
+			}
+
+			c := ClusterCommand{}
+			err := c.updateCluster(context.Background(), tt.clusterName, opts, cmd, ds)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrMessage)
+			} else {
+				require.NoError(t, err)
+				tz, err := ds.GetTrustZoneByName(tt.trustZoneName)
+				require.NoError(t, err)
+				cluster, err := ds.GetClusterByName(tt.clusterName, tz.GetId())
+				require.NoError(t, err)
+				tt.wantCheck(t, cluster)
+			}
+		})
+	}
+}
+
+func TestClusterCommand_updateCluster_withKubeCACert(t *testing.T) {
+	caString, err := getFakeKubeCACert()
+	require.NoError(t, err)
+
+	tmpFile, err := os.CreateTemp("", "cert-*.pem")
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, tmpFile.Close())
+		require.NoError(t, os.Remove(tmpFile.Name()))
+	}()
+	_, err = tmpFile.WriteString(caString)
+	require.NoError(t, err)
+
+	ds := newFakeDataSource(t, defaultConfig())
+	flags := map[string]string{"kubernetes-ca-cert": tmpFile.Name()}
+	cmd := buildUpdateCmd(flags)
+
+	opts := updateOpts{
+		trustZone:               "tz1",
+		kubernetesClusterCACert: tmpFile.Name(),
+	}
+
+	c := ClusterCommand{}
+	err = c.updateCluster(context.Background(), "local1", opts, cmd, ds)
+	require.NoError(t, err)
+
+	tz, err := ds.GetTrustZoneByName("tz1")
+	require.NoError(t, err)
+	cluster, err := ds.GetClusterByName("local1", tz.GetId())
+	require.NoError(t, err)
+
+	caBytes, err := os.ReadFile(tmpFile.Name())
+	require.NoError(t, err)
+	assert.Equal(t, caBytes, cluster.GetOidcIssuerCaCert())
+}
+
+// buildUpdateCmd creates a cobra command with the update flags registered and sets the provided flags as changed.
+func buildUpdateCmd(flags map[string]string) *cobra.Command {
+	opts := updateOpts{}
+	cmd := &cobra.Command{}
+	f := cmd.Flags()
+	f.StringVar(&opts.trustZone, "trust-zone", "", "")
+	f.StringVar(&opts.kubernetesClusterOIDCIssuerURL, "kubernetes-oidc-issuer", "", "")
+	f.StringVar(&opts.kubernetesClusterCACert, "kubernetes-ca-cert", "", "")
+	f.StringVar(&opts.context, "kubernetes-context", "", "")
+	f.BoolVar(&opts.externalServer, "external-server", false, "")
+	for name, val := range flags {
+		cobra.CheckErr(cmd.Flags().Set(name, val))
+	}
+	return cmd
+}
+
 type failingDS struct {
 	*local.LocalDataSource
 }
@@ -222,6 +403,15 @@ type failingDS struct {
 // AddCluster fails unconditionally
 func (f *failingDS) AddCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
 	return nil, errors.New("fake add failure")
+}
+
+type failingUpdateDS struct {
+	*local.LocalDataSource
+}
+
+// UpdateCluster fails unconditionally
+func (f *failingUpdateDS) UpdateCluster(cluster *clusterpb.Cluster) (*clusterpb.Cluster, error) {
+	return nil, errors.New("fake update failure")
 }
 
 func newFakeDataSource(t *testing.T, cfg *config.Config) datasource.DataSource {
