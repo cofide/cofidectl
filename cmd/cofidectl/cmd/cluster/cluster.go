@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 
 	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
@@ -37,7 +38,7 @@ func NewClusterCommand(cmdCtx *cmdcontext.CommandContext) *ClusterCommand {
 
 func (c *ClusterCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cluster add|del|list [ARGS]",
+		Use:   "cluster add|del|list|update [ARGS]",
 		Short: "Manage clusters",
 		Long:  clusterListCmdDesc,
 	}
@@ -46,6 +47,7 @@ func (c *ClusterCommand) GetRootCommand() *cobra.Command {
 		c.getAddCommand(),
 		c.getListClustersCommand(),
 		c.getDelCommand(),
+		c.getUpdateCommand(),
 	)
 
 	return cmd
@@ -246,6 +248,92 @@ func (c *ClusterCommand) deleteCluster(ctx context.Context, name, trustZoneName,
 	}
 
 	return ds.DestroyCluster(cluster.GetId())
+}
+
+var clusterUpdateCmdDesc = `
+This command will update a cluster in the Cofide configuration state.
+`
+
+type updateOpts struct {
+	trustZone                      string
+	kubernetesClusterOIDCIssuerURL string
+	kubernetesClusterCACert        string
+	context                        string
+	externalServer                 bool
+}
+
+func (c *ClusterCommand) getUpdateCommand() *cobra.Command {
+	opts := updateOpts{}
+	cmd := &cobra.Command{
+		Use:   "update [NAME]",
+		Short: "Update a cluster",
+		Long:  clusterUpdateCmdDesc,
+		Args:  cobra.ExactArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if cmd.Flags().Changed("kubernetes-oidc-issuer") {
+				normalisedURL, err := validateAndParseOIDCIssuerURL(opts.kubernetesClusterOIDCIssuerURL)
+				if err != nil {
+					return fmt.Errorf("invalid --kubernetes-oidc-issuer: %w", err)
+				}
+				opts.kubernetesClusterOIDCIssuerURL = normalisedURL
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
+			if err != nil {
+				return err
+			}
+			return c.updateCluster(cmd.Context(), args[0], opts, cmd, ds)
+		},
+	}
+	f := cmd.Flags()
+	f.StringVar(&opts.trustZone, "trust-zone", "", "Name of the cluster's trust zone")
+	f.StringVar(&opts.kubernetesClusterOIDCIssuerURL, "kubernetes-oidc-issuer", "", "OIDC issuer URL for the Kubernetes cluster")
+	f.StringVar(&opts.kubernetesClusterCACert, "kubernetes-ca-cert", "", "Path to the CA certificate of the Kubernetes cluster, used for TLS during OIDC validation")
+	f.StringVar(&opts.context, "kubernetes-context", "", "Kubernetes context to use for this cluster")
+	f.BoolVar(&opts.externalServer, "external-server", false, "If the SPIRE server runs externally")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+	return cmd
+}
+
+func (c *ClusterCommand) updateCluster(ctx context.Context, name string, opts updateOpts, cmd *cobra.Command, ds datasource.DataSource) error {
+	updatableFlags := []string{"kubernetes-context", "external-server", "kubernetes-oidc-issuer", "kubernetes-ca-cert"}
+	if !slices.ContainsFunc(updatableFlags, cmd.Flags().Changed) {
+		fmt.Println("No changes specified")
+		return nil
+	}
+
+	tz, err := ds.GetTrustZoneByName(opts.trustZone)
+	if err != nil {
+		return fmt.Errorf("failed to get trust zone %s: %w", opts.trustZone, err)
+	}
+
+	cluster, err := ds.GetClusterByName(name, tz.GetId())
+	if err != nil {
+		return err
+	}
+
+	if cmd.Flags().Changed("kubernetes-context") {
+		cluster.KubernetesContext = &opts.context
+	}
+	if cmd.Flags().Changed("external-server") {
+		cluster.ExternalServer = &opts.externalServer
+	}
+	if cmd.Flags().Changed("kubernetes-oidc-issuer") {
+		cluster.OidcIssuerUrl = &opts.kubernetesClusterOIDCIssuerURL
+	}
+	if cmd.Flags().Changed("kubernetes-ca-cert") {
+		caBytes, err := parseKubernetesCACertFromPath(opts.kubernetesClusterCACert)
+		if err != nil {
+			return fmt.Errorf("failed to read CA cert: %w", err)
+		}
+		cluster.OidcIssuerCaCert = caBytes
+	}
+
+	_, err = ds.UpdateCluster(cluster)
+	return err
 }
 
 func validateOpts(opts addOpts) error {
