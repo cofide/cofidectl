@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	federation_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/federation/v1alpha1"
 	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
@@ -131,21 +132,31 @@ type bundles struct {
 	federatedBundles map[string]string
 }
 
+// selectUsableCluster returns the first reachable cluster in a trust zone, or an error if none is found.
+func selectUsableCluster(ctx context.Context, tz *trust_zone_proto.TrustZone, ds datasource.DataSource, kubeConfig string) (*clusterpb.Cluster, error) {
+	clusters, err := trustzone.GetClustersByTrustZone(tz, ds)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range clusters {
+		if helm.IsClusterReachable(ctx, c, kubeConfig) == nil {
+			return c, nil
+		}
+	}
+	return nil, fmt.Errorf("no reachable cluster in trust zone %s", tz.GetName())
+}
+
 // checkFederationStatus builds a comparison map between two trust domains, retrieves there server CA bundle and any federated bundles available
 // locally from the SPIRE server, and then compares the bundles on each to verify SPIRE has the correct bundles on each side of the federation
 func checkFederationStatus(ctx context.Context, ds datasource.DataSource, kubeConfig string, from *trust_zone_proto.TrustZone, to *trust_zone_proto.TrustZone) (string, string, error) {
 	compare := make(map[*trust_zone_proto.TrustZone]bundles)
 
 	for _, tz := range []*trust_zone_proto.TrustZone{from, to} {
-		cluster, err := trustzone.GetClusterFromTrustZone(tz, ds)
+		cluster, err := selectUsableCluster(ctx, tz, ds, kubeConfig)
 		if err != nil {
 			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
 				return "No cluster", "N/A", nil
 			}
-			return "", "", err
-		}
-
-		if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
 			return "Unknown", err.Error(), nil
 		}
 

@@ -119,9 +119,10 @@ This command will display the status of workloads in the Cofide configuration st
 `
 
 type StatusOpts struct {
-	podName   string
-	namespace string
-	trustZone string
+	podName     string
+	namespace   string
+	trustZone   string
+	clusterName string
 }
 
 func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
@@ -150,6 +151,7 @@ func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
 	f.StringVar(&opts.podName, "pod-name", "", "Pod name for the workload")
 	f.StringVar(&opts.namespace, "namespace", "", "Namespace for the workload")
 	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone for the workload")
+	f.StringVar(&opts.clusterName, "cluster", "", "Name of the cluster for the workload (required if trust zone has multiple clusters)")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("pod-name"))
 	cobra.CheckErr(cmd.MarkFlagRequired("namespace"))
@@ -164,7 +166,7 @@ func (w *WorkloadCommand) status(ctx context.Context, ds datasource.DataSource, 
 		return err
 	}
 
-	cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
+	cluster, err := trustzone.ResolveCluster(trustZone, opts.clusterName, ds)
 	if err != nil {
 		return err
 	}
@@ -194,7 +196,7 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
+		clusters, err := trustzone.GetClustersByTrustZone(trustZone, ds)
 		if err != nil {
 			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
 				continue
@@ -202,31 +204,33 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 			return err
 		}
 
-		if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
-			slog.Warn("Cluster is unreachable", "cluster", cluster.GetName(), "error", err)
-			continue
-		}
+		for _, cluster := range clusters {
+			if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
+				slog.Warn("Cluster is unreachable", "cluster", cluster.GetName(), "error", err)
+				continue
+			}
 
-		if deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
-			return err
-		} else if !deployed {
-			return fmt.Errorf("trust zone %s has not been deployed", trustZone.Name)
-		}
+			if deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
+				return err
+			} else if !deployed {
+				return fmt.Errorf("trust zone %s has not been deployed", trustZone.Name)
+			}
 
-		registeredWorkloads, err := workload.GetRegisteredWorkloads(ctx, kubeConfig, cluster.GetKubernetesContext())
-		if err != nil {
-			return err
-		}
+			registeredWorkloads, err := workload.GetRegisteredWorkloads(ctx, kubeConfig, cluster.GetKubernetesContext())
+			if err != nil {
+				return err
+			}
 
-		for _, workload := range registeredWorkloads {
-			data = append(data, []string{
-				workload.Name,
-				trustZone.Name,
-				workload.Type,
-				workload.Status,
-				workload.Namespace,
-				workload.SPIFFEID,
-			})
+			for _, workload := range registeredWorkloads {
+				data = append(data, []string{
+					workload.Name,
+					trustZone.Name,
+					workload.Type,
+					workload.Status,
+					workload.Namespace,
+					workload.SPIFFEID,
+				})
+			}
 		}
 	}
 
@@ -318,7 +322,7 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 	data := make([][]string, 0, len(trustZones))
 
 	for _, trustZone := range trustZones {
-		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
+		clusters, err := trustzone.GetClustersByTrustZone(trustZone, ds)
 		if err != nil {
 			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
 				continue
@@ -326,33 +330,35 @@ func renderUnregisteredWorkloads(ctx context.Context, ds datasource.DataSource, 
 			return err
 		}
 
-		if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
-			slog.Warn("Cluster is unreachable", "cluster", cluster.GetName(), "error", err)
-			continue
-		}
-
-		deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig)
-		if err != nil {
-			return err
-		}
-
-		registeredWorkloads, err := workload.GetUnregisteredWorkloads(ctx, kubeConfig, cluster.GetKubernetesContext(), includeSecrets, deployed)
-		if err != nil {
-			return err
-		}
-
-		for _, workload := range registeredWorkloads {
-			rows := []string{
-				workload.Name,
-				trustZone.Name,
-				workload.Type,
-				workload.Status,
-				workload.Namespace,
+		for _, cluster := range clusters {
+			if err := helm.IsClusterReachable(ctx, cluster, kubeConfig); err != nil {
+				slog.Warn("Cluster is unreachable", "cluster", cluster.GetName(), "error", err)
+				continue
 			}
-			if includeSecrets {
-				rows = append(rows, fmt.Sprintf("%d (%d at risk)", workload.NumSecrets, workload.NumSecretsAtRisk))
+
+			deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig)
+			if err != nil {
+				return err
 			}
-			data = append(data, rows)
+
+			registeredWorkloads, err := workload.GetUnregisteredWorkloads(ctx, kubeConfig, cluster.GetKubernetesContext(), includeSecrets, deployed)
+			if err != nil {
+				return err
+			}
+
+			for _, workload := range registeredWorkloads {
+				rows := []string{
+					workload.Name,
+					trustZone.Name,
+					workload.Type,
+					workload.Status,
+					workload.Namespace,
+				}
+				if includeSecrets {
+					rows = append(rows, fmt.Sprintf("%d (%d at risk)", workload.NumSecrets, workload.NumSecretsAtRisk))
+				}
+				data = append(data, rows)
+			}
 		}
 	}
 

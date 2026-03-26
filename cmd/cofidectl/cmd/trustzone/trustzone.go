@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
@@ -82,28 +83,25 @@ func (c *TrustZoneCommand) GetListCommand() *cobra.Command {
 				return err
 			}
 
-			data := make([][]string, len(trustZones))
-			for i, trustZone := range trustZones {
-				cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
-				if err != nil && !errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
+			data := make([][]string, 0, len(trustZones))
+			for _, trustZone := range trustZones {
+				clusters, err := trustzone.GetClustersByTrustZone(trustZone, ds)
+				clusterNames := "N/A"
+				if err == nil {
+					names := make([]string, 0, len(clusters))
+					for _, c := range clusters {
+						names = append(names, c.GetName())
+					}
+					clusterNames = strings.Join(names, ", ")
+				} else if !errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
 					return err
 				}
-
-				clusterName := "N/A"
-				if cluster != nil {
-					clusterName = cluster.GetName()
-				}
-
-				data[i] = []string{
-					trustZone.Name,
-					trustZone.TrustDomain,
-					clusterName,
-				}
+				data = append(data, []string{trustZone.Name, trustZone.TrustDomain, clusterNames})
 			}
 
 			tr := renderer.NewTableRenderer(os.Stdout)
 			table := renderer.Table{
-				Header: []string{"Name", "Trust Domain", "Cluster"},
+				Header: []string{"Name", "Trust Domain", "Clusters"},
 				Data:   data,
 			}
 			_, err = tr.RenderTables(table)
@@ -264,7 +262,12 @@ This command will display the status of trust zones in the Cofide configuration 
 NOTE: This command relies on privileged access to execute SPIRE server CLI commands within the SPIRE server container, which may not be suitable for production environments.
 `
 
+type statusOpts struct {
+	clusterName string
+}
+
 func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
+	opts := statusOpts{}
 	cmd := &cobra.Command{
 		Use:   "status [NAME]",
 		Short: "Display trust zone status",
@@ -280,20 +283,23 @@ func (c *TrustZoneCommand) GetStatusCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to retrieve the kubeconfig file location")
 			}
-			return c.status(cmd.Context(), ds, kubeConfig, args[0])
+			return c.status(cmd.Context(), ds, kubeConfig, args[0], opts.clusterName)
 		},
 	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.clusterName, "cluster", "", "Name of the cluster to check status of (required if trust zone has multiple clusters)")
 
 	return cmd
 }
 
-func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName string) error {
+func (c *TrustZoneCommand) status(ctx context.Context, source datasource.DataSource, kubeConfig, tzName, clusterName string) error {
 	trustZone, err := source.GetTrustZoneByName(tzName)
 	if err != nil {
 		return err
 	}
 
-	cluster, err := trustzone.GetClusterFromTrustZone(trustZone, source)
+	cluster, err := trustzone.ResolveCluster(trustZone, clusterName, source)
 	if err != nil {
 		return err
 	}

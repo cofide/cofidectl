@@ -175,19 +175,19 @@ func (h *SpireHelm) ListTrustZoneClusters(ds datasource.DataSource, trustZoneIDs
 		return nil, fmt.Errorf("no trust zones have been configured")
 	}
 
-	trustZoneClusters := make([]TrustZoneCluster, 0, len(trustZones))
+	trustZoneClusters := make([]TrustZoneCluster, 0)
 
 	for _, trustZone := range trustZones {
-		// Sanity check that the trust zone has exactly one cluster.
-		cluster, err := trustzone.GetClusterFromTrustZone(trustZone, ds)
+		clusters, err := trustzone.GetClustersByTrustZone(trustZone, ds)
 		if err != nil {
 			if errors.Is(err, trustzone.ErrNoClustersInTrustZone) {
 				continue
 			}
 			return nil, err
 		}
-		trustZoneCluster := TrustZoneCluster{TrustZone: trustZone, Cluster: cluster}
-		trustZoneClusters = append(trustZoneClusters, trustZoneCluster)
+		for _, cluster := range clusters {
+			trustZoneClusters = append(trustZoneClusters, TrustZoneCluster{TrustZone: trustZone, Cluster: cluster})
+		}
 	}
 	return trustZoneClusters, nil
 }
