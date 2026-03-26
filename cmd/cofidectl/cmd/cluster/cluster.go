@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"slices"
@@ -20,6 +21,7 @@ import (
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	helmprovider "github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var clusterListCmdDesc = `
@@ -38,15 +40,16 @@ func NewClusterCommand(cmdCtx *cmdcontext.CommandContext) *ClusterCommand {
 
 func (c *ClusterCommand) GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cluster add|del|list|update [ARGS]",
+		Use:   "cluster add|del|get|list|update [ARGS]",
 		Short: "Manage clusters",
 		Long:  clusterListCmdDesc,
 	}
 
 	cmd.AddCommand(
 		c.getAddCommand(),
-		c.getListClustersCommand(),
 		c.getDelCommand(),
+		c.getGetCommand(),
+		c.getListClustersCommand(),
 		c.getUpdateCommand(),
 	)
 
@@ -135,6 +138,85 @@ func (c *ClusterCommand) addCluster(opts addOpts, ds datasource.DataSource) erro
 	}
 
 	_, err = ds.AddCluster(newCluster)
+	return err
+}
+
+var clusterGetCmdDesc = `
+This command will get a cluster from the Cofide configuration state.
+`
+
+type getOpts struct {
+	trustZone string
+}
+
+func (c *ClusterCommand) getGetCommand() *cobra.Command {
+	opts := getOpts{}
+	cmd := &cobra.Command{
+		Use:   "get [NAME]",
+		Short: "Get a cluster",
+		Long:  clusterGetCmdDesc,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
+			if err != nil {
+				return err
+			}
+			return c.getCluster(args[0], opts.trustZone, ds, os.Stdout)
+		},
+	}
+	f := cmd.Flags()
+	f.StringVar(&opts.trustZone, "trust-zone", "", "Name of the cluster's trust zone")
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+
+	return cmd
+}
+
+func (c *ClusterCommand) getCluster(name, trustZoneName string, ds datasource.DataSource, writer io.Writer) error {
+	tz, err := ds.GetTrustZoneByName(trustZoneName)
+	if err != nil {
+		return fmt.Errorf("failed to get trust zone %s: %w", trustZoneName, err)
+	}
+
+	cluster, err := ds.GetClusterByName(name, tz.GetId())
+	if err != nil {
+		return err
+	}
+
+	helmValues := ""
+	if cluster.GetExtraHelmValues() != nil {
+		helmMap := cluster.GetExtraHelmValues().AsMap()
+		if len(helmMap) > 0 {
+			yamlBytes, err := yaml.Marshal(helmMap)
+			if err != nil {
+				return fmt.Errorf("failed to marshal helm values to yaml: %w", err)
+			}
+			helmValues = string(yamlBytes)
+		}
+	}
+
+	oidcCert := ""
+	if cluster.GetOidcIssuerCaCert() != nil {
+		oidcCert = truncateString(string(cluster.GetOidcIssuerCaCert()), 100)
+	}
+
+	data := [][]string{
+		{"Name", cluster.GetName()},
+		{"Trust Zone", tz.GetName()},
+		{"Profile", cluster.GetProfile()},
+		{"Trust Provider", cluster.GetTrustProvider().GetKind()},
+		{"Kubernetes Context", cluster.GetKubernetesContext()},
+		{"OIDC Issuer URL", cluster.GetOidcIssuerUrl()},
+		{"OIDC Issuer CA Cert", oidcCert},
+		{"External Server", fmt.Sprintf("%t", cluster.GetExternalServer())},
+		{"Extra Helm Values", helmValues},
+	}
+
+	tr := renderer.NewTableRenderer(writer)
+	table := renderer.Table{
+		Header: []string{"Field", "Value"},
+		Data:   data,
+	}
+	_, err = tr.RenderTables(table)
 	return err
 }
 
@@ -379,4 +461,11 @@ func validateAndParseOIDCIssuerURL(oidcIssuerURL string) (string, error) {
 
 func parseKubernetesCACertFromPath(path string) ([]byte, error) {
 	return os.ReadFile(path)
+}
+
+func truncateString(s string, maxLen int) string {
+	if len(s) > maxLen {
+		return s[:maxLen] + "..."
+	}
+	return s
 }

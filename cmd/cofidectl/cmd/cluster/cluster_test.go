@@ -215,6 +215,118 @@ func getFakeKubeCACert() (string, error) {
 	return certPEM.String(), nil
 }
 
+func TestClusterCommand_getCluster(t *testing.T) {
+	tests := []struct {
+		name                 string
+		clusterName          string
+		trustZoneName        string
+		wantErr              bool
+		wantErrMessage       string
+		nonExistentTrustZone bool
+		nonExistentCluster   bool
+		wantOutputContains   []string
+	}{
+		{
+			name:          "success",
+			clusterName:   "local1",
+			trustZoneName: "tz1",
+			wantOutputContains: []string{
+				"local1",
+				"tz1",
+				"kubernetes",
+				"kind-local1",
+			},
+		},
+		{
+			name:                 "non-existent trust zone",
+			clusterName:          "local1",
+			trustZoneName:        "tz-missing",
+			wantErr:              true,
+			wantErrMessage:       "failed to get trust zone tz-missing",
+			nonExistentTrustZone: true,
+		},
+		{
+			name:               "non-existent cluster",
+			clusterName:        "missing-cluster",
+			trustZoneName:      "tz1",
+			wantErr:            true,
+			wantErrMessage:     "failed to find cluster missing-cluster",
+			nonExistentCluster: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ds := newFakeDataSource(t, defaultConfig())
+
+			c := ClusterCommand{}
+			err := c.getCluster(tt.clusterName, tt.trustZoneName, ds, os.Stdout)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrMessage)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestClusterCommand_getCluster_outputFields(t *testing.T) {
+	ds := newFakeDataSource(t, defaultConfig())
+	var buf bytes.Buffer
+	c := ClusterCommand{}
+
+	err := c.getCluster("local1", "tz1", ds, &buf)
+
+	output := buf.String()
+	require.NoError(t, err)
+
+	assert.Contains(t, output, "local1")
+	assert.Contains(t, output, "tz1")
+	assert.Contains(t, output, "kubernetes")
+	assert.Contains(t, output, "kind-local1")
+	assert.Contains(t, output, "false") // ExternalServer
+}
+
+func TestTruncateString(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		maxLen int
+		want   string
+	}{
+		{
+			name:   "short string unchanged",
+			input:  "hello",
+			maxLen: 10,
+			want:   "hello",
+		},
+		{
+			name:   "exact length unchanged",
+			input:  "hello",
+			maxLen: 5,
+			want:   "hello",
+		},
+		{
+			name:   "long string truncated",
+			input:  "hello world",
+			maxLen: 5,
+			want:   "hello...",
+		},
+		{
+			name:   "empty string",
+			input:  "",
+			maxLen: 5,
+			want:   "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := truncateString(tt.input, tt.maxLen)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestClusterCommand_updateCluster(t *testing.T) {
 	tests := []struct {
 		name                 string
