@@ -258,33 +258,20 @@ func TestClusterCommand_getCluster(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ds := newFakeDataSource(t, defaultConfig())
 
+			var buf bytes.Buffer
 			c := ClusterCommand{}
-			err := c.getCluster(tt.clusterName, tt.trustZoneName, ds, os.Stdout)
+			err := c.getCluster(tt.clusterName, tt.trustZoneName, ds, &buf)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrMessage)
 			} else {
 				require.NoError(t, err)
+				for _, want := range tt.wantOutputContains {
+					assert.Contains(t, buf.String(), want)
+				}
 			}
 		})
 	}
-}
-
-func TestClusterCommand_getCluster_outputFields(t *testing.T) {
-	ds := newFakeDataSource(t, defaultConfig())
-	var buf bytes.Buffer
-	c := ClusterCommand{}
-
-	err := c.getCluster("local1", "tz1", ds, &buf)
-
-	output := buf.String()
-	require.NoError(t, err)
-
-	assert.Contains(t, output, "local1")
-	assert.Contains(t, output, "tz1")
-	assert.Contains(t, output, "kubernetes")
-	assert.Contains(t, output, "kind-local1")
-	assert.Contains(t, output, "false") // ExternalServer
 }
 
 func TestTruncateString(t *testing.T) {
@@ -310,13 +297,19 @@ func TestTruncateString(t *testing.T) {
 			name:   "long string truncated",
 			input:  "hello world",
 			maxLen: 5,
-			want:   "hello...",
+			want:   "[truncated]\nhello...",
 		},
 		{
 			name:   "empty string",
 			input:  "",
 			maxLen: 5,
 			want:   "",
+		},
+		{
+			name:   "multi-byte runes truncated on rune boundary",
+			input:  "héllo",
+			maxLen: 3,
+			want:   "[truncated]\nhél...",
 		},
 	}
 	for _, tt := range tests {

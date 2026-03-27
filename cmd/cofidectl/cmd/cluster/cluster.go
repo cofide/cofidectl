@@ -24,6 +24,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const maxFieldLength = 100
+
 var clusterListCmdDesc = `
 This command consists of multiple sub-commands to interact with clusters
 `
@@ -190,13 +192,13 @@ func (c *ClusterCommand) getCluster(name, trustZoneName string, ds datasource.Da
 			if err != nil {
 				return fmt.Errorf("failed to marshal helm values to yaml: %w", err)
 			}
-			helmValues = string(yamlBytes)
+			helmValues = truncateString(string(yamlBytes), maxFieldLength)
 		}
 	}
 
 	oidcCert := ""
 	if cluster.GetOidcIssuerCaCert() != nil {
-		oidcCert = truncateString(string(cluster.GetOidcIssuerCaCert()), 100)
+		oidcCert = truncateString(string(cluster.GetOidcIssuerCaCert()), maxFieldLength)
 	}
 
 	data := [][]string{
@@ -464,8 +466,9 @@ func parseKubernetesCACertFromPath(path string) ([]byte, error) {
 }
 
 func truncateString(s string, maxLen int) string {
-	if len(s) > maxLen {
-		return s[:maxLen] + "..."
+	runes := []rune(s)
+	if len(runes) > maxLen {
+		return "[truncated]\n" + string(runes[:maxLen]) + "..."
 	}
 	return s
 }
