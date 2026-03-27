@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -151,7 +150,7 @@ func TestClusterCommand_addCluster(t *testing.T) {
 			}
 
 			c := ClusterCommand{}
-			err := c.addCluster(context.Background(), opts, ds)
+			err := c.addCluster(opts, ds)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrMessage)
@@ -261,7 +260,7 @@ func TestClusterCommand_updateCluster(t *testing.T) {
 			clusterName:   "local1",
 			trustZoneName: "tz1",
 			flags: map[string]string{
-				"kubernetes-context":    "new-context",
+				"kubernetes-context":     "new-context",
 				"kubernetes-oidc-issuer": fakeOIDCIssuerURL,
 			},
 			wantCheck: func(t *testing.T, cluster *clusterpb.Cluster) {
@@ -328,7 +327,7 @@ func TestClusterCommand_updateCluster(t *testing.T) {
 			}
 
 			c := ClusterCommand{}
-			err := c.updateCluster(context.Background(), tt.clusterName, opts, cmd, ds)
+			err := c.updateCluster(tt.clusterName, opts, cmd, ds)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErrMessage)
@@ -367,7 +366,7 @@ func TestClusterCommand_updateCluster_withKubeCACert(t *testing.T) {
 	}
 
 	c := ClusterCommand{}
-	err = c.updateCluster(context.Background(), "local1", opts, cmd, ds)
+	err = c.updateCluster("local1", opts, cmd, ds)
 	require.NoError(t, err)
 
 	tz, err := ds.GetTrustZoneByName("tz1")

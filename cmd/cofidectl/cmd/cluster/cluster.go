@@ -86,7 +86,7 @@ func (c *ClusterCommand) getAddCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return c.addCluster(cmd.Context(), opts, ds)
+			return c.addCluster(opts, ds)
 		},
 	}
 	f := cmd.Flags()
@@ -101,7 +101,7 @@ func (c *ClusterCommand) getAddCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *ClusterCommand) addCluster(ctx context.Context, opts addOpts, ds datasource.DataSource) error {
+func (c *ClusterCommand) addCluster(opts addOpts, ds datasource.DataSource) error {
 	tz, err := ds.GetTrustZoneByName(opts.trustZone)
 	if err != nil {
 		return fmt.Errorf("failed to get trust zone %s: %w", opts.trustZone, err)
@@ -284,7 +284,7 @@ func (c *ClusterCommand) getUpdateCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return c.updateCluster(cmd.Context(), args[0], opts, cmd, ds)
+			return c.updateCluster(args[0], opts, cmd, ds)
 		},
 	}
 	f := cmd.Flags()
@@ -298,7 +298,7 @@ func (c *ClusterCommand) getUpdateCommand() *cobra.Command {
 	return cmd
 }
 
-func (c *ClusterCommand) updateCluster(ctx context.Context, name string, opts updateOpts, cmd *cobra.Command, ds datasource.DataSource) error {
+func (c *ClusterCommand) updateCluster(name string, opts updateOpts, cmd *cobra.Command, ds datasource.DataSource) error {
 	updatableFlags := []string{"kubernetes-context", "external-server", "kubernetes-oidc-issuer", "kubernetes-ca-cert"}
 	if !slices.ContainsFunc(updatableFlags, cmd.Flags().Changed) {
 		fmt.Println("No changes specified")
