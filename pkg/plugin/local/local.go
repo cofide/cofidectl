@@ -541,6 +541,70 @@ func (lds *LocalDataSource) ListAPBindings(filter *datasourcepb.ListAPBindingsRe
 	return bindings, nil
 }
 
+func (lds *LocalDataSource) UpdateAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
+	id := binding.GetId()
+
+	for i, current := range lds.config.APBindings {
+		if current.GetId() == id {
+			if err := validateAPBindingUpdate(current, binding); err != nil {
+				return nil, err
+			}
+
+			remoteTzs := map[string]bool{}
+			for _, federation := range lds.config.Federations {
+				if federation.GetTrustZoneId() == binding.GetTrustZoneId() {
+					remoteTzs[federation.GetRemoteTrustZoneId()] = true
+				}
+			}
+
+			for _, remoteTz := range binding.Federations {
+				if remoteTz.GetTrustZoneId() == binding.GetTrustZoneId() {
+					return nil, fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.GetPolicyId(), binding.GetTrustZoneId())
+				}
+				if _, ok := remoteTzs[remoteTz.GetTrustZoneId()]; !ok {
+					if _, ok := lds.config.GetTrustZoneByID(remoteTz.GetTrustZoneId()); !ok {
+						return nil, fmt.Errorf("attestation policy %s federates with unknown trust zone %s", binding.GetPolicyId(), remoteTz.GetTrustZoneId())
+					}
+					return nil, fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", binding.GetPolicyId(), remoteTz.GetTrustZoneId(), binding.GetTrustZoneId())
+				}
+			}
+
+			binding, err := proto.CloneAPBinding(binding)
+			if err != nil {
+				return nil, err
+			}
+
+			lds.config.APBindings[i] = binding
+
+			if err := lds.updateDataFile(); err != nil {
+				return nil, fmt.Errorf("failed to update attestation policy binding %s in local config: %s", id, err)
+			}
+
+			return proto.CloneAPBinding(binding)
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find attestation policy binding %s in local config", id)
+}
+
+func validateAPBindingUpdate(current, new *ap_binding_proto.APBinding) error {
+	id := current.GetId()
+
+	if new.GetId() != current.GetId() {
+		return fmt.Errorf("cannot update id for existing attestation policy binding %s", id)
+	}
+
+	if new.GetTrustZoneId() != current.GetTrustZoneId() {
+		return fmt.Errorf("cannot update trust zone for existing attestation policy binding %s", id)
+	}
+
+	if new.GetPolicyId() != current.GetPolicyId() {
+		return fmt.Errorf("cannot update attestation policy for existing attestation policy binding %s", id)
+	}
+
+	return nil
+}
+
 func (lds *LocalDataSource) AddFederation(federationProto *federation_proto.Federation) (*federation_proto.Federation, error) {
 	if federationProto.GetId() != "" {
 		return nil, fmt.Errorf("federation %s should not have an ID set, this will be auto generated", federationProto.GetId())

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
@@ -44,6 +45,7 @@ func (c *APBindingCommand) GetRootCommand() *cobra.Command {
 		c.GetListCommand(),
 		c.GetAddCommand(),
 		c.GetDelCommand(),
+		c.GetUpdateCommand(),
 	)
 
 	return cmd
@@ -287,4 +289,100 @@ func (c *APBindingCommand) GetDelCommand() *cobra.Command {
 	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))
 
 	return cmd
+}
+
+var apBindingUpdateCmdDesc = `
+This command will update an attestation policy binding in the Cofide configuration state.`
+
+type updateOpts struct {
+	trustZone         string
+	attestationPolicy string
+	federatesWith     []string
+}
+
+func (c *APBindingCommand) GetUpdateCommand() *cobra.Command {
+	opts := updateOpts{}
+	cmd := &cobra.Command{
+		Use:   "update [ARGS]",
+		Short: "Update an attestation policy binding",
+		Long:  apBindingUpdateCmdDesc,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ds, err := c.cmdCtx.PluginManager.GetDataSource(cmd.Context())
+			if err != nil {
+				return err
+			}
+			return c.updateAPBinding(opts, cmd, ds)
+		},
+	}
+
+	f := cmd.Flags()
+	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone name")
+	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "Attestation policy name")
+	f.StringSliceVar(&opts.federatesWith, "federates-with", nil, "Defines a trust zone to federate identity with. May be specified multiple times")
+
+	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
+	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))
+
+	return cmd
+}
+
+func (c *APBindingCommand) updateAPBinding(opts updateOpts, cmd *cobra.Command, ds datasource.DataSource) error {
+	updatableFlags := []string{"federates-with"}
+	if !slices.ContainsFunc(updatableFlags, cmd.Flags().Changed) {
+		fmt.Println("No changes specified")
+		return nil
+	}
+
+	trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
+	if err != nil {
+		return fmt.Errorf("failed to get trust zone %s: %w", opts.trustZone, err)
+	}
+
+	policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
+	if err != nil {
+		return fmt.Errorf("failed to get attestation policy %s: %w", opts.attestationPolicy, err)
+	}
+
+	bindings, err := ds.ListAPBindings(&datasourcepb.ListAPBindingsRequest_Filter{
+		TrustZoneId: trustZone.Id,
+		PolicyId:    policy.Id,
+	})
+	if err != nil {
+		return err
+	}
+	if len(bindings) == 0 {
+		return errors.New("no binding found")
+	}
+	if len(bindings) > 1 {
+		return errors.New("multiple bindings found")
+	}
+	binding := bindings[0]
+
+	if cmd.Flags().Changed("federates-with") {
+		tzs, err := ds.ListTrustZones()
+		if err != nil {
+			return err
+		}
+		federations := []*ap_binding_proto.APBindingFederation{}
+		for _, federation := range opts.federatesWith {
+			var fedTZ *trustzonepb.TrustZone
+			for _, tz := range tzs {
+				if tz.Name == federation {
+					fedTZ = tz
+					break
+				}
+			}
+			if fedTZ == nil {
+				return fmt.Errorf("federated trust zone not found: %s", federation)
+			}
+			federations = append(federations, &ap_binding_proto.APBindingFederation{
+				TrustZoneId: fedTZ.Id,
+			})
+		}
+		binding.Federations = federations
+	}
+
+	_, err = ds.UpdateAPBinding(binding)
+	return err
 }

@@ -220,6 +220,15 @@ func (c *DataSourcePluginClientGRPC) ListAPBindings(filter *cofidectl_proto.List
 	return resp.Bindings, nil
 }
 
+func (c *DataSourcePluginClientGRPC) UpdateAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
+	resp, err := c.client.UpdateAPBinding(c.ctx, &cofidectl_proto.UpdateAPBindingRequest{Binding: binding})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Binding, nil
+}
+
 func (c *DataSourcePluginClientGRPC) AddFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error) {
 	resp, err := c.client.AddFederation(c.ctx, &cofidectl_proto.AddFederationRequest{Federation: federation})
 	if err != nil {
@@ -414,6 +423,14 @@ func (s *GRPCServer) ListAPBindings(_ context.Context, req *cofidectl_proto.List
 		return nil, err
 	}
 	return &cofidectl_proto.ListAPBindingsResponse{Bindings: bindings}, nil
+}
+
+func (s *GRPCServer) UpdateAPBinding(_ context.Context, req *cofidectl_proto.UpdateAPBindingRequest) (*cofidectl_proto.UpdateAPBindingResponse, error) {
+	binding, err := s.Impl.UpdateAPBinding(req.Binding)
+	if err != nil {
+		return nil, err
+	}
+	return &cofidectl_proto.UpdateAPBindingResponse{Binding: binding}, nil
 }
 
 func (s *GRPCServer) AddFederation(_ context.Context, req *cofidectl_proto.AddFederationRequest) (*cofidectl_proto.AddFederationResponse, error) {
