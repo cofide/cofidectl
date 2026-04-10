@@ -68,6 +68,8 @@ github.com/cofide/cofide-api-sdk v0.49.1-0.20260409222726-a48944e56cff h1:/xIr4r
 github.com/cofide/cofide-api-sdk v0.49.1-0.20260409222726-a48944e56cff/go.mod h1:o0K5DNBsBFtmEzfgP3/28tyJVEwvOUsWmjLUHStr7cI=
 github.com/cofide/cofide-api-sdk v0.49.1-0.20260409224258-618b37cad96c h1:atpexbyabN5IMTz5/Um13REJnaxHnfli57XhZt7A7ww=
 github.com/cofide/cofide-api-sdk v0.49.1-0.20260409224258-618b37cad96c/go.mod h1:o0K5DNBsBFtmEzfgP3/28tyJVEwvOUsWmjLUHStr7cI=
+github.com/cofide/cofide-api-sdk v0.50.0 h1:qGFlFKNqf/tmt2GsDYLNnYdiZXLHOh+a7M1PArENCpo=
+github.com/cofide/cofide-api-sdk v0.50.0/go.mod h1:o0K5DNBsBFtmEzfgP3/28tyJVEwvOUsWmjLUHStr7cI=
 github.com/containerd/containerd v1.7.30 h1:/2vezDpLDVGGmkUXmlNPLCCNKHJ5BbC5tJB5JNzQhqE=
 github.com/containerd/containerd v1.7.30/go.mod h1:fek494vwJClULlTpExsmOyKCMUAbuVjlFsJQc4/j44M=
 github.com/containerd/errdefs v0.3.0 h1:FSZgGOeK4yuT/+DnF07/Olde/q4KBoMsaamhXxIMDp4=

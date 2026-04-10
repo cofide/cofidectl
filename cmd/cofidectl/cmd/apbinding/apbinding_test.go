@@ -45,13 +45,21 @@ func TestAPBindingCommand_updateAPBinding(t *testing.T) {
 			},
 		},
 		{
-			name:                  "clear federations with empty list",
+			name:                  "clear federations with --clear-federations",
 			trustZoneName:         "tz1",
 			attestationPolicyName: "ap1",
-			flags:                 map[string]string{"federates-with": ""},
+			flags:                 map[string]string{"clear-federations": "true"},
 			wantCheck: func(t *testing.T, binding *ap_binding_proto.APBinding) {
 				assert.Empty(t, binding.GetFederations())
 			},
+		},
+		{
+			name:                  "conflicting flags returns error",
+			trustZoneName:         "tz1",
+			attestationPolicyName: "ap1",
+			flags:                 map[string]string{"federates-with": "tz2", "clear-federations": "true"},
+			wantErr:               true,
+			wantErrMessage:        "cannot simultaneously specify --federates-with and --clear-federations",
 		},
 		{
 			name:                  "no flags set leaves binding unchanged",
@@ -127,6 +135,9 @@ func TestAPBindingCommand_updateAPBinding(t *testing.T) {
 					opts.federatesWith = []string{}
 				}
 			}
+			if val, ok := tt.flags["clear-federations"]; ok && val == "true" {
+				opts.clearFederations = true
+			}
 
 			c := APBindingCommand{}
 			err := c.updateAPBinding(opts, cmd, ds)
@@ -162,6 +173,7 @@ func buildUpdateCmd(flags map[string]string) *cobra.Command {
 	f.StringVar(&opts.trustZone, "trust-zone", "", "")
 	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "")
 	f.StringSliceVar(&opts.federatesWith, "federates-with", nil, "")
+	f.BoolVar(&opts.clearFederations, "clear-federations", false, "")
 	for name, val := range flags {
 		cobra.CheckErr(cmd.Flags().Set(name, val))
 	}

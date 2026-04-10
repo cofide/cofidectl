@@ -14,9 +14,9 @@ import (
 	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	trustzonepb "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
-	"github.com/spf13/cobra"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
+	"github.com/spf13/cobra"
 )
 
 type APBindingCommand struct {
@@ -292,19 +292,22 @@ func (c *APBindingCommand) GetDelCommand() *cobra.Command {
 }
 
 var apBindingUpdateCmdDesc = `
-This command will update an attestation policy binding in the Cofide configuration state.`
+This command will update an existing attestation policy binding.
+Only the federations can be updated, so one of --federates-with
+or --clear-federations must be provided.`
 
 type updateOpts struct {
 	trustZone         string
 	attestationPolicy string
 	federatesWith     []string
+	clearFederations  bool
 }
 
 func (c *APBindingCommand) GetUpdateCommand() *cobra.Command {
 	opts := updateOpts{}
 	cmd := &cobra.Command{
 		Use:   "update [ARGS]",
-		Short: "Update an attestation policy binding",
+		Short: "Update an attestation policy binding.",
 		Long:  apBindingUpdateCmdDesc,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -319,7 +322,8 @@ func (c *APBindingCommand) GetUpdateCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone name")
 	f.StringVar(&opts.attestationPolicy, "attestation-policy", "", "Attestation policy name")
-	f.StringSliceVar(&opts.federatesWith, "federates-with", nil, "Defines a trust zone to federate identity with. May be specified multiple times")
+	f.StringSliceVar(&opts.federatesWith, "federates-with", nil, "Defines a trust zone to federate identity with. May be specified multiple times. Conflicts with --clear-federations")
+	f.BoolVar(&opts.clearFederations, "clear-federations", false, "Specify to clear all federations from the binding. Conflicts with --federates-with")
 
 	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
 	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))
@@ -328,10 +332,14 @@ func (c *APBindingCommand) GetUpdateCommand() *cobra.Command {
 }
 
 func (c *APBindingCommand) updateAPBinding(opts updateOpts, cmd *cobra.Command, ds datasource.DataSource) error {
-	updatableFlags := []string{"federates-with"}
+	updatableFlags := []string{"federates-with", "clear-federations"}
 	if !slices.ContainsFunc(updatableFlags, cmd.Flags().Changed) {
 		fmt.Println("No changes specified")
 		return nil
+	}
+
+	if cmd.Flags().Changed("federates-with") && cmd.Flags().Changed("clear-federations") {
+		return errors.New("cannot simultaneously specify --federates-with and --clear-federations")
 	}
 
 	trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
@@ -359,25 +367,30 @@ func (c *APBindingCommand) updateAPBinding(opts updateOpts, cmd *cobra.Command, 
 	}
 	binding := bindings[0]
 
-	if cmd.Flags().Changed("federates-with") {
+	if cmd.Flags().Changed("clear-federations") && opts.clearFederations {
+		binding.Federations = nil
+	}
+
+	if cmd.Flags().Changed("federates-with") && len(opts.federatesWith) > 0 {
+		federations := []*ap_binding_proto.APBindingFederation{}
 		tzs, err := ds.ListTrustZones()
 		if err != nil {
 			return err
 		}
-		federations := []*ap_binding_proto.APBindingFederation{}
+
 		for _, federation := range opts.federatesWith {
-			var fedTZ *trustzonepb.TrustZone
+			var trustZone *trustzonepb.TrustZone
 			for _, tz := range tzs {
 				if tz.Name == federation {
-					fedTZ = tz
+					trustZone = tz
 					break
 				}
 			}
-			if fedTZ == nil {
+			if trustZone == nil {
 				return fmt.Errorf("federated trust zone not found: %s", federation)
 			}
 			federations = append(federations, &ap_binding_proto.APBindingFederation{
-				TrustZoneId: fedTZ.Id,
+				TrustZoneId: trustZone.Id,
 			})
 		}
 		binding.Federations = federations
