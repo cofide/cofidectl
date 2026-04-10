@@ -174,50 +174,7 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			tz, err := ds.GetTrustZoneByName(opts.trustZone)
-			if err != nil {
-				return err
-			}
-			trustZoneID := tz.GetId()
-
-			policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
-			if err != nil {
-				return err
-			}
-			policyID := policy.GetId()
-
-			federations := []*ap_binding_proto.APBindingFederation{}
-			if len(opts.federatesWith) != 0 {
-				tzs, err := ds.ListTrustZones()
-				if err != nil {
-					return err
-				}
-
-				for _, federation := range opts.federatesWith {
-					var trustZone *trustzonepb.TrustZone
-					for _, tz := range tzs {
-						if tz.Name == federation {
-							trustZone = tz
-							break
-						}
-					}
-					if trustZone == nil {
-						return fmt.Errorf("federated trust zone not found: %s", federation)
-					}
-					federations = append(federations, &ap_binding_proto.APBindingFederation{
-						TrustZoneId: trustZone.Id,
-					})
-				}
-			}
-
-			binding := &ap_binding_proto.APBinding{
-				TrustZoneId: &trustZoneID,
-				PolicyId:    &policyID,
-				Federations: federations,
-			}
-			_, err = ds.AddAPBinding(binding)
-			return err
+			return c.addAPBinding(opts, ds)
 		},
 	}
 
@@ -230,6 +187,52 @@ func (c *APBindingCommand) GetAddCommand() *cobra.Command {
 	cobra.CheckErr(cmd.MarkFlagRequired("attestation-policy"))
 
 	return cmd
+}
+
+func (c *APBindingCommand) addAPBinding(opts AddOpts, ds datasource.DataSource) error {
+	tz, err := ds.GetTrustZoneByName(opts.trustZone)
+	if err != nil {
+		return err
+	}
+	trustZoneID := tz.GetId()
+
+	policy, err := ds.GetAttestationPolicyByName(opts.attestationPolicy)
+	if err != nil {
+		return err
+	}
+	policyID := policy.GetId()
+
+	federations := []*ap_binding_proto.APBindingFederation{}
+	if len(opts.federatesWith) != 0 {
+		tzs, err := ds.ListTrustZones()
+		if err != nil {
+			return err
+		}
+
+		for _, federation := range opts.federatesWith {
+			var trustZone *trustzonepb.TrustZone
+			for _, tz := range tzs {
+				if tz.Name == federation {
+					trustZone = tz
+					break
+				}
+			}
+			if trustZone == nil {
+				return fmt.Errorf("federated trust zone not found: %s", federation)
+			}
+			federations = append(federations, &ap_binding_proto.APBindingFederation{
+				TrustZoneId: trustZone.Id,
+			})
+		}
+	}
+
+	binding := &ap_binding_proto.APBinding{
+		TrustZoneId: &trustZoneID,
+		PolicyId:    &policyID,
+		Federations: federations,
+	}
+	_, err = ds.AddAPBinding(binding)
+	return err
 }
 
 var apBindingDelCmdDesc = `

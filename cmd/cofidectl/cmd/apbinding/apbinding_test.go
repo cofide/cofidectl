@@ -183,6 +183,132 @@ func TestAPBindingCommand_updateAPBinding(t *testing.T) {
 	}
 }
 
+func TestAPBindingCommand_addAPBinding(t *testing.T) {
+	tests := []struct {
+		name                  string
+		trustZoneName         string
+		attestationPolicyName string
+		federatesWith         []string
+		injectFailure         bool
+		wantErr               bool
+		wantErrMessage        string
+		wantCheck             func(t *testing.T, binding *ap_binding_proto.APBinding)
+	}{
+		{
+			name:                  "add binding with no federations",
+			trustZoneName:         "tz1",
+			attestationPolicyName: "ap2",
+			wantCheck: func(t *testing.T, binding *ap_binding_proto.APBinding) {
+				assert.Empty(t, binding.GetFederations())
+			},
+		},
+		{
+			name:                  "add binding with single federation",
+			trustZoneName:         "tz1",
+			attestationPolicyName: "ap2",
+			federatesWith:         []string{"tz2"},
+			wantCheck: func(t *testing.T, binding *ap_binding_proto.APBinding) {
+				require.Len(t, binding.GetFederations(), 1)
+				assert.Equal(t, "tz2-id", binding.GetFederations()[0].GetTrustZoneId())
+			},
+		},
+		{
+			name:                  "add binding with multiple federations",
+			trustZoneName:         "tz1",
+			attestationPolicyName: "ap2",
+			federatesWith:         []string{"tz2", "tz3"},
+			wantCheck: func(t *testing.T, binding *ap_binding_proto.APBinding) {
+				require.Len(t, binding.GetFederations(), 2)
+				tzIDs := []string{
+					binding.GetFederations()[0].GetTrustZoneId(),
+					binding.GetFederations()[1].GetTrustZoneId(),
+				}
+				assert.Contains(t, tzIDs, "tz2-id")
+				assert.Contains(t, tzIDs, "tz3-id")
+			},
+		},
+		{
+			name:                  "non-existent trust zone",
+			trustZoneName:         "tz-missing",
+			attestationPolicyName: "ap2",
+			federatesWith:         []string{"tz2"},
+			wantErr:               true,
+			wantErrMessage:        "failed to find trust zone tz-missing in local config",
+		},
+		{
+			name:                  "non-existent attestation policy",
+			trustZoneName:         "tz1",
+			attestationPolicyName: "ap-missing",
+			federatesWith:         []string{"tz2"},
+			wantErr:               true,
+			wantErrMessage:        "failed to find attestation policy ap-missing in local config",
+		},
+		{
+			name:                  "invalid federated trust zone",
+			trustZoneName:         "tz1",
+			attestationPolicyName: "ap2",
+			federatesWith:         []string{"tz-missing"},
+			wantErr:               true,
+			wantErrMessage:        "federated trust zone not found: tz-missing",
+		},
+		{
+			name:                  "datastore failure",
+			trustZoneName:         "tz1",
+			attestationPolicyName: "ap2",
+			injectFailure:         true,
+			wantErr:               true,
+			wantErrMessage:        "fake add failure",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ds := newFakeDataSource(t, defaultConfig())
+			if tt.injectFailure {
+				ds = &failingAddDS{LocalDataSource: ds.(*local.LocalDataSource)}
+			}
+
+			opts := AddOpts{
+				trustZone:         tt.trustZoneName,
+				attestationPolicy: tt.attestationPolicyName,
+				federatesWith:     tt.federatesWith,
+			}
+
+			c := APBindingCommand{}
+			err := c.addAPBinding(opts, ds)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tt.wantErrMessage)
+			} else {
+				require.NoError(t, err)
+				tz, err := ds.GetTrustZoneByName(tt.trustZoneName)
+				require.NoError(t, err)
+				ap, err := ds.GetAttestationPolicyByName(tt.attestationPolicyName)
+				require.NoError(t, err)
+				bindings, err := ds.ListAPBindings(nil)
+				require.NoError(t, err)
+				var binding *ap_binding_proto.APBinding
+				for _, b := range bindings {
+					if b.GetTrustZoneId() == tz.GetId() && b.GetPolicyId() == ap.GetId() {
+						binding = b
+						break
+					}
+				}
+				require.NotNil(t, binding)
+				tt.wantCheck(t, binding)
+			}
+		})
+	}
+}
+
+type failingAddDS struct {
+	*local.LocalDataSource
+}
+
+// AddAPBinding fails unconditionally.
+func (f *failingAddDS) AddAPBinding(_ *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error) {
+	return nil, errors.New("fake add failure")
+}
+
 func buildUpdateCmd(flags map[string]string) *cobra.Command {
 	opts := updateOpts{}
 	cmd := &cobra.Command{}
