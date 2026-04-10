@@ -482,13 +482,13 @@ func (lds *LocalDataSource) AddAPBinding(binding *ap_binding_proto.APBinding) (*
 	for _, remoteTz := range binding.Federations {
 		if remoteTz.GetTrustZoneId() == binding.GetTrustZoneId() {
 			// Is this a problem?
-			return nil, fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.GetPolicyId(), binding.GetTrustZoneId())
+			return nil, fmt.Errorf("attestation policy binding %s federates with its own trust zone %s", binding.GetId(), binding.GetTrustZoneId())
 		}
 		if _, ok := remoteTzs[remoteTz.GetTrustZoneId()]; !ok {
 			if _, ok := lds.config.GetTrustZoneByID(remoteTz.GetTrustZoneId()); !ok {
-				return nil, fmt.Errorf("attestation policy %s federates with unknown trust zone %s", binding.GetPolicyId(), remoteTz.GetTrustZoneId())
+				return nil, fmt.Errorf("attestation policy binding %s federates with unknown trust zone %s", binding.GetId(), remoteTz.GetTrustZoneId())
 			} else {
-				return nil, fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", binding.GetPolicyId(), remoteTz.GetTrustZoneId(), binding.GetTrustZoneId())
+				return nil, fmt.Errorf("attestation policy binding %s federates with %s but trust zone %s does not", binding.GetId(), remoteTz.GetTrustZoneId(), binding.GetTrustZoneId())
 			}
 		}
 	}
@@ -559,13 +559,13 @@ func (lds *LocalDataSource) UpdateAPBinding(binding *ap_binding_proto.APBinding)
 
 			for _, remoteTz := range binding.Federations {
 				if remoteTz.GetTrustZoneId() == binding.GetTrustZoneId() {
-					return nil, fmt.Errorf("attestation policy %s federates with its own trust zone %s", binding.GetPolicyId(), binding.GetTrustZoneId())
+					return nil, fmt.Errorf("attestation policy binding %s federates with its own trust zone %s", binding.GetId(), binding.GetTrustZoneId())
 				}
 				if _, ok := remoteTzs[remoteTz.GetTrustZoneId()]; !ok {
 					if _, ok := lds.config.GetTrustZoneByID(remoteTz.GetTrustZoneId()); !ok {
-						return nil, fmt.Errorf("attestation policy %s federates with unknown trust zone %s", binding.GetPolicyId(), remoteTz.GetTrustZoneId())
+						return nil, fmt.Errorf("attestation policy binding %s federates with unknown trust zone %s", binding.GetId(), remoteTz.GetTrustZoneId())
 					}
-					return nil, fmt.Errorf("attestation policy %s federates with %s but trust zone %s does not", binding.GetPolicyId(), remoteTz.GetTrustZoneId(), binding.GetTrustZoneId())
+					return nil, fmt.Errorf("attestation policy binding %s federates with %s but trust zone %s does not", binding.GetId(), remoteTz.GetTrustZoneId(), binding.GetTrustZoneId())
 				}
 			}
 

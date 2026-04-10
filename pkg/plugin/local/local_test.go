@@ -5,6 +5,7 @@ package local
 
 import (
 	"context"
+	"regexp"
 	"slices"
 	"testing"
 
@@ -1028,10 +1029,10 @@ func TestLocalDataSource_ListAttestationPolicies(t *testing.T) {
 func TestLocalDataSource_AddAPBinding(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name          string
-		binding       *ap_binding_proto.APBinding
-		wantErr       bool
-		wantErrString string
+		name                 string
+		binding              *ap_binding_proto.APBinding
+		wantErr              bool
+		wantErrStringPattern string
 	}{
 		{
 			name: "success",
@@ -1056,8 +1057,8 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				TrustZoneId: fixtures.StringPtr("invalid"),
 				PolicyId:    fixtures.StringPtr("ap2"),
 			},
-			wantErr:       true,
-			wantErrString: "failed to find trust zone invalid in local config",
+			wantErr:              true,
+			wantErrStringPattern: "failed to find trust zone invalid in local config",
 		},
 		{
 			name: "invalid policy",
@@ -1065,8 +1066,8 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				TrustZoneId: fixtures.StringPtr("tz1-id"),
 				PolicyId:    fixtures.StringPtr("invalid"),
 			},
-			wantErr:       true,
-			wantErrString: "failed to find attestation policy invalid in local config",
+			wantErr:              true,
+			wantErrStringPattern: "failed to find attestation policy invalid in local config",
 		},
 		{
 			name: "federates with self",
@@ -1075,8 +1076,8 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				PolicyId:    fixtures.StringPtr("ap2-id"),
 				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("tz1-id")}},
 			},
-			wantErr:       true,
-			wantErrString: "attestation policy ap2-id federates with its own trust zone tz1-id",
+			wantErr:              true,
+			wantErrStringPattern: "attestation policy binding [a-z0-9\\-]+ federates with its own trust zone tz1-id",
 		},
 		{
 			name: "federates with invalid tz",
@@ -1085,8 +1086,8 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				PolicyId:    fixtures.StringPtr("ap2-id"),
 				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("invalid")}},
 			},
-			wantErr:       true,
-			wantErrString: "attestation policy ap2-id federates with unknown trust zone invalid",
+			wantErr:              true,
+			wantErrStringPattern: "attestation policy binding [a-z0-9\\-]+ federates with unknown trust zone invalid",
 		},
 		{
 			name: "federates with unfederated tz",
@@ -1095,8 +1096,8 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 				PolicyId:    fixtures.StringPtr("ap2-id"),
 				Federations: []*ap_binding_proto.APBindingFederation{{TrustZoneId: fixtures.StringPtr("tz3-id")}},
 			},
-			wantErr:       true,
-			wantErrString: "attestation policy ap2-id federates with tz3-id but trust zone tz1-id does not",
+			wantErr:              true,
+			wantErrStringPattern: "attestation policy binding [a-z0-9\\-]+ federates with tz3-id but trust zone tz1-id does not",
 		},
 	}
 	for _, tt := range tests {
@@ -1127,7 +1128,8 @@ func TestLocalDataSource_AddAPBinding(t *testing.T) {
 			got, err := lds.AddAPBinding(tt.binding)
 			if tt.wantErr {
 				require.Error(t, err)
-				assert.EqualError(t, err, tt.wantErrString)
+				assert.Regexp(t, regexp.MustCompile(tt.wantErrStringPattern), err.Error())
+				//assert.EqualError(t, err, tt.wantErrString)
 			} else {
 				require.Nil(t, err)
 				tt.binding.Id = got.Id
