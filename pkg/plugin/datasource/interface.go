@@ -40,6 +40,7 @@ type DataSource interface {
 	AddAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error)
 	DestroyAPBinding(id string) error
 	ListAPBindings(filter *datasourcepb.ListAPBindingsRequest_Filter) ([]*ap_binding_proto.APBinding, error)
+	UpdateAPBinding(binding *ap_binding_proto.APBinding) (*ap_binding_proto.APBinding, error)
 
 	AddFederation(federation *federation_proto.Federation) (*federation_proto.Federation, error)
 	DestroyFederation(id string) error
