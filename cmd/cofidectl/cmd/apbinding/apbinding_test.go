@@ -5,6 +5,7 @@ package apbinding
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
@@ -42,6 +43,21 @@ func TestAPBindingCommand_updateAPBinding(t *testing.T) {
 			wantCheck: func(t *testing.T, binding *ap_binding_proto.APBinding) {
 				require.Len(t, binding.GetFederations(), 1)
 				assert.Equal(t, "tz2-id", binding.GetFederations()[0].GetTrustZoneId())
+			},
+		},
+		{
+			name:                  "update federates-with multiple values",
+			trustZoneName:         "tz1",
+			attestationPolicyName: "ap1",
+			flags:                 map[string]string{"federates-with": "tz2,tz3"},
+			wantCheck: func(t *testing.T, binding *ap_binding_proto.APBinding) {
+				require.Len(t, binding.GetFederations(), 2)
+				tzIDs := []string{
+					binding.GetFederations()[0].GetTrustZoneId(),
+					binding.GetFederations()[1].GetTrustZoneId(),
+				}
+				assert.Contains(t, tzIDs, "tz2-id")
+				assert.Contains(t, tzIDs, "tz3-id")
 			},
 		},
 		{
@@ -130,9 +146,10 @@ func TestAPBindingCommand_updateAPBinding(t *testing.T) {
 				attestationPolicy: tt.attestationPolicyName,
 			}
 			if val, ok := tt.flags["federates-with"]; ok {
-				opts.federatesWith = []string{val}
 				if val == "" {
 					opts.federatesWith = []string{}
+				} else {
+					opts.federatesWith = strings.Split(val, ",")
 				}
 			}
 			if val, ok := tt.flags["clear-federations"]; ok && val == "true" {
@@ -202,6 +219,7 @@ func defaultConfig() *config.Config {
 		TrustZones: []*trust_zone_proto.TrustZone{
 			fixtures.TrustZone("tz1"),
 			fixtures.TrustZone("tz2"),
+			fixtures.TrustZone("tz3"),
 		},
 		AttestationPolicies: []*attestation_policy_proto.AttestationPolicy{
 			fixtures.AttestationPolicy("ap1"),
@@ -213,6 +231,7 @@ func defaultConfig() *config.Config {
 		Federations: []*federation_proto.Federation{
 			fixtures.Federation("fed1"),
 			fixtures.Federation("fed2"),
+			fixtures.Federation("fed3"),
 		},
 		Plugins: fixtures.Plugins("plugins1"),
 	}

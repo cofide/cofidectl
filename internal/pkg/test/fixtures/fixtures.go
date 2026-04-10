@@ -356,6 +356,11 @@ var federationFixtures map[string]*federation_proto.Federation = map[string]*fed
 		TrustZoneId:       StringPtr("tz2-id"),
 		RemoteTrustZoneId: StringPtr("tz1-id"),
 	},
+	"fed3": {
+		Id:                StringPtr("fed3-id"),
+		TrustZoneId:       StringPtr("tz1-id"),
+		RemoteTrustZoneId: StringPtr("tz3-id"),
+	},
 }
 
 var pluginConfigFixtures map[string]*structpb.Struct = map[string]*structpb.Struct{
