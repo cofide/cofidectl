@@ -160,7 +160,7 @@ func checkFederationStatus(ctx context.Context, ds datasource.DataSource, kubeCo
 			return "Unknown", err.Error(), nil
 		}
 		if cluster.GetKubernetesContext() == "" {
-			return "Unknown", "no kubernetes context for cluster", nil
+			return "Unknown", fmt.Sprintf("no kubernetes context for cluster %q in trust zone %q", cluster.GetName(), tz.GetName()), nil
 		}
 
 		if deployed, err := helm.IsClusterDeployed(ctx, cluster, kubeConfig); err != nil {
