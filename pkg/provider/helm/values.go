@@ -442,8 +442,10 @@ func (s *spireServerValues) generateValues() (map[string]any, error) {
 			"controllerManager": map[string]any{
 				"enabled": s.controllerManagerEnabled,
 			},
-			"fullnameOverride": s.fullnameOverride,
-			"logLevel":         s.logLevel,
+			"fullnameOverride":             s.fullnameOverride,
+			"logLevel":                     s.logLevel,
+			"pruneAttestedNodesExpiredFor": s.serverConfig.PruneAttestedNodesExpiredFor,
+			"pruneTOFUNodes":               s.serverConfig.PruneTOFUNodes,
 			"nodeAttestor": map[string]any{
 				s.serverConfig.NodeAttestor: s.serverConfig.NodeAttestorConfig,
 			},

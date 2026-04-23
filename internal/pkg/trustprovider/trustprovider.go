@@ -52,6 +52,8 @@ func (tp *TrustProvider) getValues() error {
 				"enabled":  true,
 				"audience": []string{"spire-server"},
 			},
+			PruneAttestedNodesExpiredFor: "24h",
+			PruneTOFUNodes:               false,
 		}
 	default:
 		return fmt.Errorf("an unknown trust provider kind was specified: %s", tp.Kind)
@@ -66,8 +68,10 @@ type TrustProviderAgentConfig struct {
 }
 
 type TrustProviderServerConfig struct {
-	NodeAttestor       string
-	NodeAttestorConfig map[string]any
+	NodeAttestor                 string
+	NodeAttestorConfig           map[string]any
+	PruneAttestedNodesExpiredFor string
+	PruneTOFUNodes               bool
 }
 
 // GetTrustProviderKindFromProfile returns the valid kind of trust provider for the
