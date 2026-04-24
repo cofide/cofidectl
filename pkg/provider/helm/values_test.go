@@ -122,6 +122,8 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							"enabled":  true,
 						},
 					},
+					"pruneAttestedNodesExpiredFor": "24h",
+					"pruneTOFUNodes":               false,
 					"service": Values{
 						"type": "LoadBalancer",
 					},
@@ -231,6 +233,8 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							"enabled":  true,
 						},
 					},
+					"pruneAttestedNodesExpiredFor": "24h",
+					"pruneTOFUNodes":               false,
 					"service": Values{
 						"type": "LoadBalancer",
 					},
@@ -345,6 +349,8 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							"enabled":  true,
 						},
 					},
+					"pruneAttestedNodesExpiredFor": "24h",
+					"pruneTOFUNodes":               false,
 					"service": Values{
 						"type": "LoadBalancer",
 					},
@@ -429,6 +435,8 @@ func TestHelmValuesGenerator_GenerateValues_success(t *testing.T) {
 							"enabled":  true,
 						},
 					},
+					"pruneAttestedNodesExpiredFor": "24h",
+					"pruneTOFUNodes":               false,
 					"service": Values{
 						"type": "LoadBalancer",
 					},
@@ -665,6 +673,8 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 							"enabled":  true,
 						},
 					},
+					"pruneAttestedNodesExpiredFor": "24h",
+					"pruneTOFUNodes":               false,
 					"service": Values{
 						"type": "LoadBalancer",
 					},
@@ -758,6 +768,8 @@ func TestHelmValuesGenerator_GenerateValues_AdditionalValues(t *testing.T) {
 							"enabled":  true,
 						},
 					},
+					"pruneAttestedNodesExpiredFor": "24h",
+					"pruneTOFUNodes":               false,
 					"service": Values{
 						"type": "LoadBalancer",
 					},
@@ -1584,6 +1596,8 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 						"enabled":  true,
 						"audience": []string{"spire-server"},
 					},
+					PruneAttestedNodesExpiredFor: "24h",
+					PruneTOFUNodes:               false,
 				},
 				serviceType: "LoadBalancer",
 			},
@@ -1594,9 +1608,11 @@ func TestSpireServerValues_GenerateValues(t *testing.T) {
 					"controllerManager": map[string]any{
 						"enabled": true,
 					},
-					"enabled":          true,
-					"fullnameOverride": "spire-server",
-					"logLevel":         "DEBUG",
+					"enabled":                      true,
+					"fullnameOverride":             "spire-server",
+					"logLevel":                     "DEBUG",
+					"pruneAttestedNodesExpiredFor": "24h",
+					"pruneTOFUNodes":               false,
 					"nodeAttestor": Values{
 						"k8sPSAT": Values{
 							"audience": []string{"spire-server"},
