@@ -10,11 +10,11 @@ import (
 	"net/url"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/kubectl/pkg/scheme"
+	"k8s.io/streaming/pkg/httpstream"
 )
 
 func RunCommand(ctx context.Context, client kubernetes.Interface, config *restclient.Config, podName string,
