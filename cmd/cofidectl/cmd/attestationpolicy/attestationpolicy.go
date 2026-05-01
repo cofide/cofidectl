@@ -493,10 +493,10 @@ func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, name string
 	if err != nil {
 		return err
 	}
-	if len(bindings) > 0 {
+if len(bindings) > 0 {
 		return fmt.Errorf(
-			"cannot delete attestation policy %q because it is still bound to one or more trust zones.\nRun `cofidectl attestation-policy-binding del` to remove the binding(s) first",
-			name,
+			"cannot delete attestation policy %q because it is still bound to one or more trust zones.\nRun 'cofidectl attestation-policy-binding list --attestation-policy %q' to see the binding(s) first",
+			name, name,
 		)
 	}
 
