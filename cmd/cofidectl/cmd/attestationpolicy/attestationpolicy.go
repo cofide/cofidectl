@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/spf13/cobra"
@@ -485,6 +486,18 @@ func (c *AttestationPolicyCommand) deletePolicy(ctx context.Context, name string
 	ap, err := ds.GetAttestationPolicyByName(name)
 	if err != nil {
 		return err
+	}
+
+	// Check for any APBindings which will cause deletion to fail
+	bindings, err := ds.ListAPBindings(&datasourcepb.ListAPBindingsRequest_Filter{PolicyId: ap.Id})
+	if err != nil {
+		return err
+	}
+	if len(bindings) > 0 {
+		return fmt.Errorf(
+			"cannot delete attestation policy %q because it is still bound to one or more trust zones.\nRun `cofidectl attestation-policy-binding del` to remove the binding(s) first",
+			name,
+		)
 	}
 
 	return ds.DestroyAttestationPolicy(ap.GetId())
