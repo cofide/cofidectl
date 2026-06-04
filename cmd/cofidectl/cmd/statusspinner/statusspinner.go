@@ -12,7 +12,7 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
+	provisionpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 )
 
 // statusSpinner implements a CLI spinner that displays messages from `provider.ProviderStatus`.

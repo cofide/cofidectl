@@ -6,8 +6,8 @@ package attestationpolicy
 import (
 	"fmt"
 
-	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	ap_binding_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/ap_binding/v1alpha1"
+	attestation_policy_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"

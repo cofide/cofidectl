@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	cofidectl_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
+	cofidectl_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
+	provisionpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	go_plugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"

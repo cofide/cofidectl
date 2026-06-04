@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	clusterpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cluster/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
