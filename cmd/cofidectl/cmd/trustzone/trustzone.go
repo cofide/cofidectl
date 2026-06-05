@@ -12,12 +12,12 @@ import (
 	"strconv"
 	"strings"
 
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
+	datasourcepb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/trustzone/helm"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"

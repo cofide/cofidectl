@@ -10,9 +10,9 @@ import (
 	"slices"
 	"strings"
 
-	ap_binding_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/ap_binding/v1alpha1"
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
-	trustzonepb "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	ap_binding_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/ap_binding/v1alpha1"
+	datasourcepb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
+	trustzonepb "github.com/cofide/cofidectl-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"

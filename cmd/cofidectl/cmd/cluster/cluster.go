@@ -12,9 +12,9 @@ import (
 	"slices"
 	"strings"
 
-	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
-	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
+	clusterpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cluster/v1alpha1"
+	datasourcepb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
+	trust_provider_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/trust_provider/v1alpha1"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	"github.com/cofide/cofidectl/internal/pkg/trustprovider"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"

@@ -6,8 +6,8 @@ package spirehelm
 import (
 	"context"
 
-	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	clusterpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cluster/v1alpha1"
+	trust_zone_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/trust_zone/v1alpha1"
 
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/provider/helm"

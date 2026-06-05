@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"os"
 
-	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
-	"github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
-	trust_zone_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_zone/v1alpha1"
+	clusterpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cluster/v1alpha1"
+	"github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
+	provisionpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
+	trust_zone_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/trust_zone/v1alpha1"
 
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"

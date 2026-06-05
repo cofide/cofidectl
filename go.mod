@@ -6,7 +6,7 @@ require (
 	buf.build/go/protoyaml v0.7.0
 	cuelang.org/go v0.16.1
 	github.com/briandowns/spinner v1.23.2
-	github.com/cofide/cofide-api-sdk v0.54.0
+	github.com/cofide/cofidectl-sdk v0.1.0
 	github.com/fatih/color v1.19.0
 	github.com/gofrs/flock v0.13.0
 	github.com/google/go-cmp v0.7.0
@@ -153,5 +153,5 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-// Uncomment the following for development with local Cofide API SDK changes:
-// replace github.com/cofide/cofide-api-sdk => ../cofide-api-sdk
+// Uncomment the following for development with local cofidectl SDK changes:
+// replace github.com/cofide/cofidectl-sdk => ../cofidectl-sdk

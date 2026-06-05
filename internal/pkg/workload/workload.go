@@ -10,7 +10,7 @@ import (
 	"io"
 	"time"
 
-	provisionpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
+	provisionpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin/provision"
 	"github.com/cofide/cofidectl/pkg/spire"

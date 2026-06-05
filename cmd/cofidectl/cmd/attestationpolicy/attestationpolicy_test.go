@@ -6,7 +6,7 @@ package attestationpolicy
 import (
 	"testing"
 
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	attestation_policy_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/attestation_policy/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/test/fixtures"
 	"github.com/google/go-cmp/cmp"
 	types "github.com/spiffe/spire-api-sdk/proto/spire/api/types"

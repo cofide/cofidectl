@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
 
-	clusterpb "github.com/cofide/cofide-api-sdk/gen/go/proto/cluster/v1alpha1"
+	clusterpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cluster/v1alpha1"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"

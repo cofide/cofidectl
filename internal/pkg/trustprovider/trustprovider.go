@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	trust_provider_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/trust_provider/v1alpha1"
+	trust_provider_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/trust_provider/v1alpha1"
 )
 
 const (

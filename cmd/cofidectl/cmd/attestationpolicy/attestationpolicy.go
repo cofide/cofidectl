@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	attestation_policy_proto "github.com/cofide/cofide-api-sdk/gen/go/proto/attestation_policy/v1alpha1"
-	datasourcepb "github.com/cofide/cofide-api-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
+	attestation_policy_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/attestation_policy/v1alpha1"
+	datasourcepb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/datasource_plugin/v1alpha2"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/spf13/cobra"

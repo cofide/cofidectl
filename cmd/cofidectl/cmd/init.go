@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	pluginspb "github.com/cofide/cofide-api-sdk/gen/go/proto/plugins/v1alpha1"
+	pluginspb "github.com/cofide/cofidectl-sdk/gen/go/proto/plugins/v1alpha1"
 	"github.com/cofide/cofidectl/pkg/cmd/context"
 	"github.com/cofide/cofidectl/pkg/plugin"
 	"github.com/cofide/cofidectl/pkg/plugin/manager"
