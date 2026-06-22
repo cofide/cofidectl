@@ -16,7 +16,7 @@ jobs:
           - external-agent
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install just
         # v2.66.5
@@ -57,7 +57,7 @@ jobs:
           - "cofidectl-test-plugin"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install just
         uses: taiki-e/install-action@just
