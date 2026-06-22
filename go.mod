@@ -15,7 +15,7 @@ require (
 	github.com/hashicorp/go-plugin v1.8.0
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/spf13/cobra v1.10.2
-	github.com/spiffe/go-spiffe/v2 v2.7.0
+	github.com/spiffe/go-spiffe/v2 v2.8.1
 	github.com/spiffe/spire-api-sdk v1.15.1
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/grpc v1.81.1
