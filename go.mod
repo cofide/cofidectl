@@ -4,7 +4,7 @@ go 1.26.5
 
 require (
 	buf.build/go/protoyaml v0.7.0
-	cuelang.org/go v0.17.0
+	cuelang.org/go v0.17.1
 	github.com/briandowns/spinner v1.23.2
 	github.com/cofide/cofidectl-sdk v0.1.0
 	github.com/fatih/color v1.19.0
