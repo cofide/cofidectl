@@ -343,7 +343,7 @@ func GetBundle(ctx context.Context, client *kubeutil.Client) (*types.Bundle, err
 }
 
 func createPodWatcher(ctx context.Context, client *kubeutil.Client) (watch.Interface, error) {
-	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
+	watchFunc := func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64(120)
 		return client.Clientset.CoreV1().Pods(serverNamespace).Watch(ctx, metav1.ListOptions{
 			FieldSelector:  fmt.Sprintf("metadata.name=%s", serverPodName),
@@ -351,7 +351,7 @@ func createPodWatcher(ctx context.Context, client *kubeutil.Client) (watch.Inter
 		})
 	}
 
-	watcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
+	watcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFuncWithContext: watchFunc})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create watcher for context %s: %v", client.CmdConfig.CurrentContext, err)
 	}
@@ -360,7 +360,7 @@ func createPodWatcher(ctx context.Context, client *kubeutil.Client) (watch.Inter
 }
 
 func createServiceWatcher(ctx context.Context, client *kubeutil.Client) (watch.Interface, error) {
-	watchFunc := func(opts metav1.ListOptions) (watch.Interface, error) {
+	watchFunc := func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 		timeout := int64(120)
 		return client.Clientset.CoreV1().Services(serverNamespace).Watch(ctx, metav1.ListOptions{
 			FieldSelector:  fmt.Sprintf("metadata.name=%s", serverServiceName),
@@ -368,7 +368,7 @@ func createServiceWatcher(ctx context.Context, client *kubeutil.Client) (watch.I
 		})
 	}
 
-	watcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
+	watcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFuncWithContext: watchFunc})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create service watcher for context %s: %v", client.CmdConfig.CurrentContext, err)
 	}
