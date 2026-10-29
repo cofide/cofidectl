@@ -10,14 +10,11 @@ import (
 	"log/slog"
 	"os"
 
-	provisionpb "github.com/cofide/cofidectl-sdk/gen/go/proto/cofidectl/provision_plugin/v1alpha2"
 	trust_zone_proto "github.com/cofide/cofidectl-sdk/gen/go/proto/trust_zone/v1alpha1"
 	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/renderer"
-	"github.com/cofide/cofidectl/cmd/cofidectl/cmd/statusspinner"
 	"github.com/cofide/cofidectl/internal/pkg/trustzone"
 	"github.com/cofide/cofidectl/internal/pkg/workload"
 	cmdcontext "github.com/cofide/cofidectl/pkg/cmd/context"
-	kubeutil "github.com/cofide/cofidectl/pkg/kube"
 	"github.com/cofide/cofidectl/pkg/plugin/datasource"
 	"github.com/cofide/cofidectl/pkg/provider/helm"
 	"github.com/spf13/cobra"
@@ -46,7 +43,6 @@ func (c *WorkloadCommand) GetRootCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		c.GetStatusCommand(),
 		c.GetListCommand(),
 		c.GetDiscoverCommand(),
 	)
@@ -114,84 +110,6 @@ func (w *WorkloadCommand) GetListCommand() *cobra.Command {
 	return cmd
 }
 
-var workloadStatusCmdDesc = `
-This command will display the status of workloads in the Cofide configuration state.
-`
-
-type StatusOpts struct {
-	podName     string
-	namespace   string
-	trustZone   string
-	clusterName string
-}
-
-func (w *WorkloadCommand) GetStatusCommand() *cobra.Command {
-	opts := StatusOpts{}
-	cmd := &cobra.Command{
-		Use:   "status [ARGS]",
-		Short: "Display workload status",
-		Long:  workloadStatusCmdDesc,
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ds, err := w.cmdCtx.PluginManager.GetDataSource(cmd.Context())
-			if err != nil {
-				return err
-			}
-
-			kubeConfig, err := cmd.Flags().GetString("kube-config")
-			if err != nil {
-				return fmt.Errorf("failed to retrieve the kubeconfig file location")
-			}
-
-			return w.status(cmd.Context(), ds, kubeConfig, opts)
-		},
-	}
-
-	f := cmd.Flags()
-	f.StringVar(&opts.podName, "pod-name", "", "Pod name for the workload")
-	f.StringVar(&opts.namespace, "namespace", "", "Namespace for the workload")
-	f.StringVar(&opts.trustZone, "trust-zone", "", "Trust zone for the workload")
-	f.StringVar(&opts.clusterName, "cluster", "", "Name of the cluster for the workload (required if trust zone has multiple clusters)")
-
-	cobra.CheckErr(cmd.MarkFlagRequired("pod-name"))
-	cobra.CheckErr(cmd.MarkFlagRequired("namespace"))
-	cobra.CheckErr(cmd.MarkFlagRequired("trust-zone"))
-
-	return cmd
-}
-
-func (w *WorkloadCommand) status(ctx context.Context, ds datasource.DataSource, kubeConfig string, opts StatusOpts) error {
-	trustZone, err := ds.GetTrustZoneByName(opts.trustZone)
-	if err != nil {
-		return err
-	}
-
-	cluster, err := trustzone.ResolveCluster(trustZone, opts.clusterName, ds)
-	if err != nil {
-		return err
-	}
-
-	client, err := kubeutil.NewKubeClientFromSpecifiedContext(kubeConfig, cluster.GetKubernetesContext())
-	if err != nil {
-		return err
-	}
-
-	statusCh, dataCh := getWorkloadStatus(ctx, client, opts.podName, opts.namespace)
-
-	// Create a spinner to display whilst the debug container is created and executed and logs retrieved
-	if err := statusspinner.WatchProvisionStatus(ctx, statusCh, false); err != nil {
-		return fmt.Errorf("retrieving workload status failed: %w", err)
-	}
-
-	result := <-dataCh
-	if result == "" {
-		return fmt.Errorf("retrieving workload status failed")
-	}
-
-	fmt.Println(result)
-	return nil
-}
-
 func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, kubeConfig string, trustZones []*trust_zone_proto.TrustZone) error {
 	data := make([][]string, 0, len(trustZones))
 
@@ -241,19 +159,6 @@ func renderRegisteredWorkloads(ctx context.Context, ds datasource.DataSource, ku
 	}
 	_, err := tr.RenderTables(table)
 	return err
-}
-
-func getWorkloadStatus(ctx context.Context, client *kubeutil.Client, podName string, namespace string) (<-chan *provisionpb.Status, chan string) {
-	statusCh := make(chan *provisionpb.Status)
-	dataCh := make(chan string, 1)
-
-	go func() {
-		defer close(statusCh)
-		defer close(dataCh)
-		workload.GetStatus(ctx, statusCh, dataCh, client, podName, namespace)
-	}()
-
-	return statusCh, dataCh
 }
 
 var workloadDiscoverCmdDesc = `
