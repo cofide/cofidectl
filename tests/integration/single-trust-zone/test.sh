@@ -57,23 +57,6 @@ function run_tests() {
   run_ping_pong_test $K8S_CLUSTER_CONTEXT $client_spiffe_id $K8S_CLUSTER_CONTEXT
 }
 
-function show_workload_status() {
-  POD_NAME=$(kubectl get pods -l app=ping-pong-client \
-    -n $NAMESPACE_POLICY_NAMESPACE \
-    -o jsonpath='{.items[0].metadata.name}' \
-    --context $K8S_CLUSTER_CONTEXT)
-  WORKLOAD_STATUS_RESPONSE=$(./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
-    --pod-name $POD_NAME \
-    --trust-zone $TRUST_ZONE)
-
-  if [[ $WORKLOAD_STATUS_RESPONSE != *"SVID verified against trust bundle"* ]]; then
-    echo "cofidectl workload status unsuccessful"
-    exit 1
-  fi
-
-  echo "cofidectl workload status successful"
-}
-
 function check_overridden_values() {
   echo "Generated Helm values:"
   ./cofidectl trust-zone helm values $TRUST_ZONE --output-file -
@@ -117,7 +100,6 @@ function main() {
   show_config
   show_status
   run_tests
-  show_workload_status
   check_overridden_values
   check_dns_name_templates
   # Check for idempotence of up

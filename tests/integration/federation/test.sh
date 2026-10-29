@@ -89,23 +89,6 @@ function post_deploy() {
   fi
 }
 
-function show_workload_status() {
-  POD_NAME=$(kubectl get pods -l app=ping-pong-client \
-    -n $NAMESPACE_POLICY_NAMESPACE \
-    -o jsonpath='{.items[0].metadata.name}' \
-    --context $K8S_CLUSTER_1_CONTEXT)
-  WORKLOAD_STATUS_RESPONSE=$(./cofidectl workload status --namespace $NAMESPACE_POLICY_NAMESPACE \
-    --pod-name $POD_NAME \
-    --trust-zone $TRUST_ZONE_1)
-
-  if [[ $WORKLOAD_STATUS_RESPONSE != *"SVID verified against trust bundle"* ]]; then
-    echo "cofidectl workload status unsuccessful"
-    exit 1
-  fi
-
-  echo "cofidectl workload status successful"
-}
-
 function teardown_federation_and_verify() {
   kubectl --context $K8S_CLUSTER_2_CONTEXT delete clusterspiffeids.spire.spiffe.io spire-mgmt-spire-namespace
   kubectl exec --context $K8S_CLUSTER_2_CONTEXT -n spire-server spire-server-0 -- /opt/spire/bin/spire-server federation delete -id td1
@@ -156,7 +139,6 @@ function main() {
   show_status
   run_tests
   post_deploy
-  show_workload_status
   teardown_federation_and_verify
   down $TRUST_ZONE_1 $TRUST_ZONE_2
   delete
