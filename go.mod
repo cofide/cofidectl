@@ -16,7 +16,7 @@ require (
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/spf13/cobra v1.10.2
 	github.com/spiffe/go-spiffe/v2 v2.9.0
-	github.com/spiffe/spire-api-sdk v1.15.3
+	github.com/spiffe/spire-api-sdk v1.16.0
 	github.com/stretchr/testify v1.12.1
 	google.golang.org/grpc v1.85.0
 	google.golang.org/protobuf v1.36.12
