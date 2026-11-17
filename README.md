@@ -8,6 +8,8 @@
 
 [![CI](https://github.com/cofide/cofidectl/workflows/ci/badge.svg)](https://github.com/cofide/cofidectl/actions?query=workflow%3Aci+branch%3Amain)
 
+**Note to Cofide customers**: This `cofidectl` is unrelated to `cofidectl` used for managing Cofide Connect. These instructions are not to be used with Cofide Connect.
+
 `cofidectl` is a command-line tool that makes it easy to install and manage workload identity providers for Kubernetes, and provide seamless and secure mTLS for applications. It builds on [SPIFFE](https://spiffe.io/docs/latest/spiffe-about/overview/)/[SPIRE](https://spiffe.io/docs/latest/spire-about/) and provides a set of abstractions that make it easy to configure. `cofidectl` can be used to deploy single cluster instances, or handle federation across multiple clusters.
 
 _Note: `cofidectl` is an early-stage project under active development, so please be aware that it is subject to breaking changes._
